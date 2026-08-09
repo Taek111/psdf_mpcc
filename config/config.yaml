@@ -1,0 +1,160 @@
+# MPC Test Configuration File
+# You can configure various combinations of MPC tests.
+
+# Test configuration list
+# Each test can have the following options:
+# Environment type (options: "s_path", "straight_corridor", "maze", "oblique_maze", "parking")
+# Robot shape (options: "rectangle", "pentagon", "triangle", "lshape")
+# Optimizer type (options: "psdf", "mpcc", "rmpcc", "rmpcc_pv", "acados", "casadi", "dcbf", "dcbf_casadi")
+# Dynamics model (currently only "differential_drive" is supported)
+# Path planner type (options: "astar", "hybrid_astar")
+
+test_configs:
+  - maze_type: "maze"
+    robot_shape: "rectangle"
+    optimizer_type: "psdf"
+    dynamics_type: "differential_drive"
+    path_planner: "astar"
+
+  # - maze_type: "s_path"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "rmpcc"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "s_path"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "rmpcc_pv"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "s_path"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "mpcc"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "s_path"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "psdf"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "straight_corridor"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "rmpcc"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "straight_corridor"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "rmpcc_pv"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "straight_corridor"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "mpcc"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "straight_corridor"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "psdf"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "maze"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "rmpcc"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "maze"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "rmpcc_pv"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "maze"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "mpcc"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "maze"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "psdf"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "oblique_maze"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "rmpcc"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "oblique_maze"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "rmpcc_pv"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "oblique_maze"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "mpcc"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+  # - maze_type: "oblique_maze"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "psdf"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
+
+# Default settings
+# Common settings applied to all tests
+defaults:
+  frame_skip: 2                # Animation frame skip (1=every frame, 5=every 5th frame)
+  simulation_time: 60.0         # Simulation time (seconds)
+  generate_animation: true      # Whether to generate animation (true/false)
+  generate_plots: true          # Whether to generate static plots (true/false)
+  plot_covariance: false        # Overlay RMPCC directional covariance axes/arcs on world plots
+  speed_range: [0.0, 0.30]      # Shared color scale for speed heatmaps [m/s]
+  clearance_range: [0.00, 0.03] # Shared color scale for clearance/SDF heatmaps [m]
+  risk_range: [0.0, 0.045]     # Shared color scale for risk heatmaps [m]
+
+# =====================================================
+# Option descriptions:
+# =====================================================
+#
+# maze_type options:
+#   - "s_path": Simple S-shaped path environment
+#   - "straight_corridor": Straight path with a narrow corridor in the middle
+#   - "maze": Complex maze environment  
+#   - "oblique_maze": Maze with tilted obstacles
+#   - "parking": Parking scenario environment
+#
+# robot_shape options:
+#   - "rectangle": Rectangular robot (0.15x0.06m)
+#   - "pentagon": Pentagon robot (radius 0.05m)
+#   - "triangle": Triangle robot
+#   - "lshape": L-shaped robot
+#
+# optimizer_type options:
+#   - "psdf": PSDF-based SQP optimizer (obstacle avoidance)
+#   - "mpcc": MPCC optimizer with PSDF safety constraint
+#   - "rmpcc": Boole multi-feature chance-constrained MPCC with one affine RTI row per stage
+#   - "rmpcc_pv": Risk-aware MPCC optimizer with a projected-variance PSDF margin
+#   - "acados": ACADOS SQP-based NMPC
+#   - "casadi": CasADi-based basic NMPC  
+#   - "dcbf": DCBF-based SQP optimizer
+#   - "dcbf_casadi": DCBF-based CasADi optimizer
+#
+# dynamics_type options:
+#   - "differential_drive": Differential drive robot model (currently the only option)
+#
+# path_planner options:
+#   - "astar": Traditional A* with Line of Sight path reduction
+#   - "hybrid_astar": Hybrid A* considering vehicle kinematics
+# =====================================================

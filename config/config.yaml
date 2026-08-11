@@ -12,7 +12,7 @@
 test_configs:
   - maze_type: "maze"
     robot_shape: "rectangle"
-    optimizer_type: "psdf"
+    optimizer_type: "rmpcc"
     dynamics_type: "differential_drive"
     path_planner: "astar"
 
@@ -116,7 +116,7 @@ test_configs:
 # Common settings applied to all tests
 defaults:
   frame_skip: 2                # Animation frame skip (1=every frame, 5=every 5th frame)
-  simulation_time: 60.0         # Simulation time (seconds)
+  simulation_time: 10.0         # Simulation time (seconds)
   generate_animation: true      # Whether to generate animation (true/false)
   generate_plots: true          # Whether to generate static plots (true/false)
   plot_covariance: false        # Overlay RMPCC directional covariance axes/arcs on world plots
@@ -144,7 +144,7 @@ defaults:
 # optimizer_type options:
 #   - "psdf": PSDF-based SQP optimizer (obstacle avoidance)
 #   - "mpcc": MPCC optimizer with PSDF safety constraint
-#   - "rmpcc": Boole multi-feature chance-constrained MPCC with one affine RTI row per stage
+#   - "rmpcc": MPCC with fixed signed-PSDF guard and stage-masked MF affine rows
 #   - "rmpcc_pv": Risk-aware MPCC optimizer with a projected-variance PSDF margin
 #   - "acados": ACADOS SQP-based NMPC
 #   - "casadi": CasADi-based basic NMPC  

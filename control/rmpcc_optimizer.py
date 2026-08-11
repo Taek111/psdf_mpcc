@@ -65,10 +65,30 @@ class RMPCCOptimizerParam:
 
         # Safety constraints (PSDF style)
         self.d_min = 0.001
+        # Row G uses one fixed signed-PSDF target throughout the horizon.
+        # Keep this separate from d_min, which is the distance threshold used
+        # inside the multi-feature probability model.
+        self.d_col = 0.001
+        # Row G is always active and hard.  Row M can be switched off without
+        # changing the fixed two-row OCP layout; its stage parameters are then
+        # replaced by the always-feasible residual chance_epsilon.
+        self.use_row_mf = False
+        # The unsigned feature-distance model is used only in the separated
+        # domain.  Zero therefore masks contact and penetration by default.
+        self.d_mf_mask = 0.0
         self.use_obstacle_constraint = True
         self.chance_epsilon = 0.20
         self.debug_mf = True
         self.augmented_psdf_device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        # Row G is a hard lower-bound constraint.  Only Row M has a slack, with
+        # the same raw-row penalty at every intermediate/terminal stage.
+        self.mf_slack_linear = 1e2
+        self.mf_slack_quadratic = 1e0
+
+        # Number of equal-duration samples used to check the executed first
+        # shooting interval, in addition to its measured starting pose.
+        self.first_interval_substeps = 10
 
         # Topic 2 risk/covariance parameters.
         self.sigma_f0 = 0.0002 #0.0002
@@ -106,8 +126,10 @@ class RMPCCOptimizer:
         self._system = None
 
         self.path_param_dim = None
+        self.guard_param_dim = 4
         self.mf_param_dim = 9
         self.path_param_slice = slice(0, 0)
+        self.guard_param_slice = slice(0, 0)
         self.mf_param_slice = slice(0, 0)
         self._path_params = None
         self._prev_predicted_s = 0.0
@@ -117,9 +139,19 @@ class RMPCCOptimizer:
         self._last_mf_probability_sums = None
         self._last_mf_A = None
         self._last_mf_c = None
+        self._last_mf_A_raw = None
+        self._last_mf_c_raw = None
+        self._last_mf_valid = None
+        self._last_mf_mask = None
+        self._last_row_mf_enabled = None
+        self._last_guard_A = None
+        self._last_guard_c = None
         self._last_nominal_psdf_clearances = None
         self._last_local_covariances = None
         self._last_psdf_clearances = None
+        self._last_exact_current_phi = None
+        self._last_constraint_diagnostics = None
+        self._mf_stage_data_available = None
         self._has_shift_source = False
 
         self.json_filename = "acados_ocp_rmpcc_mf.json"
@@ -128,6 +160,7 @@ class RMPCCOptimizer:
         self.backup_json_filename = "acados_ocp_rmpcc_mf_backup.json"
         self.backup_code_export_directory = "c_generated_code_rmpcc_mf_backup"
         self._last_solve_mode = "uninitialized"
+        self._last_backup_status = None
         self._temp_files = []
         self._reset_runtime_counters()
 
@@ -186,8 +219,10 @@ class RMPCCOptimizer:
         self._system = None
         self._temp_files = []
         self.path_param_dim = None
+        self.guard_param_dim = 4
         self.mf_param_dim = 9
         self.path_param_slice = slice(0, 0)
+        self.guard_param_slice = slice(0, 0)
         self.mf_param_slice = slice(0, 0)
         self._path_params = None
         self._prev_predicted_s = 0.0
@@ -197,11 +232,22 @@ class RMPCCOptimizer:
         self._last_mf_probability_sums = None
         self._last_mf_A = None
         self._last_mf_c = None
+        self._last_mf_A_raw = None
+        self._last_mf_c_raw = None
+        self._last_mf_valid = None
+        self._last_mf_mask = None
+        self._last_row_mf_enabled = None
+        self._last_guard_A = None
+        self._last_guard_c = None
         self._last_nominal_psdf_clearances = None
         self._last_local_covariances = None
         self._last_psdf_clearances = None
+        self._last_exact_current_phi = None
+        self._last_constraint_diagnostics = None
+        self._mf_stage_data_available = None
         self._has_shift_source = False
         self._last_solve_mode = "uninitialized"
+        self._last_backup_status = None
 
     def __del__(self):
         self.cleanup()
@@ -243,6 +289,16 @@ class RMPCCOptimizer:
             return None
         return np.asarray(self._last_psdf_clearances, dtype=float).copy()
 
+    def get_last_constraint_diagnostics(self):
+        """Return the latest fixed-row safety diagnostics.
+
+        Constraint ordering is invariant throughout this dictionary:
+        row 0 is the signed-PSDF guard/recovery row and row 1 is the MF row.
+        """
+        if self._last_constraint_diagnostics is None:
+            return None
+        return copy.deepcopy(self._last_constraint_diagnostics)
+
     def record_plant_input_applied(self):
         self._plant_input_apply_count += 1
 
@@ -271,14 +327,19 @@ class RMPCCOptimizer:
         xdot = ca.MX.sym("xdot", nx)
         u = ca.MX.sym("u", nu)
         p_ref_t_ref = ca.MX.sym("p_ref_t_ref", self.path_param_dim)
+        p_guard = ca.MX.sym("guard_affine", self.guard_param_dim)
         p_mf = ca.MX.sym("mf_affine", self.mf_param_dim)
 
         self.path_param_slice = slice(0, self.path_param_dim)
-        self.mf_param_slice = slice(
+        self.guard_param_slice = slice(
             self.path_param_dim,
-            self.path_param_dim + self.mf_param_dim,
+            self.path_param_dim + self.guard_param_dim,
         )
-        p_all = ca.vertcat(p_ref_t_ref, p_mf)
+        self.mf_param_slice = slice(
+            self.path_param_dim + self.guard_param_dim,
+            self.path_param_dim + self.guard_param_dim + self.mf_param_dim,
+        )
+        p_all = ca.vertcat(p_ref_t_ref, p_guard, p_mf)
 
         v = u[0]
         omega = u[1]
@@ -486,12 +547,13 @@ class RMPCCOptimizer:
             dtype=float,
         )
 
-    def _build_stage_param(self, stage_path_param, mf_affine):
+    def _build_stage_param(self, stage_path_param, guard_affine, mf_affine):
         stage_param = np.zeros(
-            self.path_param_dim + self.mf_param_dim,
+            self.path_param_dim + self.guard_param_dim + self.mf_param_dim,
             dtype=float,
         )
         stage_param[self.path_param_slice] = stage_path_param
+        stage_param[self.guard_param_slice] = guard_affine
         stage_param[self.mf_param_slice] = mf_affine
         return stage_param
 
@@ -534,7 +596,59 @@ class RMPCCOptimizer:
         target_param = self.param if param is None else param
         return bool(getattr(target_param, "debug_mf", False))
 
+    def _normalize_epsilon_values(self, num_stages):
+        epsilon = np.asarray(
+            getattr(self.param, "chance_epsilon", 0.20),
+            dtype=float,
+        )
+        if epsilon.ndim == 0:
+            epsilon = np.full((num_stages,), float(epsilon), dtype=float)
+        else:
+            epsilon = epsilon.reshape(-1)
+            if epsilon.shape != (num_stages,):
+                raise ValueError(
+                    "chance_epsilon must be a scalar or have one value per stage"
+                )
+        if not np.isfinite(epsilon).all() or np.any(epsilon <= 0.0) or np.any(epsilon >= 1.0):
+            raise ValueError("chance_epsilon values must lie strictly between 0 and 1")
+        return epsilon
+
+    def _compute_exact_psdf(self, poses):
+        """Evaluate signed PSDF directly at world-frame poses."""
+        poses_np = np.asarray(poses, dtype=float)
+        squeeze = poses_np.ndim == 1
+        poses_np = np.atleast_2d(poses_np)
+        if poses_np.ndim != 2 or poses_np.shape[1] != 3:
+            raise ValueError("poses must have shape (H, 3) or (3,)")
+        if not np.isfinite(poses_np).all():
+            raise ValueError("pose values must be finite")
+
+        if self.psdf_wrapper is None:
+            phi = np.full((poses_np.shape[0],), 1000.0, dtype=float)
+            gradient = np.zeros((poses_np.shape[0], 3), dtype=float)
+        else:
+            poses_t = torch.as_tensor(
+                poses_np,
+                dtype=self.psdf_wrapper.A.dtype,
+                device=self.psdf_wrapper.device,
+            )
+            phi_t, gradient_t = self.psdf_wrapper(poses_t)
+            phi = phi_t.detach().cpu().numpy()
+            gradient = gradient_t.detach().cpu().numpy()
+
+        if not np.isfinite(phi).all() or not np.isfinite(gradient).all():
+            raise ValueError("augmented PSDF returned non-finite signed-distance data")
+        if squeeze:
+            return float(phi[0]), gradient[0].copy()
+        return phi, gradient
+
     def _compute_mf_affine_data(self, z_bar):
+        """Return raw PSDF/MF data without applying the separated-domain mask.
+
+        The normal path is one batched ``forward_mf`` call.  If a covariance
+        issue makes that call fail, stagewise calls preserve every valid MF
+        row while the pose-only PSDF path still supplies the always-active Row G.
+        """
         z_bar_np = np.asarray(z_bar, dtype=float)
         if z_bar_np.ndim != 2 or z_bar_np.shape[1] != 8:
             raise ValueError("z_bar must have shape (H, 8)")
@@ -542,9 +656,7 @@ class RMPCCOptimizer:
             raise ValueError("z_bar values must be finite")
 
         num_stages = z_bar_np.shape[0]
-        epsilon = float(getattr(self.param, "chance_epsilon", 0.20))
-        if not np.isfinite(epsilon) or not 0.0 < epsilon < 1.0:
-            raise ValueError("chance_epsilon must lie strictly between 0 and 1")
+        epsilon = self._normalize_epsilon_values(num_stages)
 
         if self.psdf_wrapper is None or not getattr(
             self.param,
@@ -554,7 +666,8 @@ class RMPCCOptimizer:
             phi = np.full((num_stages,), 1000.0, dtype=float)
             gradient = np.zeros((num_stages, 3), dtype=float)
             A_mf = np.zeros((num_stages, 8), dtype=float)
-            c_mf = np.full((num_stages,), epsilon, dtype=float)
+            c_mf = epsilon.copy()
+            self._mf_stage_data_available = np.zeros((num_stages,), dtype=bool)
             return phi, gradient, A_mf, c_mf
 
         z_bar_t = torch.as_tensor(
@@ -562,15 +675,150 @@ class RMPCCOptimizer:
             dtype=self.psdf_wrapper.A.dtype,
             device=self.psdf_wrapper.device,
         )
-        phi_t, gradient_t, A_mf_t, c_mf_t = self.psdf_wrapper.forward_mf(
-            z_bar_t,
-            epsilon,
-            float(self.param.d_min),
+        try:
+            outputs_t = self.psdf_wrapper.forward_mf(
+                z_bar_t,
+                torch.as_tensor(
+                    epsilon,
+                    dtype=z_bar_t.dtype,
+                    device=z_bar_t.device,
+                ),
+                float(self.param.d_min),
+            )
+            phi, gradient, A_mf, c_mf = tuple(
+                output.detach().cpu().numpy() for output in outputs_t
+            )
+            stage_available = np.ones((num_stages,), dtype=bool)
+        except (RuntimeError, ValueError, FloatingPointError):
+            # Guard geometry is covariance-independent, so retain it even when
+            # one MF stage has invalid variance data.
+            phi, gradient = self._compute_exact_psdf(z_bar_np[:, :3])
+            A_mf = np.full((num_stages, 8), np.nan, dtype=float)
+            c_mf = np.full((num_stages,), np.nan, dtype=float)
+            stage_available = np.zeros((num_stages,), dtype=bool)
+
+            for i in range(num_stages):
+                try:
+                    outputs_i = self.psdf_wrapper.forward_mf(
+                        z_bar_t[i : i + 1],
+                        float(epsilon[i]),
+                        float(self.param.d_min),
+                    )
+                    phi_i, gradient_i, A_i, c_i = tuple(
+                        output.detach().cpu().numpy() for output in outputs_i
+                    )
+                    phi[i] = phi_i[0]
+                    gradient[i] = gradient_i[0]
+                    A_mf[i] = A_i[0]
+                    c_mf[i] = c_i[0]
+                    stage_available[i] = True
+                except (RuntimeError, ValueError, FloatingPointError):
+                    continue
+
+        # A failed/non-finite MF stage is maskable.  Repair guard/mask geometry
+        # through the exact pose interface, then fail loudly if even the signed
+        # PSDF itself is invalid.  Row G is repaired independently from the MF
+        # validity mask and remains active at every constrained stage.
+        guard_finite = np.isfinite(phi) & np.isfinite(gradient).all(axis=1)
+        # A non-finite PSDF/gradient returned by forward_mf also invalidates
+        # that stage's MF data, even though Row G can be repaired independently.
+        stage_available &= guard_finite
+        if not guard_finite.all():
+            phi_exact, gradient_exact = self._compute_exact_psdf(z_bar_np[:, :3])
+            phi[~guard_finite] = phi_exact[~guard_finite]
+            gradient[~guard_finite] = gradient_exact[~guard_finite]
+        if not np.isfinite(phi).all() or not np.isfinite(gradient).all():
+            raise ValueError("signed PSDF guard data must be finite at every stage")
+
+        active_clusters = getattr(self.psdf_wrapper, "active_clusters", None)
+        has_active_features = (
+            True if active_clusters is None else bool(active_clusters > 0)
         )
-        outputs = (phi_t, gradient_t, A_mf_t, c_mf_t)
-        if not all(torch.isfinite(output).all() for output in outputs):
-            raise ValueError("augmented PSDF returned non-finite MF coefficients")
-        return tuple(output.detach().cpu().numpy() for output in outputs)
+        self._mf_stage_data_available = stage_available & has_active_features
+        return phi, gradient, A_mf, c_mf
+
+    def _compute_constraint_affine_data(self, z_bar):
+        """Build fixed Row G/Row M coefficients and the per-stage MF mask."""
+        z_bar_np = np.asarray(z_bar, dtype=float)
+        if z_bar_np.ndim != 2 or z_bar_np.shape[1] != 8:
+            raise ValueError("z_bar must have shape (H, 8)")
+        if not np.isfinite(z_bar_np).all():
+            raise ValueError("z_bar values must be finite")
+
+        self._mf_stage_data_available = None
+        num_stages = z_bar_np.shape[0]
+        epsilon = self._normalize_epsilon_values(num_stages)
+        row_mf_enabled = bool(getattr(self.param, "use_row_mf", True))
+        obstacle_constraint_enabled = bool(
+            getattr(self.param, "use_obstacle_constraint", True)
+        )
+
+        if not obstacle_constraint_enabled:
+            # Preserve the master obstacle-constraint switch even if a wrapper
+            # from an earlier setup is still attached to the optimizer.
+            phi = np.full((num_stages,), 1000.0, dtype=float)
+            gradient = np.zeros((num_stages, 3), dtype=float)
+            A_mf_raw = np.full((num_stages, 8), np.nan, dtype=float)
+            c_mf_raw = np.full((num_stages,), np.nan, dtype=float)
+            self._mf_stage_data_available = np.zeros(
+                (num_stages,),
+                dtype=bool,
+            )
+        elif row_mf_enabled:
+            phi, gradient, A_mf_raw, c_mf_raw = self._compute_mf_affine_data(
+                z_bar_np
+            )
+        else:
+            # A disabled Row M must not evaluate the covariance-dependent MF
+            # model.  Retain the pose-only signed PSDF evaluation required to
+            # build hard Row G, and mark raw MF data as intentionally absent.
+            phi, gradient = self._compute_exact_psdf(z_bar_np[:, :3])
+            phi = np.asarray(phi, dtype=float)
+            gradient = np.asarray(gradient, dtype=float)
+            A_mf_raw = np.full((num_stages, 8), np.nan, dtype=float)
+            c_mf_raw = np.full((num_stages,), np.nan, dtype=float)
+            self._mf_stage_data_available = np.zeros(
+                (num_stages,),
+                dtype=bool,
+            )
+
+        d_col = float(getattr(self.param, "d_col", self.param.d_min))
+        d_mf_mask = float(getattr(self.param, "d_mf_mask", 0.0))
+        if not np.isfinite(d_col) or not np.isfinite(d_mf_mask):
+            raise ValueError("d_col and d_mf_mask must be finite")
+
+        guard_A = np.zeros((num_stages, 8), dtype=float)
+        guard_A[:, :3] = gradient
+        guard_c = phi - np.einsum("ij,ij->i", gradient, z_bar_np[:, :3]) - d_col
+
+        finite_mf = np.isfinite(A_mf_raw).all(axis=1) & np.isfinite(c_mf_raw)
+        stage_available = getattr(self, "_mf_stage_data_available", None)
+        if stage_available is None or np.asarray(stage_available).shape != (num_stages,):
+            stage_available = finite_mf.copy()
+        else:
+            stage_available = np.asarray(stage_available, dtype=bool)
+        mf_valid = row_mf_enabled & stage_available & finite_mf
+        mf_mask = row_mf_enabled & (phi > d_mf_mask) & mf_valid
+
+        A_mf = np.zeros((num_stages, 8), dtype=float)
+        c_mf = epsilon.copy()
+        A_mf[mf_mask] = A_mf_raw[mf_mask]
+        c_mf[mf_mask] = c_mf_raw[mf_mask]
+
+        return {
+            "phi": phi,
+            "gradient": gradient,
+            "row_mf_enabled": row_mf_enabled,
+            "guard_A": guard_A,
+            "guard_c": guard_c,
+            "mf_A_raw": A_mf_raw,
+            "mf_c_raw": c_mf_raw,
+            "mf_valid": mf_valid,
+            "mf_A": A_mf,
+            "mf_c": c_mf,
+            "mf_mask": mf_mask,
+            "epsilon": epsilon,
+        }
 
     def _propagate_covariance_state_batch(self, inputs, stage_s_values):
         num_stages = len(stage_s_values)
@@ -773,7 +1021,9 @@ class RMPCCOptimizer:
         self.nu = nu
         self.N = N
         self.ocp.dims.N = N
-        self.ocp.dims.np = self.path_param_dim + self.mf_param_dim
+        self.ocp.dims.np = (
+            self.path_param_dim + self.guard_param_dim + self.mf_param_dim
+        )
         self.ocp.parameter_values = np.zeros((self.ocp.dims.np,), dtype=float)
 
         self.ocp.cost.cost_type = "EXTERNAL"
@@ -849,31 +1099,77 @@ class RMPCCOptimizer:
         return solver
 
     def add_obstacle_avoidance_constraint(self, param, system, obstacles_geo):
-        if not getattr(param, "use_obstacle_constraint", True):
-            print("Obstacle avoidance constraint is disabled by use_obstacle_constraint=False")
-            return
+        if getattr(param, "use_obstacle_constraint", True):
+            self.update_obstacles(obstacles_geo)
 
-        self.update_obstacles(obstacles_geo)
-
-        if self.psdf_wrapper is None or self.ocp is None:
-            print("Warning: augmented PSDF not initialized; skipping MF constraint")
+        if self.ocp is None:
+            print("Warning: OCP is not initialized; skipping fixed safety rows")
             return
 
         x = self.ocp.model.x
+        guard_affine = self.ocp.model.p[self.guard_param_slice]
         mf_affine = self.ocp.model.p[self.mf_param_slice]
-        constraint_expr = ca.dot(mf_affine[:8], x) + mf_affine[8]
+        guard_expr = ca.dot(guard_affine[:3], x[:3]) + guard_affine[3]
+        mf_expr = ca.dot(mf_affine[:8], x) + mf_affine[8]
+        constraint_expr = ca.vertcat(guard_expr, mf_expr)
 
         self.ocp.constraints.constr_type = "BGH"
         self.ocp.constraints.constr_type_e = "BGH"
-        self.ocp.dims.nh = 1
-        self.ocp.dims.nh_e = 1
+        self.ocp.dims.nh = 2
+        self.ocp.dims.nh_e = 2
         self.ocp.model.con_h_expr = constraint_expr
         self.ocp.model.con_h_expr_e = constraint_expr
-        self.ocp.constraints.lh = np.array([0.0], dtype=float)
-        self.ocp.constraints.uh = np.array([1e8], dtype=float)
-        self.ocp.constraints.lh_e = np.array([0.0], dtype=float)
-        self.ocp.constraints.uh_e = np.array([1e8], dtype=float)
-        print("Added one HARD Boole MF affine constraint at path and terminal stages")
+        self.ocp.constraints.lh = np.zeros((2,), dtype=float)
+        self.ocp.constraints.uh = np.full((2,), 1e8, dtype=float)
+        self.ocp.constraints.lh_e = np.zeros((2,), dtype=float)
+        self.ocp.constraints.uh_e = np.full((2,), 1e8, dtype=float)
+
+        # Row G (index 0) is deliberately absent from idxsh and is therefore
+        # hard.  Row M (index 1) remains soft so the chance constraint can be
+        # relaxed without weakening the geometric collision guard.
+        soft_indices = np.array([1], dtype=np.int64)
+        self.ocp.dims.nsh = 1
+        self.ocp.dims.ns = 1
+        self.ocp.dims.nsh_e = 1
+        self.ocp.dims.ns_e = 1
+        self.ocp.constraints.idxsh = soft_indices
+        self.ocp.constraints.idxsh_e = soft_indices.copy()
+        # lsh/ush are lower bounds on lower/upper slack variables, not upper
+        # limits.  Zero permits a nonnegative slack without forcing one.
+        self.ocp.constraints.lsh = np.zeros((1,), dtype=float)
+        self.ocp.constraints.ush = np.zeros((1,), dtype=float)
+        self.ocp.constraints.lsh_e = np.zeros((1,), dtype=float)
+        self.ocp.constraints.ush_e = np.zeros((1,), dtype=float)
+
+        slack_linear = np.array(
+            [float(getattr(param, "mf_slack_linear", 1e1))],
+            dtype=float,
+        )
+        slack_quadratic = np.array(
+            [float(getattr(param, "mf_slack_quadratic", 1e0))],
+            dtype=float,
+        )
+        if (
+            not np.isfinite(slack_linear).all()
+            or not np.isfinite(slack_quadratic).all()
+            or np.any(slack_linear <= 0.0)
+            or np.any(slack_quadratic <= 0.0)
+        ):
+            raise ValueError("MF slack penalties must be positive and finite")
+
+        # acados expects the diagonal entries as one-dimensional vectors.
+        self.ocp.cost.zl = slack_linear.copy()
+        self.ocp.cost.Zl = slack_quadratic.copy()
+        self.ocp.cost.zu = slack_linear.copy()
+        self.ocp.cost.Zu = slack_quadratic.copy()
+        self.ocp.cost.zl_e = slack_linear.copy()
+        self.ocp.cost.Zl_e = slack_quadratic.copy()
+        self.ocp.cost.zu_e = slack_linear.copy()
+        self.ocp.cost.Zu_e = slack_quadratic.copy()
+        print(
+            "Added two affine safety rows at intermediate/terminal stages: "
+            "0=HARD guard/recovery, 1=SOFT MF"
+        )
 
     def add_warm_start(self, param, system, solver=None):
         solver = self.solver if solver is None else solver
@@ -1055,39 +1351,108 @@ class RMPCCOptimizer:
             solver.set(i, "u", u_bar[i])
         solver.set(self.N, "x", z_bar[-1])
 
-        phi_bar, _, A_mf, c_mf = self._compute_mf_affine_data(z_bar)
-        mf_affine = np.concatenate((A_mf, c_mf[:, None]), axis=1)
-        self._last_mf_A = A_mf.copy()
-        self._last_mf_c = c_mf.copy()
-        self._last_nominal_psdf_clearances = phi_bar.copy()
+        if self.state is not None:
+            measured_pose = np.asarray(self.state._x, dtype=float)
+            if not np.allclose(z_bar[0, :3], measured_pose, rtol=0.0, atol=1e-12):
+                raise AssertionError("shifted nominal stage 0 must match the measured pose")
+        else:
+            measured_pose = z_bar[0, :3]
+        exact_current_phi, _ = self._compute_exact_psdf(measured_pose)
 
-        for i in range(self.N):
+        constraint_data = self._compute_constraint_affine_data(z_bar)
+        guard_affine = np.column_stack(
+            (constraint_data["guard_A"][:, :3], constraint_data["guard_c"])
+        )
+        mf_affine = np.column_stack(
+            (constraint_data["mf_A"], constraint_data["mf_c"])
+        )
+
+        self._last_exact_current_phi = float(exact_current_phi)
+        self._last_guard_A = constraint_data["guard_A"].copy()
+        self._last_guard_c = constraint_data["guard_c"].copy()
+        self._last_mf_A = constraint_data["mf_A"].copy()
+        self._last_mf_c = constraint_data["mf_c"].copy()
+        self._last_mf_A_raw = constraint_data["mf_A_raw"].copy()
+        self._last_mf_c_raw = constraint_data["mf_c_raw"].copy()
+        self._last_mf_valid = constraint_data["mf_valid"].copy()
+        self._last_mf_mask = constraint_data["mf_mask"].copy()
+        self._last_row_mf_enabled = bool(constraint_data["row_mf_enabled"])
+        self._last_nominal_psdf_clearances = constraint_data["phi"].copy()
+
+        # No safety row exists at stage 0; mirror the actual trivial p values
+        # in the cached QP-row data and mask used by diagnostics.
+        self._last_mf_A[0] = 0.0
+        self._last_mf_c[0] = constraint_data["epsilon"][0]
+        self._last_mf_mask[0] = False
+
+        # Stage 0 has a fixed state and deliberately no con_h_expr_0.  Keep its
+        # safety parameter slots trivially feasible for a uniform p layout.
+        stage_path_param = self._build_stage_path_parameter(z_bar[0, 3])
+        guard_affine_0 = np.array([0.0, 0.0, 0.0, 1.0], dtype=float)
+        mf_affine_0 = np.zeros((self.mf_param_dim,), dtype=float)
+        mf_affine_0[-1] = constraint_data["epsilon"][0]
+        solver.set(
+            0,
+            "p",
+            self._build_stage_param(
+                stage_path_param,
+                guard_affine_0,
+                mf_affine_0,
+            ),
+        )
+
+        for i in range(1, self.N):
             stage_path_param = self._build_stage_path_parameter(z_bar[i, 3])
             solver.set(
                 i,
                 "p",
-                self._build_stage_param(stage_path_param, mf_affine[i]),
+                self._build_stage_param(
+                    stage_path_param,
+                    guard_affine[i],
+                    mf_affine[i],
+                ),
             )
         terminal_path_param = self._build_stage_path_parameter(z_bar[-1, 3])
         solver.set(
             self.N,
             "p",
-            self._build_stage_param(terminal_path_param, mf_affine[-1]),
+            self._build_stage_param(
+                terminal_path_param,
+                guard_affine[-1],
+                mf_affine[-1],
+            ),
         )
         return solver.solve()
 
-    def recovery_infeasible(self, fast_status):
+    def recovery_infeasible(self, solver_status):
+        self._last_backup_status = None
         if self.solver is None or self.state is None:
-            return self.solver, fast_status, "safe_stop"
+            return self.solver, solver_status, "safe_stop"
 
         dynamics = self._system_dynamics
         if dynamics is None or not hasattr(dynamics, "nominal_safe_controller"):
             print("Warning: nominal_safe_controller is unavailable; keeping failed solver iterate.")
-            return self.solver, fast_status, "fast"
+            return self.solver, solver_status, "sqp_rti"
 
-        print(f"Fast SQP_RTI solver failed with status {fast_status}. Starting infeasible recovery.")
+        print(f"SQP_RTI solver failed with status {solver_status}. Starting infeasible recovery.")
 
         if self.backup_solver is not None:
+            cache_names = (
+                "_last_exact_current_phi",
+                "_last_guard_A",
+                "_last_guard_c",
+                "_last_mf_A",
+                "_last_mf_c",
+                "_last_mf_A_raw",
+                "_last_mf_c_raw",
+                "_last_mf_valid",
+                "_last_mf_mask",
+                "_last_row_mf_enabled",
+                "_last_nominal_psdf_clearances",
+            )
+            main_constraint_cache = {
+                name: copy.deepcopy(getattr(self, name)) for name in cache_names
+            }
             try:
                 self.backup_solver.reset(reset_qp_solver_mem=1)
                 try:
@@ -1099,6 +1464,7 @@ class RMPCCOptimizer:
                     self.backup_solver,
                     shift_nominal=False,
                 )
+                self._last_backup_status = int(backup_status)
                 if backup_status == 0:
                     try:
                         self._copy_primal_guess(self.backup_solver, self.solver)
@@ -1107,6 +1473,8 @@ class RMPCCOptimizer:
                     self._last_solve_mode = "backup_feasible_qp"
                     print("Recovered with backup SQP_WITH_FEASIBLE_QP solver.")
                     return self.backup_solver, 0, "backup_feasible_qp"
+                for name, value in main_constraint_cache.items():
+                    setattr(self, name, value)
                 try:
                     self._copy_primal_guess(self.backup_solver, self.solver)
                 except Exception:
@@ -1116,14 +1484,14 @@ class RMPCCOptimizer:
                     f"Backup SQP_WITH_FEASIBLE_QP solver returned status {backup_status}; "
                     "falling back to safe stop."
                 )
-                fast_status = backup_status
             except Exception as e:
+                for name, value in main_constraint_cache.items():
+                    setattr(self, name, value)
                 print(f"Warning: backup solver recovery failed: {e}")
         else:
             print("Backup solver is unavailable; falling back to safe stop.")
 
         dt = float(self.param.tf) / float(max(self.N, 1))
-        cov0 = self._build_initial_covariance_state(self.param)
         s_curr = self._clamp_s(self._current_s0)
         x_curr = np.array(self.state._x, dtype=float).copy()
         u_prev = np.asarray(getattr(self.state, "_u", np.zeros((2,), dtype=float)), dtype=float).reshape(-1)
@@ -1131,10 +1499,11 @@ class RMPCCOptimizer:
 
         try:
             self.solver.reset(reset_qp_solver_mem=1)
-            self.solver.set(
-                0,
-                "x",
-                np.array([x_curr[0], x_curr[1], x_curr[2], s_curr, cov0[0], cov0[1], cov0[2], cov0[3]], dtype=float),
+            safe_states = np.zeros((self.N + 1, self.nx), dtype=float)
+            safe_inputs = np.zeros((self.N, self.nu), dtype=float)
+            safe_states[0, :4] = np.array(
+                [x_curr[0], x_curr[1], x_curr[2], s_curr],
+                dtype=float,
             )
 
             for i in range(self.N):
@@ -1145,23 +1514,34 @@ class RMPCCOptimizer:
                 v_s_nom = 0.0
                 s_next = s_curr
 
-                self.solver.set(i, "u", np.array([v_nom, omega_nom, v_s_nom], dtype=float))
-                self.solver.set(
-                    i + 1,
-                    "x",
-                    np.array([x_next[0], x_next[1], x_next[2], s_next, cov0[0], cov0[1], cov0[2], cov0[3]], dtype=float),
+                safe_inputs[i] = np.array(
+                    [v_nom, omega_nom, v_s_nom],
+                    dtype=float,
+                )
+                safe_states[i + 1, :4] = np.array(
+                    [x_next[0], x_next[1], x_next[2], s_next],
+                    dtype=float,
                 )
 
                 x_curr = np.asarray(x_next, dtype=float).copy()
                 v_last = v_nom
                 s_curr = s_next
 
+            safe_states[:, 4:8] = self._propagate_covariance_state_batch(
+                safe_inputs,
+                safe_states[:, 3],
+            )
+            for i in range(self.N):
+                self.solver.set(i, "x", safe_states[i])
+                self.solver.set(i, "u", safe_inputs[i])
+            self.solver.set(self.N, "x", safe_states[-1])
+
             self._last_solve_mode = "safe_stop"
-            return self.solver, fast_status, "safe_stop"
+            return self.solver, solver_status, "safe_stop"
         except Exception as e:
             print(f"Warning: infeasible recovery failed: {e}")
             self._last_solve_mode = "safe_stop"
-            return self.solver, fast_status, "safe_stop"
+            return self.solver, solver_status, "safe_stop"
 
     def update_obstacles(self, obstacles_geo):
         if self.psdf_wrapper is None:
@@ -1209,8 +1589,10 @@ class RMPCCOptimizer:
                 self.psdf_wrapper = None
                 print("RMPCC-MF obstacle constraint disabled: skipping augmented PSDF initialization.")
             self.setup_ocp(param, reference_trajectory)
-            if use_obstacle_constraint:
-                self.add_obstacle_avoidance_constraint(param, system, obstacles)
+            # Compile the same two safety rows in every configuration.  Row G
+            # remains hard; disabled obstacle processing or Row M uses trivial
+            # stage parameters instead of changing the generated OCP dimensions.
+            self.add_obstacle_avoidance_constraint(param, system, obstacles)
             self.solver = self.create_solver(
                 code_export_directory=self.code_export_directory,
             )
@@ -1224,8 +1606,11 @@ class RMPCCOptimizer:
                     backup_param.hpipm_mode = "ROBUST"
                     backup_param.regularize_method = "PROJECT"
                     self.setup_ocp(backup_param, reference_trajectory)
-                    if use_obstacle_constraint:
-                        self.add_obstacle_avoidance_constraint(backup_param, system, obstacles)
+                    self.add_obstacle_avoidance_constraint(
+                        backup_param,
+                        system,
+                        obstacles,
+                    )
                     self.backup_solver = self.create_solver(
                         json_filename=self.backup_json_filename,
                         code_export_directory=self.backup_code_export_directory,
@@ -1246,14 +1631,322 @@ class RMPCCOptimizer:
             if use_obstacle_constraint:
                 self.update_obstacles(obstacles)
 
+    @staticmethod
+    def _diagnostic_array_string(values):
+        return np.array2string(
+            np.asarray(values),
+            precision=5,
+            suppress_small=False,
+            max_line_width=200,
+        )
+
+    def _read_lower_slack_trajectory(self, solver):
+        lower_slacks = np.full((self.N + 1, 2), np.nan, dtype=float)
+        # Keep the public diagnostic layout [Row G, Row M].  Row G is hard and
+        # consequently has no solver slack; represent that fixed value as zero.
+        lower_slacks[1:, 0] = 0.0
+        for i in range(1, self.N + 1):
+            try:
+                stage_slacks = np.asarray(solver.get(i, "sl"), dtype=float).reshape(-1)
+                if stage_slacks.size < 1:
+                    continue
+                lower_slacks[i, 1] = stage_slacks[0]
+            except Exception:
+                continue
+        return lower_slacks
+
+    def _sample_first_interval_psdf(self, solver, x_sol):
+        num_substeps = max(
+            int(getattr(self.param, "first_interval_substeps", 10)),
+            1,
+        )
+        pose = np.asarray(x_sol[0, :3], dtype=float).copy()
+        poses = [pose.copy()]
+        if self.N >= 1:
+            physical_input = np.asarray(solver.get(0, "u"), dtype=float)[:2]
+            substep_dt = float(self.param.tf) / float(self.N * num_substeps)
+            for _ in range(num_substeps):
+                pose = self._rollout_terminal_pose(
+                    pose,
+                    physical_input,
+                    substep_dt,
+                )
+                poses.append(np.asarray(pose, dtype=float).copy())
+        poses = np.asarray(poses, dtype=float)
+        phi, _ = self._compute_exact_psdf(poses)
+        return poses, np.asarray(phi, dtype=float)
+
+    def _collect_solver_residual_diagnostics(self, solver, status, mode):
+        diagnostics = {
+            "status": int(status),
+            "mode": str(mode),
+            "backup_status": self._last_backup_status,
+            "nlp_residuals": None,
+            "qp_status": None,
+            "qp_iterations": None,
+            "qp_residuals": None,
+            "statistics": None,
+        }
+        try:
+            diagnostics["nlp_residuals"] = np.asarray(
+                solver.get_residuals(recompute=True),
+                dtype=float,
+            )
+        except TypeError:
+            try:
+                diagnostics["nlp_residuals"] = np.asarray(
+                    solver.get_residuals(),
+                    dtype=float,
+                )
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+        try:
+            qp_status = solver.get_stats("qp_stat")
+            if qp_status is not None:
+                diagnostics["qp_status"] = np.asarray(qp_status, dtype=float)
+        except Exception:
+            pass
+        try:
+            qp_iterations = solver.get_stats("qp_iter")
+            if qp_iterations is not None:
+                diagnostics["qp_iterations"] = np.asarray(
+                    qp_iterations,
+                    dtype=float,
+                )
+        except Exception:
+            pass
+
+        try:
+            statistics = np.asarray(solver.get_stats("statistics"), dtype=float)
+            diagnostics["statistics"] = statistics
+            if (
+                mode == "backup_feasible_qp"
+                and statistics.ndim == 2
+                and statistics.shape[0] >= 11
+                and statistics.shape[1] > 0
+            ):
+                # SQP_WITH_FEASIBLE_QP reports up to three QP attempts.  It
+                # does not expose external QP KKT residuals in this build.
+                diagnostics["qp_status"] = statistics[[5, 7, 9], -1].copy()
+                diagnostics["qp_iterations"] = statistics[[6, 8, 10], -1].copy()
+        except Exception:
+            pass
+        return diagnostics
+
+    def _build_constraint_diagnostics(self, solver, x_sol, status, mode):
+        d_col = float(getattr(self.param, "d_col", self.param.d_min))
+        epsilon = self._normalize_epsilon_values(self.N + 1)
+        phi_exact, _ = self._compute_exact_psdf(x_sol[:, :3])
+        phi_exact = np.asarray(phi_exact, dtype=float)
+
+        guard_affine_residual = (
+            np.einsum("ij,ij->i", self._last_guard_A, x_sol)
+            + self._last_guard_c
+        )
+        guard_fresh_residual = phi_exact - d_col
+        mf_affine_residual = (
+            np.einsum("ij,ij->i", self._last_mf_A, x_sol)
+            + self._last_mf_c
+        )
+
+        try:
+            fresh_data = self._compute_constraint_affine_data(x_sol)
+            mf_fresh_raw_residual = (
+                np.einsum("ij,ij->i", fresh_data["mf_A_raw"], x_sol)
+                + fresh_data["mf_c_raw"]
+            )
+            fresh_raw_finite = fresh_data["mf_valid"] & (
+                np.isfinite(fresh_data["mf_A_raw"]).all(axis=1)
+                & np.isfinite(fresh_data["mf_c_raw"])
+            )
+            mf_fresh_raw_residual[~fresh_raw_finite] = np.nan
+            mf_fresh_effective_residual = (
+                np.einsum("ij,ij->i", fresh_data["mf_A"], x_sol)
+                + fresh_data["mf_c"]
+            )
+            mf_fresh_mask = fresh_data["mf_mask"].copy()
+            mf_fresh_mask[0] = False
+        except Exception:
+            mf_fresh_raw_residual = np.full((self.N + 1,), np.nan, dtype=float)
+            mf_fresh_effective_residual = np.full(
+                (self.N + 1,),
+                np.nan,
+                dtype=float,
+            )
+            mf_fresh_mask = np.zeros((self.N + 1,), dtype=bool)
+
+        lower_slacks = self._read_lower_slack_trajectory(solver)
+        slack_source = "solver"
+        if mode == "safe_stop":
+            # Safe-stop states/inputs are written manually after a failed QP;
+            # any MF sl values in solver memory belong to an older iterate.
+            lower_slacks[:, 1] = np.nan
+            slack_source = "unavailable_safe_stop"
+        row_coefficient_norms = np.column_stack(
+            (
+                np.linalg.norm(self._last_guard_A, axis=1),
+                np.linalg.norm(self._last_mf_A, axis=1),
+            )
+        )
+        required_lower_slacks = np.column_stack(
+            (
+                np.maximum(-guard_affine_residual, 0.0),
+                np.maximum(-mf_affine_residual, 0.0),
+            )
+        )
+        qp_fixed_row_lower_residual = np.column_stack(
+            (guard_affine_residual, mf_affine_residual)
+        ) + lower_slacks
+
+        # Stage 0 has no safety constraint or slack.  Keep its diagnostic slots
+        # explicitly NaN so trajectory indexing cannot imply otherwise.
+        for values in (
+            guard_affine_residual,
+            guard_fresh_residual,
+            mf_affine_residual,
+            mf_fresh_raw_residual,
+            mf_fresh_effective_residual,
+        ):
+            values[0] = np.nan
+        lower_slacks[0] = np.nan
+        required_lower_slacks[0] = np.nan
+        qp_fixed_row_lower_residual[0] = np.nan
+        row_coefficient_norms[0] = np.nan
+
+        first_interval_poses, first_interval_phi = self._sample_first_interval_psdf(
+            solver,
+            x_sol,
+        )
+        solver_diagnostics = self._collect_solver_residual_diagnostics(
+            solver,
+            status,
+            mode,
+        )
+        solver_diagnostics["qp_fixed_row_lower_residual"] = (
+            qp_fixed_row_lower_residual
+        )
+        future_qp_row_residual = qp_fixed_row_lower_residual[1:]
+        if np.isfinite(future_qp_row_residual).any():
+            solver_diagnostics["qp_fixed_row_violation_inf"] = float(
+                np.nanmax(np.maximum(-future_qp_row_residual, 0.0))
+            )
+        else:
+            solver_diagnostics["qp_fixed_row_violation_inf"] = None
+        future_phi = phi_exact[1:] if self.N >= 1 else phi_exact
+        min_predicted_phi = float(np.min(future_phi))
+        min_first_interval_phi = float(np.min(first_interval_phi))
+
+        diagnostics = {
+            "row_g_enabled": True,
+            "row_mf_enabled": bool(self._last_row_mf_enabled),
+            "constraint_row_order": {
+                0: "guard/recovery",
+                1: "MF",
+            },
+            "constraint_stages": np.arange(1, self.N + 1, dtype=int),
+            "exact_current_psdf": float(self._last_exact_current_phi),
+            "exact_current_guard_residual": float(self._last_exact_current_phi - d_col),
+            "guard_affine_residual": guard_affine_residual,
+            "guard_fresh_exact_psdf_residual": guard_fresh_residual,
+            "mf_affine_residual": mf_affine_residual,
+            # The effective fresh value respects the same domain mask as Row M.
+            # Keep the raw unsigned-feature value separately for debugging.
+            "mf_fresh_recomputed_residual": mf_fresh_effective_residual,
+            "mf_fresh_raw_residual": mf_fresh_raw_residual,
+            "mf_fresh_effective_residual": mf_fresh_effective_residual,
+            "guard_lower_slack": lower_slacks[:, 0],
+            "mf_lower_slack": lower_slacks[:, 1],
+            "lower_slack_source": slack_source,
+            "required_lower_slack": required_lower_slacks,
+            "mf_mask": self._last_mf_mask.copy(),
+            "mf_fresh_mask": mf_fresh_mask,
+            "exact_psdf_predicted_nodes": phi_exact,
+            "minimum_exact_psdf_predicted_nodes": min_predicted_phi,
+            "first_interval_substep_poses": first_interval_poses,
+            "first_interval_substep_exact_psdf": first_interval_phi,
+            "minimum_exact_psdf_first_interval_substeps": min_first_interval_phi,
+            "row_coefficient_norms": row_coefficient_norms,
+            "solver": solver_diagnostics,
+        }
+
+        self._last_mf_residuals = mf_affine_residual.copy()
+        self._last_mf_probability_sums = epsilon - mf_affine_residual
+        self._last_local_covariances = self._covariance_state_to_matrix(x_sol[:, 4:8])
+        self._last_psdf_clearances = phi_exact.copy()
+        self._last_constraint_diagnostics = diagnostics
+        return diagnostics
+
+    def _print_constraint_diagnostics(self, diagnostics):
+        future = slice(1, None)
+        solver_diagnostics = diagnostics["solver"]
+        print("RMPCC-MF constraint order: 0=guard/recovery, 1=MF")
+        print("RMPCC-MF Row G: enabled (always hard)")
+        print(
+            "RMPCC-MF Row M: "
+            f"{'enabled' if diagnostics['row_mf_enabled'] else 'disabled (trivially masked)'}"
+        )
+        print(
+            "RMPCC-MF exact current PSDF: "
+            f"{diagnostics['exact_current_psdf']:.8g}"
+        )
+        print(
+            "RMPCC-MF guard residuals [affine | fresh exact]: "
+            f"{self._diagnostic_array_string(diagnostics['guard_affine_residual'][future])} | "
+            f"{self._diagnostic_array_string(diagnostics['guard_fresh_exact_psdf_residual'][future])}"
+        )
+        print(
+            "RMPCC-MF MF residuals [affine | fresh recomputed]: "
+            f"{self._diagnostic_array_string(diagnostics['mf_affine_residual'][future])} | "
+            f"{self._diagnostic_array_string(diagnostics['mf_fresh_recomputed_residual'][future])}"
+        )
+        print(
+            "RMPCC-MF Row G is hard (no slack); MF lower slack: "
+            f"{self._diagnostic_array_string(diagnostics['mf_lower_slack'][future])}"
+        )
+        if diagnostics["lower_slack_source"] != "solver":
+            print(
+                "RMPCC-MF required row relaxations [hard guard violation, MF slack] "
+                f"({diagnostics['lower_slack_source']}): "
+                f"{self._diagnostic_array_string(diagnostics['required_lower_slack'][future])}"
+            )
+        print(
+            "RMPCC-MF per-stage MF mask: "
+            f"{self._diagnostic_array_string(diagnostics['mf_mask'][future].astype(int))}"
+        )
+        print(
+            "RMPCC-MF exact PSDF minima [predicted nodes | first interval substeps]: "
+            f"{diagnostics['minimum_exact_psdf_predicted_nodes']:.8g} | "
+            f"{diagnostics['minimum_exact_psdf_first_interval_substeps']:.8g}"
+        )
+        print(
+            "RMPCC-MF raw row coefficient norms [guard, MF]: "
+            f"{self._diagnostic_array_string(diagnostics['row_coefficient_norms'][future])}"
+        )
+        print(
+            "RMPCC-MF QP lower residuals [hard guard | soft MF after slack]: "
+            f"{self._diagnostic_array_string(solver_diagnostics['qp_fixed_row_lower_residual'][future])}"
+        )
+        print(
+            "RMPCC-MF solver/QP diagnostics "
+            f"[NLP(stat,eq,ineq,comp) | QP KKT(if available) | status | iter]: "
+            f"{self._diagnostic_array_string(solver_diagnostics['nlp_residuals'])} | "
+            f"{self._diagnostic_array_string(solver_diagnostics['qp_residuals'])} | "
+            f"{self._diagnostic_array_string(solver_diagnostics['qp_status'])} | "
+            f"{self._diagnostic_array_string(solver_diagnostics['qp_iterations'])}"
+        )
+
     def solve_nlp(self):
         if self.solver is None:
             raise RuntimeError("RMPCC-MF solver is not initialized. Call setup() first.")
 
         start = time.time()
+        self._last_backup_status = None
         status = self._prepare_and_solve(self.solver)
         active_solver = self.solver
-        mode = "fast"
+        mode = "sqp_rti"
 
         if status != 0:
             print(f"Acados solver failed with status {status}")
@@ -1292,43 +1985,29 @@ class RMPCCOptimizer:
 
         self._has_shift_source = True
 
-        if self._debug_mf_enabled():
-            x_sol = np.stack([active_solver.get(i, "x") for i in range(self.N + 1)], axis=0)
-            if mode == "safe_stop" or self._last_mf_A is None or self._last_mf_c is None:
-                phi_sol, _, A_eval, c_eval = self._compute_mf_affine_data(x_sol)
-            else:
-                A_eval = self._last_mf_A
-                c_eval = self._last_mf_c
-                if self.psdf_wrapper is None:
-                    phi_sol = np.full((x_sol.shape[0],), 1000.0, dtype=float)
-                else:
-                    pose_t = torch.as_tensor(
-                        x_sol[:, :3],
-                        dtype=self.psdf_wrapper.A.dtype,
-                        device=self.psdf_wrapper.device,
-                    )
-                    phi_t, _ = self.psdf_wrapper(pose_t)
-                    phi_sol = phi_t.detach().cpu().numpy()
-
-            residuals = np.einsum("ij,ij->i", A_eval, x_sol) + c_eval
-            epsilon = float(self.param.chance_epsilon)
-            self._last_mf_residuals = residuals
-            self._last_mf_probability_sums = epsilon - residuals
-            self._last_local_covariances = self._covariance_state_to_matrix(x_sol[:, 4:8])
-            self._last_psdf_clearances = np.asarray(phi_sol, dtype=float)
-        else:
-            self._last_mf_residuals = None
-            self._last_mf_probability_sums = None
-            self._last_local_covariances = None
-            self._last_psdf_clearances = None
+        x_sol = np.stack(
+            [np.asarray(active_solver.get(i, "x"), dtype=float) for i in range(self.N + 1)],
+            axis=0,
+        )
+        diagnostics = self._build_constraint_diagnostics(
+            active_solver,
+            x_sol,
+            status,
+            mode,
+        )
 
         self._last_solve_mode = mode
         solve_time = time.time() - start
         self.solver_times.append(solve_time)
         if self._debug_mf_enabled():
-            min_residual = float(np.min(self._last_mf_residuals))
-            max_probability_sum = float(np.max(self._last_mf_probability_sums))
-            min_clearance = float(np.min(self._last_psdf_clearances))
+            self._print_constraint_diagnostics(diagnostics)
+            min_residual = float(np.nanmin(self._last_mf_residuals[1:]))
+            max_probability_sum = float(
+                np.nanmax(self._last_mf_probability_sums[1:])
+            )
+            min_clearance = float(
+                diagnostics["minimum_exact_psdf_predicted_nodes"]
+            )
             print(
                 f"solver time: {solve_time}, path_s: {self._current_s0}, "
                 f"mf_residual_min: {min_residual}, "

@@ -16,11 +16,11 @@ test_configs:
     dynamics_type: "differential_drive"
     path_planner: "astar"
 
-  # - maze_type: "s_path"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "rmpcc"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
+  - maze_type: "s_path"
+    robot_shape: "rectangle"
+    optimizer_type: "rmpcc"
+    dynamics_type: "differential_drive"
+    path_planner: "astar"
 
   # - maze_type: "s_path"
   #   robot_shape: "rectangle"
@@ -116,7 +116,7 @@ test_configs:
 # Common settings applied to all tests
 defaults:
   frame_skip: 2                # Animation frame skip (1=every frame, 5=every 5th frame)
-  simulation_time: 10.0         # Simulation time (seconds)
+  simulation_time: 20.0         # Simulation time (seconds)
   generate_animation: true      # Whether to generate animation (true/false)
   generate_plots: true          # Whether to generate static plots (true/false)
   plot_covariance: false        # Overlay RMPCC directional covariance axes/arcs on world plots

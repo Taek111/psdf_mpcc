@@ -79,14 +79,16 @@ class BaseController:
             u_stage0 = u_opt[:, 0]
             if hasattr(self._optimizer, "record_plant_input_applied"):
                 self._optimizer.record_plant_input_applied()
-            print(f"plant_input_stage0: full={u_stage0}, physical={u_stage0[:2]}")
+            if not getattr(self._optimizer, "prints_compact_runtime_summary", False):
+                print(f"plant_input_stage0: full={u_stage0}, physical={u_stage0[:2]}")
             return u_stage0
                   
         except Exception:
             u_stage0 = self._opt_sol.value(self._optimizer.variables["u"][:, 0])
             if hasattr(self._optimizer, "record_plant_input_applied"):
                 self._optimizer.record_plant_input_applied()
-            print(f"plant_input_stage0: full={u_stage0}, physical={u_stage0[:2]}")
+            if not getattr(self._optimizer, "prints_compact_runtime_summary", False):
+                print(f"plant_input_stage0: full={u_stage0}, physical={u_stage0[:2]}")
             return u_stage0
 
     def logging(self, logger):

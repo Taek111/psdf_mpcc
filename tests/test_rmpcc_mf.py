@@ -1,4 +1,7 @@
+import io
+import time
 import unittest
+from contextlib import redirect_stdout
 
 import casadi as ca
 import numpy as np
@@ -123,7 +126,7 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
         self.optimizer.ocp = None
 
     def _setup_constraint_ocp(self):
-        self.optimizer.setup_ocp(self.param, None)
+        self.optimizer.setup_ocp(self.param)
         verts = torch.tensor(
             [[-0.1, -0.05], [0.1, -0.05], [0.1, 0.05], [-0.1, 0.05]],
             dtype=torch.float32,
@@ -133,7 +136,7 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
             K_max=2,
             E_max=4,
         )
-        self.optimizer.add_obstacle_avoidance_constraint(self.param, None, None)
+        self.optimizer.add_obstacle_avoidance_constraint(self.param, None)
 
     def test_parameter_layout_and_exact_two_raw_affine_rows(self):
         self._setup_constraint_ocp()
@@ -282,6 +285,7 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
         np.testing.assert_allclose(lower_slacks[1:, 1], [0.01, 0.02, 0.03])
 
     def test_guard_coefficients_and_stagewise_mf_mask(self):
+        self.param.use_row_mf = True
         self.param.d_col = 0.03
         self.param.d_mf_mask = 0.05
         epsilon = float(self.param.chance_epsilon)
@@ -350,7 +354,35 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
         self.assertNotIn("guard_scale", data)
         self.assertNotIn("mf_scale", data)
 
+    def test_mf_mask_uses_strict_phi_threshold(self):
+        self.param.use_row_mf = True
+        self.param.d_mf_mask = 0.05
+        z_bar = np.zeros((4, 8), dtype=float)
+        phi = np.array(
+            [
+                0.10,
+                self.param.d_mf_mask,
+                np.nextafter(self.param.d_mf_mask, np.inf),
+                np.nextafter(self.param.d_mf_mask, -np.inf),
+            ]
+        )
+        gradient = np.tile(np.array([1.0, 0.0, 0.0]), (4, 1))
+        mf_A_raw = np.ones((4, 8), dtype=float)
+        mf_c_raw = -np.ones(4, dtype=float)
+        self.optimizer._compute_mf_affine_data = lambda _: (
+            phi.copy(),
+            gradient.copy(),
+            mf_A_raw.copy(),
+            mf_c_raw.copy(),
+        )
+
+        data = self.optimizer._compute_constraint_affine_data(z_bar)
+
+        np.testing.assert_array_equal(data["mf_valid"], np.ones(4, dtype=bool))
+        np.testing.assert_array_equal(data["mf_mask"], [True, False, True, False])
+
     def test_row_mf_option_masks_only_mf_row_and_preserves_hard_guard(self):
+        self.param.use_row_mf = True
         self.assertTrue(self.param.use_row_mf)
         self.assertFalse(hasattr(self.param, "use_row_g"))
         self.param.d_mf_mask = 0.0
@@ -435,6 +467,7 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
         )
 
     def test_batch_mf_failure_falls_back_and_masks_only_failed_stage(self):
+        self.param.use_row_mf = True
         self.param.d_col = 0.03
         self.param.d_mf_mask = 0.0
         epsilon = float(self.param.chance_epsilon)
@@ -483,6 +516,222 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
         self.assertTrue(np.isnan(data["mf_c_raw"][failed_stage]))
         np.testing.assert_allclose(data["mf_A"][failed_stage], np.zeros(8))
         self.assertAlmostEqual(data["mf_c"][failed_stage], epsilon)
+
+    def test_infeasibility_classification_excludes_inactive_mf_row(self):
+        diagnostics = {
+            "guard_affine_residual": np.array([np.nan, -0.01, 0.02, 0.03]),
+            "mf_affine_residual": np.array([np.nan, 0.20, 0.20, 0.20]),
+            "mf_mask": np.zeros(4, dtype=bool),
+            "solver": {
+                "qp_fixed_row_lower_residual": np.array(
+                    [
+                        [np.nan, np.nan],
+                        [-0.01, 0.20],
+                        [0.02, 0.20],
+                        [0.03, 0.20],
+                    ]
+                ),
+                "nlp_residuals": np.zeros(4),
+            },
+            "bounds": {
+                "state_stages": np.arange(1, 4),
+                "state_names": np.array(["s"]),
+                "state_lower_residual": np.ones((3, 1)),
+                "state_upper_residual": np.ones((3, 1)),
+                "input_stages": np.arange(3),
+                "input_names": np.array(["v", "omega", "v_s"]),
+                "input_lower_residual": np.ones((3, 3)),
+                "input_upper_residual": np.ones((3, 3)),
+            },
+        }
+
+        summary = self.optimizer._classify_infeasibility_candidates(diagnostics)
+
+        self.assertEqual(len(summary["candidates"]), 1)
+        self.assertEqual(
+            summary["candidates"][0]["constraint"],
+            "row_g_hard_guard",
+        )
+        np.testing.assert_array_equal(
+            summary["inactive_mf_violation_stages"],
+            np.array([], dtype=int),
+        )
+
+    def test_solve_skips_diagnostics_when_debug_is_disabled(self):
+        states = np.zeros((4, 8), dtype=float)
+        inputs_ = np.zeros((3, 3), dtype=float)
+        self.optimizer.solver = _FakeSolver(states, inputs_)
+        self.optimizer._prepare_and_solve = lambda _: 0
+        self.param.debug_mf = False
+        self.param.debug_infeasibility = False
+        calls = []
+        self.optimizer.compute_diagnostics = lambda *args, **kwargs: calls.append(
+            (args, kwargs)
+        )
+
+        solution = self.optimizer.solve_nlp()
+
+        self.assertEqual(calls, [])
+        self.assertIsNone(self.optimizer.get_last_constraint_diagnostics())
+        self.assertEqual(solution.get_state_trajectory().shape, (8, 4))
+        self.assertEqual(solution.get_input_trajectory().shape, (3, 3))
+
+    def test_diagnostic_reporting_failure_does_not_interrupt_control(self):
+        states = np.zeros((4, 8), dtype=float)
+        solver = _FakeSolver(states, np.zeros((3, 3), dtype=float))
+        expected = {"snapshot": "complete"}
+        self.optimizer._build_constraint_diagnostics = (
+            lambda *args, **kwargs: expected
+        )
+
+        def fail_to_report(_):
+            raise RuntimeError("formatting failed")
+
+        self.optimizer._print_constraint_diagnostics = fail_to_report
+
+        result = self.optimizer.compute_diagnostics(
+            solver,
+            0,
+            "sqp_rti",
+            report=True,
+        )
+
+        self.assertIs(result, expected)
+        self.assertEqual(self.optimizer.get_last_constraint_diagnostics(), expected)
+
+    def test_failed_solve_diagnostics_run_before_recovery(self):
+        states = np.zeros((4, 8), dtype=float)
+        inputs_ = np.zeros((3, 3), dtype=float)
+        solver = _FakeSolver(states, inputs_)
+        self.optimizer.solver = solver
+        self.optimizer._prepare_and_solve = lambda _: 1
+        self.optimizer._report_solver_failure = lambda _: None
+        self.param.debug_mf = False
+        self.param.debug_infeasibility = True
+        events = []
+
+        def compute(*args, **kwargs):
+            events.append(("diagnostics", kwargs["failed"]))
+            return None
+
+        def recover(status):
+            events.append(("recovery", status))
+            return solver, status, "safe_stop"
+
+        self.optimizer.compute_diagnostics = compute
+        self.optimizer.recovery_infeasible = recover
+
+        self.optimizer.solve_nlp()
+
+        self.assertEqual(events, [("diagnostics", True), ("recovery", 1)])
+
+    def test_failed_diagnostic_report_error_does_not_block_recovery(self):
+        states = np.zeros((4, 8), dtype=float)
+        inputs_ = np.zeros((3, 3), dtype=float)
+        solver = _FakeSolver(states, inputs_)
+        self.optimizer.solver = solver
+        self.optimizer._prepare_and_solve = lambda _: 1
+        self.optimizer._report_solver_failure = lambda _: None
+        self.param.debug_mf = False
+        self.param.debug_infeasibility = True
+        self.optimizer.compute_diagnostics = lambda *args, **kwargs: {
+            "snapshot": "failed"
+        }
+
+        def fail_to_report(_):
+            raise RuntimeError("formatting failed")
+
+        self.optimizer._print_infeasibility_diagnostics = fail_to_report
+        recovery_statuses = []
+
+        def recover(status):
+            recovery_statuses.append(status)
+            return solver, status, "safe_stop"
+
+        self.optimizer.recovery_infeasible = recover
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.optimizer.solve_nlp()
+
+        self.assertEqual(recovery_statuses, [1])
+        self.assertIn(
+            "could not report failed diagnostics",
+            output.getvalue(),
+        )
+
+    def test_constraint_log_keeps_only_feasibility_fields(self):
+        diagnostics = {
+            "constraint_stages": np.arange(1, 4),
+            "d_mf_mask": 0.1,
+            "mf_activation_phi": np.array([0.0, 0.2, 0.05, 0.3]),
+            "mf_domain_eligible": np.array([False, True, False, True]),
+            "mf_valid": np.array([False, True, True, True]),
+            "mf_mask": np.array([False, True, False, True]),
+            "guard_affine_residual": np.array([np.nan, 0.01, -0.02, 0.03]),
+            "mf_affine_residual": np.array([np.nan, -0.01, 0.2, 0.04]),
+            "mf_lower_slack": np.array([np.nan, 0.02, 0.0, 0.0]),
+            "solver": {
+                "qp_fixed_row_lower_residual": np.array(
+                    [
+                        [np.nan, np.nan],
+                        [0.01, 0.01],
+                        [-0.02, 0.2],
+                        [0.03, 0.04],
+                    ]
+                )
+            },
+        }
+
+        self.optimizer._record_constraint_log(diagnostics)
+
+        rows = self.optimizer.get_constraint_log_rows()
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(set(rows[0]), set(self.optimizer.CONSTRAINT_LOG_FIELDS))
+        self.assertTrue(rows[0]["mf_active"])
+        self.assertFalse(rows[0]["row_m_feasible_before_slack"])
+        self.assertTrue(rows[0]["row_m_feasible_after_slack"])
+        self.assertFalse(rows[1]["mf_active"])
+        self.assertIsNone(rows[1]["row_m_residual_before_slack"])
+        self.assertIsNone(rows[1]["row_m_feasible_after_slack"])
+        self.assertFalse(rows[1]["row_g_feasible"])
+
+    def test_compact_runtime_summary_omits_solver_mode(self):
+        states = np.zeros((4, 8), dtype=float)
+        solver = _FakeSolver(states, np.zeros((3, 3), dtype=float))
+        diagnostics = {
+            "guard_affine_residual": np.array([np.nan, 0.01, 0.02, 0.03]),
+            "minimum_exact_psdf_predicted_nodes": 0.012,
+            "mf_mask": np.array([False, True, False, True]),
+            "mf_lower_slack": np.array([np.nan, 0.0, 0.0, 0.002]),
+            "solver": {
+                "qp_fixed_row_lower_residual": np.array(
+                    [
+                        [np.nan, np.nan],
+                        [0.01, 0.004],
+                        [0.02, 0.2],
+                        [0.03, 0.006],
+                    ]
+                )
+            },
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            self.optimizer._finish_solve(
+                time.time(),
+                "sqp_rti",
+                0,
+                solver,
+                diagnostics=diagnostics,
+            )
+
+        summary = output.getvalue().strip()
+        self.assertIn("[RMPCC 0000] OK", summary)
+        self.assertIn("PSDFmin=+0.012", summary)
+        self.assertIn("G=OK(+0.01)", summary)
+        self.assertIn("MF=OK(active=2/3,min=+0.004,slack=+0.002)", summary)
+        self.assertNotIn("mode=", summary)
+        self.assertEqual(len(summary.splitlines()), 1)
 
     def test_shifted_nominal_stage_alignment_and_covariance_repropagation(self):
         states = np.zeros((4, 8), dtype=float)

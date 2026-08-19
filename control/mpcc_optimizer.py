@@ -9,7 +9,14 @@ from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 from control.analytic_psdf_casadi import AnalyticPSDFCasADi
 from models.geometry_utils import polygon_to_edges
 from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
-from planning.trajectory_generator.spline_reference_generator import build_cubic_spline_path_data
+from utils.acados_diagnostics import report_solver_failure
+from utils.spline_path import (
+    clamp_progress,
+    normalize_path_data,
+    progress_bounds,
+    project_progress,
+    stage_parameter,
+)
 
 
 class MPCCOptimizerParam:
@@ -95,7 +102,6 @@ class MPCCOptimizer:
         self.psdf_param_dim = 0
         self.path_param_slice = slice(0, 0)
         self.psdf_param_slice = slice(0, 0)
-        self._path_params = None
         self._prev_predicted_s = 0.0
         self._current_s0 = 0.0
         self._has_prev_predicted_s = False
@@ -131,7 +137,6 @@ class MPCCOptimizer:
         self.psdf_param_dim = 0
         self.path_param_slice = slice(0, 0)
         self.psdf_param_slice = slice(0, 0)
-        self._path_params = None
         self._prev_predicted_s = 0.0
         self._current_s0 = 0.0
         self._has_prev_predicted_s = False
@@ -241,110 +246,14 @@ class MPCCOptimizer:
         model.cost_expr_ext_cost_e = cost_terminal
         return model
 
-    def _build_path_data_from_polyline(self, polyline):
-        return build_cubic_spline_path_data(polyline)
-
-    def _normalize_reference_path_data(self, reference_path_data):
-        if isinstance(reference_path_data, np.ndarray):
-            return self._build_path_data_from_polyline(reference_path_data)
-
-        if isinstance(reference_path_data, dict):
-            def _pick(keys):
-                for key in keys:
-                    if key in reference_path_data and reference_path_data[key] is not None:
-                        return reference_path_data[key]
-                return None
-
-            seg_x_raw = _pick(["segments_x", "coeff_x", "cx"])
-            seg_y_raw = _pick(["segments_y", "coeff_y", "cy"])
-            s_breaks_raw = _pick(["s_breaks", "S", "s_nodes", "segment_bounds"])
-            if seg_x_raw is None or seg_y_raw is None or s_breaks_raw is None:
-                raise ValueError(
-                    "reference_path_data dict must contain spline coefficients and s-breaks."
-                )
-
-            seg_x = np.asarray(seg_x_raw, dtype=float)
-            seg_y = np.asarray(seg_y_raw, dtype=float)
-            s_breaks = np.asarray(s_breaks_raw, dtype=float).reshape(-1)
-            n_segments = int(reference_path_data.get("n_segments", seg_x.shape[0]))
-            if seg_x.shape != seg_y.shape or seg_x.shape[1] != 4:
-                raise ValueError("segments_x/segments_y must have shape [n_segments, 4].")
-            if s_breaks.shape[0] < n_segments + 1:
-                raise ValueError("s_breaks must have length >= n_segments + 1.")
-            return {
-                "segments_x": seg_x,
-                "segments_y": seg_y,
-                "s_breaks": s_breaks,
-                "n_segments": n_segments,
-            }
-
-        raise ValueError("reference_path_data must be ndarray or dict.")
-
-    def _reference_eval_numeric(self, s, path_data):
-        s = float(s)
-        n_seg = int(path_data["n_segments"])
-        if n_seg <= 0:
-            return np.zeros((2,), dtype=float)
-
-        s_breaks = np.asarray(path_data["s_breaks"], dtype=float)
-        s_min = float(s_breaks[0])
-        s_max = float(s_breaks[n_seg])
-        s_clamped = float(np.clip(s, s_min, s_max))
-
-        seg_idx = int(np.searchsorted(s_breaks[1:n_seg + 1], s_clamped, side="right"))
-        seg_idx = int(np.clip(seg_idx, 0, n_seg - 1))
-        s_left = float(s_breaks[seg_idx])
-        tau = s_clamped - s_left
-
-        cx = np.asarray(path_data["segments_x"][seg_idx], dtype=float)
-        cy = np.asarray(path_data["segments_y"][seg_idx], dtype=float)
-        x_ref = cx[0] + cx[1] * tau + cx[2] * tau * tau + cx[3] * tau * tau * tau
-        y_ref = cy[0] + cy[1] * tau + cy[2] * tau * tau + cy[3] * tau * tau * tau
-        return np.array([x_ref, y_ref], dtype=float)
-
-    def _reference_tangent_numeric(self, s, path_data):
-        n_seg = int(path_data["n_segments"])
-        if n_seg <= 0:
-            return np.array([1.0, 0.0], dtype=float)
-
-        s_breaks = np.asarray(path_data["s_breaks"], dtype=float)
-        s_min = float(s_breaks[0])
-        s_max = float(s_breaks[n_seg])
-        s_clamped = float(np.clip(float(s), s_min, s_max))
-
-        seg_idx = int(np.searchsorted(s_breaks[1:n_seg + 1], s_clamped, side="right"))
-        seg_idx = int(np.clip(seg_idx, 0, n_seg - 1))
-        s_left = float(s_breaks[seg_idx])
-        tau = s_clamped - s_left
-
-        cx = np.asarray(path_data["segments_x"][seg_idx], dtype=float)
-        cy = np.asarray(path_data["segments_y"][seg_idx], dtype=float)
-        dx_ds = cx[1] + 2.0 * cx[2] * tau + 3.0 * cx[3] * tau * tau
-        dy_ds = cy[1] + 2.0 * cy[2] * tau + 3.0 * cy[3] * tau * tau
-        t_vec = np.array([dx_ds, dy_ds], dtype=float)
-
-        tangent_reg = max(float(getattr(getattr(self, "param", None), "tangent_reg_delta", 1e-6)), 1e-9)
-        t_norm = float(np.linalg.norm(t_vec))
-        if t_norm <= tangent_reg:
-            fd_eps = max(float(getattr(getattr(self, "param", None), "fd_eps", 1e-3)), 1e-4)
-            s_prev = float(np.clip(s_clamped - fd_eps, s_min, s_max))
-            s_next = float(np.clip(s_clamped + fd_eps, s_min, s_max))
-            if s_next > s_prev + 1e-10:
-                p_prev = self._reference_eval_numeric(s_prev, path_data)
-                p_next = self._reference_eval_numeric(s_next, path_data)
-                t_vec = p_next - p_prev
-                t_norm = float(np.linalg.norm(t_vec))
-
-        if t_norm <= tangent_reg:
-            return np.array([1.0, 0.0], dtype=float)
-        return t_vec / (t_norm + tangent_reg)
-
     def _build_stage_path_parameter(self, s_value):
-        if self.reference_path_data is None:
-            return np.array([0.0, 0.0, 1.0, 0.0, float(s_value)], dtype=float)
-        p_ref = self._reference_eval_numeric(s_value, self.reference_path_data)
-        t_ref = self._reference_tangent_numeric(s_value, self.reference_path_data)
-        return np.array([p_ref[0], p_ref[1], t_ref[0], t_ref[1], float(s_value)], dtype=float)
+        return stage_parameter(
+            self.reference_path_data,
+            s_value,
+            getattr(self.param, "tangent_reg_delta", 1e-6),
+            getattr(self.param, "fd_eps", 1e-3),
+            include_curvature=False,
+        )
 
     def _predict_stage_s_values(self, s0, s_lower, s_upper):
         s_values = np.zeros((self.N + 1,), dtype=float)
@@ -378,101 +287,25 @@ class MPCCOptimizer:
 
         return s_values
 
-    def _closest_s_on_path_segments(self, position_xy):
-        if self.reference_path_data is None:
-            return 0.0
-
-        n_seg = int(self.reference_path_data["n_segments"])
-        if n_seg <= 0:
-            return 0.0
-
-        pos = np.asarray(position_xy, dtype=float).reshape(2)
-        best_dist = np.inf
-        best_s = float(self.reference_path_data["s_breaks"][0])
-
-        for i in range(n_seg):
-            s_left = float(self.reference_path_data["s_breaks"][i])
-            s_right = float(self.reference_path_data["s_breaks"][i + 1])
-            ds = max(s_right - s_left, 1e-6)
-
-            cx = self.reference_path_data["segments_x"][i]
-            cy = self.reference_path_data["segments_y"][i]
-            p0 = np.array([cx[0], cy[0]], dtype=float)
-            tau1 = ds
-            p1 = np.array(
-                [
-                    cx[0] + cx[1] * tau1 + cx[2] * tau1 * tau1 + cx[3] * tau1 * tau1 * tau1,
-                    cy[0] + cy[1] * tau1 + cy[2] * tau1 * tau1 + cy[3] * tau1 * tau1 * tau1,
-                ],
-                dtype=float,
-            )
-
-            vec = p1 - p0
-            denom = float(np.dot(vec, vec))
-            if denom <= 1e-12:
-                t = 0.0
-            else:
-                t = float(np.clip(np.dot(pos - p0, vec) / denom, 0.0, 1.0))
-
-            proj = p0 + t * vec
-            dist = float(np.linalg.norm(pos - proj))
-            if dist < best_dist:
-                best_dist = dist
-                best_s = s_left + t * ds
-
-        return self._clamp_s(best_s)
-
     def _clamp_s(self, s_value):
-        if self.reference_path_data is None:
-            return max(0.0, float(s_value))
-        s_min = float(self.reference_path_data["s_breaks"][0])
-        s_max = float(self.reference_path_data["s_breaks"][int(self.reference_path_data["n_segments"])])
-        return float(np.clip(s_value, s_min, s_max))
+        return clamp_progress(self.reference_path_data, s_value)
 
     def _project_s_with_line_search(self, position_xy, param):
-        if self.reference_path_data is None:
-            return 0.0
-
-        s_min = float(self.reference_path_data["s_breaks"][0])
-        s_max = float(self.reference_path_data["s_breaks"][int(self.reference_path_data["n_segments"])])
-        s_closest = self._closest_s_on_path_segments(position_xy)
-        center = s_closest if not self._has_prev_predicted_s else self._clamp_s(self._prev_predicted_s)
-
-        half_window = max(float(param.line_search_window), 1e-3)
-        num_samples = max(int(param.line_search_samples), 5)
-        lower = max(s_min, center - half_window)
-        upper = min(s_max, center + half_window)
-
-        if upper <= lower:
-            return center
-
-        s_grid = np.linspace(lower, upper, num_samples)
-        dists = np.empty_like(s_grid)
-        for i, s in enumerate(s_grid):
-            p_ref = self._reference_eval_numeric(s, self.reference_path_data)
-            dists[i] = np.linalg.norm(position_xy - p_ref)
-        s_line = float(s_grid[int(np.argmin(dists))])
-
-        # If line-search around previous prediction is clearly worse, fall back to closest-segment estimate.
-        p_line = self._reference_eval_numeric(s_line, self.reference_path_data)
-        p_closest = self._reference_eval_numeric(s_closest, self.reference_path_data)
-        if np.linalg.norm(position_xy - p_closest) + 1e-6 < np.linalg.norm(position_xy - p_line):
-            return s_closest
-        return s_line
+        previous_s = self._prev_predicted_s if self._has_prev_predicted_s else None
+        return project_progress(
+            self.reference_path_data,
+            position_xy,
+            previous_s,
+            param.line_search_window,
+            param.line_search_samples,
+        )
 
     def _get_current_s_bounds(self, param):
-        if self.reference_path_data is None:
-            return 0.0, float(param.s_upper_guard)
-        s_min = float(self.reference_path_data["s_breaks"][0])
-        s_max = float(self.reference_path_data["s_breaks"][int(self.reference_path_data["n_segments"])])
-        s_upper = min(s_max, float(param.s_upper_guard))
-        if s_upper < s_min:
-            s_upper = s_min
-        return s_min, s_upper
+        return progress_bounds(self.reference_path_data, param.s_upper_guard)
 
     def update_reference_path_params(self, reference_path_data, state):
         if reference_path_data is not None:
-            self.reference_path_data = self._normalize_reference_path_data(reference_path_data)
+            self.reference_path_data = normalize_path_data(reference_path_data)
         if self.reference_path_data is None:
             return None
 
@@ -483,13 +316,12 @@ class MPCCOptimizer:
             backtrack_tol = max(float(getattr(self.param, "s_backtrack_tolerance", 0.03)), 0.0)
             s_floor = self._clamp_s(self._prev_predicted_s - backtrack_tol)
             self._current_s0 = max(self._current_s0, s_floor)
-        self._path_params = None
         return self._current_s0
 
     def set_reference_trajectory(self, reference_path_data):
         if reference_path_data is None:
             return
-        self.reference_path_data = self._normalize_reference_path_data(reference_path_data)
+        self.reference_path_data = normalize_path_data(reference_path_data)
 
     def setup_ocp(self, param, reference_path_data):
         self.ocp = AcadosOcp()
@@ -764,19 +596,14 @@ class MPCCOptimizer:
         print(f"solver time: {solve_time}, path_s: {self._current_s0}")
 
         if status != 0:
-            print(f"Acados solver failed with status {status}")
-            if status == 2:
-                print("Acados reached the maximum SQP iterations before meeting the configured tolerance.")
-            try:
-                residuals = np.asarray(self.solver.get_residuals(), dtype=float)
-                print(f"Acados residuals [stat, eq, ineq, comp]: {residuals}")
-            except Exception:
-                pass
-            try:
-                sqp_iter = int(self.solver.get_stats("sqp_iter"))
-                print(f"Acados SQP iterations: {sqp_iter}")
-            except Exception:
-                pass
+            report_solver_failure(
+                self.solver,
+                status,
+                max_iteration_message=(
+                    "Acados reached the maximum SQP iterations before meeting "
+                    "the configured tolerance."
+                ),
+            )
             # Prevent failed iterate from poisoning next-step projection center.
             self._prev_predicted_s = self._clamp_s(self._current_s0)
             self._has_prev_predicted_s = False

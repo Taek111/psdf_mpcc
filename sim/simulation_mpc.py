@@ -1516,6 +1516,44 @@ class simulation_mpc:
             writer.writerows(rows)
         print(f"RMPCC constraint history saved to {filepath}")
 
+    def save_rmpcc_debug_history_to_csv(self):
+        """Save the compact tuning records in the current run directory."""
+        controller = getattr(self.robot, "_controller", None)
+        optimizer = getattr(controller, "_optimizer", None)
+        if optimizer is None:
+            return
+
+        output_dir = self._get_output_dir("data")
+        exports = (
+            (
+                "cycle_raw.csv",
+                "get_cycle_log_rows",
+                "get_cycle_log_fields",
+            ),
+            (
+                "covariance_trajectory.csv",
+                "get_covariance_log_rows",
+                "get_covariance_log_fields",
+            ),
+        )
+        for filename, rows_method, fields_method in exports:
+            if not hasattr(optimizer, rows_method) or not hasattr(
+                optimizer, fields_method
+            ):
+                continue
+            rows = getattr(optimizer, rows_method)()
+            if not rows:
+                continue
+            filepath = os.path.join(output_dir, filename)
+            with open(filepath, "w", newline="", encoding="utf-8") as csv_file:
+                writer = csv.DictWriter(
+                    csv_file,
+                    fieldnames=getattr(optimizer, fields_method)(),
+                )
+                writer.writeheader()
+                writer.writerows(rows)
+            print(f"RMPCC debug history saved to {filepath}")
+
     def mpc_test(self, maze_type, robot_shape, optimizer_type="casadi", dynamics_type="differential_drive", path_planner="astar", simulation_time=20.0, config=None):
         """
         Run MPC test with specified optimizer and dynamics.
@@ -2003,6 +2041,7 @@ class simulation_mpc:
             self.save_rmpcc_constraint_history_to_csv(
                 f"rmpcc_constraints_{self.current_name}"
             )
+            self.save_rmpcc_debug_history_to_csv()
 
         # Save pose-SDF data to CSV for PSDF-family optimizers
         if optimizer_type in ("psdf", "mpcc", "rmpcc", "rmpcc_pv"):

@@ -1,4 +1,5 @@
 import io
+import json
 import time
 import unittest
 from contextlib import redirect_stdout
@@ -42,6 +43,14 @@ class _FakeSolver:
             return self.states[stage].copy()
         if field == "u":
             return self.inputs[stage].copy()
+        raise KeyError(field)
+    def set(self, stage, field, value):
+        if field == "x":
+            self.states[stage] = np.asarray(value, dtype=float)
+            return
+        if field == "u":
+            self.inputs[stage] = np.asarray(value, dtype=float)
+            return
         raise KeyError(field)
 
 
@@ -125,6 +134,23 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
     def tearDown(self):
         self.optimizer.ocp = None
 
+    def test_default_covariance_growth_scale_is_point_three(self):
+        self.assertAlmostEqual(self.param.covariance_growth_scale, 0.3)
+        expected = {
+            "alpha_f": 0.0006,
+            "alpha_v": 0.00012,
+            "alpha_kappa": 0.003,
+            "beta_v": 0.006,
+            "beta_kappa": 0.0024,
+            "beta_omega": 0.0024,
+        }
+        for key, value in expected.items():
+            self.assertAlmostEqual(
+                getattr(self.param, key),
+                value,
+                msg=f"unexpected default for {key}",
+            )
+
     def _setup_constraint_ocp(self):
         self.optimizer.setup_ocp(self.param)
         verts = torch.tensor(
@@ -137,6 +163,64 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
             E_max=4,
         )
         self.optimizer.add_obstacle_avoidance_constraint(self.param, None)
+
+    def test_pv_and_mf_models_share_covariance_dynamics_and_mpcc_cost(self):
+        pv_param = RMPCCPVOptimizerParam()
+        pv_param.horizon = self.param.horizon
+        pv_param.tf = self.param.tf
+        for key in (
+            "alpha_f",
+            "alpha_v",
+            "alpha_kappa",
+            "beta_v",
+            "beta_kappa",
+            "beta_omega",
+        ):
+            setattr(pv_param, key, getattr(self.param, key))
+        pv_optimizer = RMPCCPVOptimizer()
+
+        mf_model = self.optimizer.create_model(self.param)
+        pv_model = pv_optimizer.create_model(pv_param)
+        state = np.array(
+            [0.2, -0.1, 0.3, 0.4, 1e-4, 2e-4, 3e-4, -4e-5],
+            dtype=float,
+        )
+        control = np.array([0.35, -0.25, 0.3], dtype=float)
+        path_param = np.array([0.1, -0.2, 0.8, 0.6, 0.35, -0.4])
+        mf_param = np.zeros(int(mf_model.p.shape[0]), dtype=float)
+        pv_param_value = np.zeros(int(pv_model.p.shape[0]), dtype=float)
+        mf_param[:6] = path_param
+        pv_param_value[:6] = path_param
+
+        mf_eval = ca.Function(
+            "test_mf_common_model",
+            [mf_model.x, mf_model.u, mf_model.p],
+            [mf_model.f_expl_expr, mf_model.cost_expr_ext_cost],
+        )
+        pv_eval = ca.Function(
+            "test_pv_common_model",
+            [pv_model.x, pv_model.u, pv_model.p],
+            [pv_model.f_expl_expr, pv_model.cost_expr_ext_cost],
+        )
+        mf_dynamics, mf_cost = mf_eval(state, control, mf_param)
+        pv_dynamics, pv_cost = pv_eval(state, control, pv_param_value)
+
+        np.testing.assert_allclose(
+            np.asarray(mf_dynamics),
+            np.asarray(pv_dynamics),
+            rtol=0.0,
+            atol=1e-14,
+        )
+        np.testing.assert_allclose(
+            np.asarray(mf_cost),
+            np.asarray(pv_cost),
+            rtol=0.0,
+            atol=1e-14,
+        )
+        np.testing.assert_allclose(
+            self.optimizer._build_initial_covariance_state(self.param),
+            pv_optimizer._build_initial_covariance_state(pv_param),
+        )
 
     def test_parameter_layout_and_exact_two_raw_affine_rows(self):
         self._setup_constraint_ocp()
@@ -379,7 +463,49 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
         data = self.optimizer._compute_constraint_affine_data(z_bar)
 
         np.testing.assert_array_equal(data["mf_valid"], np.ones(4, dtype=bool))
-        np.testing.assert_array_equal(data["mf_mask"], [True, False, True, False])
+        np.testing.assert_array_equal(data["mf_mask"], [False, False, True, False])
+
+    def test_mf_active_window_separates_intermediate_and_terminal_stages(self):
+        self.param.use_row_mf = True
+        self.param.d_mf_mask = 0.0
+        self.param.mf_active_start_step = 1
+        self.param.mf_active_end_step = 1
+        self.param.mf_active_terminal = False
+        z_bar = np.zeros((4, 8), dtype=float)
+        phi = np.full(4, 0.2, dtype=float)
+        gradient = np.tile(np.array([1.0, 0.0, 0.0]), (4, 1))
+        mf_A_raw = np.ones((4, 8), dtype=float)
+        mf_c_raw = -np.ones(4, dtype=float)
+        self.optimizer._compute_mf_affine_data = lambda _: (
+            phi.copy(),
+            gradient.copy(),
+            mf_A_raw.copy(),
+            mf_c_raw.copy(),
+        )
+
+        data = self.optimizer._compute_constraint_affine_data(z_bar)
+        np.testing.assert_array_equal(
+            data["mf_stage_mask"],
+            [False, True, False, False],
+        )
+        np.testing.assert_array_equal(
+            data["mf_mask"],
+            [False, True, False, False],
+        )
+
+        self.param.mf_active_end_step = 20
+        data = self.optimizer._compute_constraint_affine_data(z_bar)
+        np.testing.assert_array_equal(
+            data["mf_stage_mask"],
+            [False, True, True, False],
+        )
+
+        self.param.mf_active_terminal = True
+        data = self.optimizer._compute_constraint_affine_data(z_bar)
+        np.testing.assert_array_equal(
+            data["mf_stage_mask"],
+            [False, True, True, True],
+        )
 
     def test_row_mf_option_masks_only_mf_row_and_preserves_hard_guard(self):
         self.param.use_row_mf = True
@@ -501,9 +627,9 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
         )
         np.testing.assert_allclose(data["guard_c"], expected_guard_c)
         np.testing.assert_array_equal(data["mf_valid"], [True, True, False, True])
-        np.testing.assert_array_equal(data["mf_mask"], [True, True, False, True])
+        np.testing.assert_array_equal(data["mf_mask"], [False, True, False, True])
 
-        for stage in (0, 1, 3):
+        for stage in (1, 3):
             expected_A = wrapper.expected_mf_A(stage).numpy()
             np.testing.assert_allclose(data["mf_A_raw"][stage], expected_A)
             np.testing.assert_allclose(data["mf_A"][stage], expected_A)
@@ -511,6 +637,12 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
                 data["mf_c"][stage],
                 wrapper.expected_mf_c(stage),
             )
+
+        np.testing.assert_allclose(
+            data["mf_A_raw"][0], wrapper.expected_mf_A(0).numpy()
+        )
+        np.testing.assert_allclose(data["mf_A"][0], np.zeros(8))
+        self.assertAlmostEqual(data["mf_c"][0], epsilon)
 
         self.assertTrue(np.isnan(data["mf_A_raw"][failed_stage]).all())
         self.assertTrue(np.isnan(data["mf_c_raw"][failed_stage]))
@@ -695,6 +827,65 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
         self.assertIsNone(rows[1]["row_m_feasible_after_slack"])
         self.assertFalse(rows[1]["row_g_feasible"])
 
+    def test_compact_cycle_and_covariance_logs_use_eight_fields(self):
+        states = np.zeros((4, 8), dtype=float)
+        states[:, 4:7] = np.array([1e-4, 4e-4, 9e-4])
+        inputs_ = np.array(
+            [
+                [0.1, 0.01, 0.1],
+                [0.2, 0.02, 0.2],
+                [0.3, 0.03, 0.3],
+            ],
+            dtype=float,
+        )
+        solver = _FakeSolver(states, inputs_)
+        self.optimizer._last_nominal_probability_sum = np.array(
+            [np.nan, 0.1, 0.2, 0.3],
+            dtype=float,
+        )
+        self.optimizer._last_main_status = 0
+        diagnostics = {
+            "exact_current_psdf": 0.012,
+            "mf_lower_slack": np.array([np.nan, 0.01, 0.02, 0.03]),
+        }
+
+        self.optimizer._record_experiment_logs(
+            "sqp_rti",
+            0,
+            solver,
+            diagnostics,
+        )
+
+        cycle_rows = self.optimizer.get_cycle_log_rows()
+        self.assertEqual(len(cycle_rows), 1)
+        self.assertEqual(
+            set(cycle_rows[0]),
+            set(self.optimizer.CYCLE_LOG_FIELDS),
+        )
+        self.assertEqual(len(self.optimizer.CYCLE_LOG_FIELDS), 8)
+        self.assertEqual(
+            json.loads(cycle_rows[0]["mf_probability_sum"]),
+            [None, 0.1, 0.2, 0.3],
+        )
+
+        covariance_rows = self.optimizer.get_covariance_log_rows()
+        self.assertEqual(len(covariance_rows), 4)
+        self.assertEqual(
+            set(covariance_rows[0]),
+            set(self.optimizer.COVARIANCE_LOG_FIELDS),
+        )
+        self.assertEqual(len(self.optimizer.COVARIANCE_LOG_FIELDS), 8)
+        np.testing.assert_allclose(
+            [
+                covariance_rows[0]["sigma_f"],
+                covariance_rows[0]["sigma_l"],
+                covariance_rows[0]["sigma_psi"],
+            ],
+            [0.01, 0.02, 0.03],
+        )
+        self.assertIsNone(covariance_rows[-1]["v"])
+        self.assertIsNone(covariance_rows[-1]["omega"])
+
     def test_compact_runtime_summary_omits_solver_mode(self):
         states = np.zeros((4, 8), dtype=float)
         solver = _FakeSolver(states, np.zeros((3, 3), dtype=float))
@@ -733,13 +924,14 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
         self.assertNotIn("mode=", summary)
         self.assertEqual(len(summary.splitlines()), 1)
 
-    def test_shifted_nominal_stage_alignment_and_covariance_repropagation(self):
+    def test_prepare_retains_future_covariance_like_pv(self):
         states = np.zeros((4, 8), dtype=float)
         states[:, 0] = [0.0, 1.0, 2.0, 3.0]
         states[:, 1] = [0.0, 0.1, 0.2, 0.3]
         states[:, 2] = 0.1
         states[:, 3] = [0.0, 0.1, 0.2, 0.3]
         states[:, 4:8] = 99.0
+        states[1, 4:7] = [-1.0, -2.0, -3.0]
         inputs_ = np.array(
             [
                 [0.1, 0.01, 0.1],
@@ -749,40 +941,43 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
             dtype=float,
         )
         solver = _FakeSolver(states, inputs_)
+        solver.solve = lambda: 0
+        self.optimizer.solver = solver
 
-        self.optimizer._has_shift_source = False
-        first_states, first_inputs = self.optimizer._build_shifted_nominal(
-            solver,
-            0.0,
-            10.0,
+        num_stages = self.optimizer.N + 1
+        self.optimizer._compute_constraint_affine_data = lambda _: {
+            "mf_A_raw": np.zeros((num_stages, self.optimizer.nx)),
+            "mf_c_raw": np.zeros(num_stages),
+            "epsilon": np.full(num_stages, self.param.chance_epsilon),
+            "mf_valid": np.zeros(num_stages, dtype=bool),
+        }
+        self.optimizer._compute_exact_psdf = lambda _: (1.0, np.zeros(3))
+        captured = {}
+        self.optimizer._set_constraint_parameters = (
+            lambda _, stage_s_values, __: captured.update(
+                stage_s_values=np.asarray(stage_s_values).copy()
+            )
         )
-        np.testing.assert_allclose(first_states[1, :3], states[1, :3])
-        np.testing.assert_allclose(first_inputs, inputs_)
-        np.testing.assert_allclose(first_states[0, :3], self.optimizer.state._x)
-        self.assertFalse(np.any(first_states[:, 4:8] == 99.0))
 
-        self.optimizer._has_shift_source = True
-        shifted_states, shifted_inputs = self.optimizer._build_shifted_nominal(
-            solver,
-            0.0,
-            10.0,
+        status = self.optimizer._prepare_and_solve(solver)
+
+        self.assertEqual(status, 0)
+        np.testing.assert_allclose(solver.states[0, :3], self.optimizer.state._x)
+        np.testing.assert_allclose(
+            solver.states[0, 4:8],
+            self.optimizer._build_initial_covariance_state(self.param),
         )
-        np.testing.assert_allclose(shifted_states[1, :3], states[2, :3])
-        np.testing.assert_allclose(shifted_states[2, :3], states[3, :3])
-        np.testing.assert_allclose(shifted_inputs[0], inputs_[1])
-        np.testing.assert_allclose(shifted_inputs[-1], inputs_[-1])
-        expected_terminal_pose = _FakeDynamics.forward_dynamics(
-            states[-1, :3],
-            inputs_[-1, :2],
-            0.1,
+        expected_future_covariance = states[1:, 4:8].copy()
+        expected_future_covariance[:, :3] = np.maximum(
+            expected_future_covariance[:, :3],
+            self.param.risk_cov_jitter,
         )
-        np.testing.assert_allclose(shifted_states[-1, :3], expected_terminal_pose)
-        self.assertAlmostEqual(shifted_states[-1, 3], 0.33, places=12)
-        expected_covariance = self.optimizer._propagate_covariance_state_batch(
-            shifted_inputs,
-            shifted_states[:, 3],
+        np.testing.assert_allclose(
+            solver.states[1:, 4:8],
+            expected_future_covariance,
         )
-        np.testing.assert_allclose(shifted_states[:, 4:8], expected_covariance)
+        np.testing.assert_allclose(solver.inputs, inputs_)
+        self.assertEqual(captured["stage_s_values"].shape, (num_stages,))
 
     def test_optimizer_routing_and_independent_classes(self):
         self.assertFalse(self.param.enable_backup_solver)

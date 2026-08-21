@@ -1,0 +1,315 @@
+RMPCC configured from config: horizon=20, tf=2.0, use_obstacle_constraint=True, use_row_mf=True, d_col=0.001, d_min=0.001, d_mf_mask=0.001, mf_slack_linear=30.0, mf_slack_quadratic=1.0, chance_epsilon=0.2, mf_active_start_step=1, mf_active_end_step=None, mf_active_terminal=True, sigma_f0=0.0002, sigma_l0=0.00025, sigma_psi0=0.00025, q_f0=0.0, q_l0=0.0, q_psi0=0.0, alpha_f=0.002, alpha_v=0.0004, alpha_kappa=0.01, beta_v=0.02, beta_kappa=0.008, beta_omega=0.008, enable_backup_solver=False, debug_mf=True, debug_infeasibility=True, augmented_psdf_device=cpu
+Resetting rmpcc optimizer for clean state...
+Trial failure criteria enabled: movement_window_sec=5.0, movement_threshold=0.005, max_consecutive_solver_failures=10
+generating global path with A* + Line of Sight
+시작 위치: [0.075 0.795]
+목적지: [1.8  0.09]
+도착 판정 기준: position <= 0.01m, angle <= 0.01rad
+Setting up RMPCC-MF optimizer...
+RMPCC-MF Row M configuration: enabled=True, active only when phi > d_mf_mask=0.001, configured stages=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+Added two affine safety rows at intermediate/terminal stages: 0=HARD guard/recovery, 1=SOFT MF
+field AcadosOcpDims.N has been migrated to AcadosOcpOptions.N_horizon. setting AcadosOcpOptions.N_horizon = N. For future comppatibility, please use AcadosOcpOptions.N_horizon directly.
+
+WARNING: Gauss-Newton Hessian approximation with EXTERNAL cost type not well defined!
+got cost_type EXTERNAL for cost_type_0, cost_type, cost_type_e, hessian_approx: 'GAUSS_NEWTON'.
+With this setting, acados will proceed computing the exact Hessian for the cost term and no Hessian contribution from constraints and dynamics.
+If the external cost is a linear least squares cost, this coincides with the Gauss-Newton Hessian.
+Note: There is also the option to use the external cost module with a numerical Hessian approximation (see `ext_cost_num_hess`).
+OR the option to provide a symbolic custom Hessian approximation (see `cost_expr_ext_cost_custom_hess`).
+
+acados was compiled without OpenMP.
+RMPCC-MF backup SQP_WITH_FEASIBLE_QP solver disabled; using nominal safe-stop recovery.
+[RMPCC 0000] OK solve=151.2ms pose=(0.075,0.795,-1.571) u=(0.123,0.000) s=0.013 PSDFmin=+0.03 G=OK(+0.04134) MF=OK(active=20/20,min=+0.2,slack=+6.462e-11)
+[RMPCC 0001] OK solve=141.9ms pose=(0.075,0.783,-1.571) u=(0.114,0.088) s=0.024 PSDFmin=-0.002916 G=OK(+1.688e-11) MF=OK(active=20/20,min=+0.2,slack=+1.133e-13)
+[RMPCC 0002] OK solve=136.4ms pose=(0.075,0.771,-1.562) u=(0.128,0.064) s=0.035 PSDFmin=+0.009478 G=OK(+0.01019) MF=OK(active=14/20,min=+2.596e-14,slack=+2.021e-16)
+[RMPCC 0003] OK solve=269.8ms pose=(0.075,0.758,-1.556) u=(0.145,-0.250) s=0.041 PSDFmin=-0.01097 G=OK(+0.01909) MF=OK(active=20/20,min=+1.157e-12,slack=+2.362e-13)
+[RMPCC 0004] OK solve=244.2ms pose=(0.075,0.744,-1.581) u=(0.111,-0.105) s=0.055 PSDFmin=-0.001575 G=OK(+0.02089) MF=OK(active=17/20,min=+0.2,slack=+8.971e-14)
+[RMPCC 0005] OK solve=128.1ms pose=(0.075,0.733,-1.591) u=(0.147,0.121) s=0.056 PSDFmin=+0.002989 G=OK(+0.02292) MF=OK(active=16/20,min=+1.283e-13,slack=+2.186e-15)
+[RMPCC 0006] OK solve=245.9ms pose=(0.075,0.718,-1.579) u=(0.149,0.897) s=0.071 PSDFmin=-0.002146 G=OK(+0.004848) MF=OK(active=20/20,min=+1.561e-13,slack=+6.431e-15)
+[RMPCC 0007] OK solve=428.7ms pose=(0.075,0.703,-1.489) u=(0.108,0.524) s=0.088 PSDFmin=+0.003637 G=OK(+0.005728) MF=OK(active=14/20,min=+7.502e-11,slack=+3.24e-13)
+[RMPCC 0008] OK solve=366.7ms pose=(0.076,0.693,-1.437) u=(0.081,0.319) s=0.089 PSDFmin=+0.00997 G=OK(+0.01241) MF=OK(active=19/20,min=+9.462e-15,slack=+3.577e-16)
+[RMPCC 0009] OK solve=380.2ms pose=(0.077,0.684,-1.405) u=(0.132,0.554) s=0.105 PSDFmin=-0.003797 G=OK(+0.002329) MF=OK(active=18/20,min=+1.462e-11,slack=+1.378e-13)
+[RMPCC 0010] OK solve=367.6ms pose=(0.079,0.671,-1.349) u=(0.081,0.554) s=0.123 PSDFmin=+0.005278 G=OK(+4.926e-10) MF=OK(active=14/20,min=+8.921e-10,slack=+6.658e-12)
+[RMPCC 0011] OK solve=372.0ms pose=(0.081,0.664,-1.294) u=(0.041,0.277) s=0.126 PSDFmin=-0.0006536 G=OK(+1.91e-14) MF=OK(active=18/20,min=-2.845e-16,slack=+0.04553)
+[RMPCC 0012] OK solve=350.6ms pose=(0.082,0.660,-1.266) u=(0.034,0.124) s=0.127 PSDFmin=-0.02106 G=OK(+4.802e-15) MF=OK(active=16/20,min=+1.532e-13,slack=+2.247e-15)
+[RMPCC 0013] OK solve=375.7ms pose=(0.083,0.656,-1.254) u=(0.078,-0.058) s=0.127 PSDFmin=+0.001606 G=OK(+0.0006522) MF=OK(active=17/20,min=+8.206e-10,slack=+1.031e-11)
+[RMPCC 0014] OK solve=377.6ms pose=(0.085,0.649,-1.260) u=(0.039,-1.128) s=0.143 PSDFmin=-0.002877 G=OK(+0.008128) MF=OK(active=16/20,min=+1.722e-13,slack=+2.533e-15)
+[RMPCC 0015] OK solve=386.1ms pose=(0.086,0.645,-1.373) u=(0.129,-0.767) s=0.146 PSDFmin=+0.003303 G=OK(+0.004281) MF=OK(active=12/20,min=+7.346e-12,slack=+4.501e-14)
+[RMPCC 0016] OK solve=393.0ms pose=(0.089,0.633,-1.449) u=(0.071,-0.370) s=0.164 PSDFmin=+0.003906 G=OK(+0.005879) MF=OK(active=17/20,min=+5.438e-12,slack=+4.821e-14)
+[RMPCC 0017] OK solve=402.9ms pose=(0.090,0.626,-1.486) u=(0.132,0.032) s=0.168 PSDFmin=-0.005302 G=OK(+0.003764) MF=OK(active=19/20,min=+1.879e-14,slack=+1.347e-16)
+[RMPCC 0018] OK solve=378.2ms pose=(0.091,0.612,-1.483) u=(0.073,0.991) s=0.187 PSDFmin=+0.0002337 G=OK(+5.486e-11) MF=OK(active=15/20,min=+2.421e-12,slack=+1.183e-14)
+[RMPCC 0019] OK solve=438.4ms pose=(0.092,0.605,-1.384) u=(0.057,0.471) s=0.201 PSDFmin=+0.001284 G=OK(+0.006746) MF=OK(active=17/20,min=+3.288e-14,slack=+1.268e-16)
+[RMPCC 0020] OK solve=302.3ms pose=(0.093,0.600,-1.337) u=(0.029,0.235) s=0.207 PSDFmin=+0.006923 G=OK(+0.009492) MF=OK(active=19/20,min=+8.385e-11,slack=+2.106e-12)
+[RMPCC 0021] OK solve=275.9ms pose=(0.093,0.597,-1.313) u=(0.095,1.200) s=0.210 PSDFmin=-0.008612 G=OK(+0.002794) MF=OK(active=20/20,min=+1.241e-11,slack=+5.954e-14)
+[RMPCC 0022] OK solve=262.0ms pose=(0.096,0.588,-1.193) u=(0.047,1.174) s=0.219 PSDFmin=+0.007542 G=OK(+0.006879) MF=OK(active=12/20,min=+5.057e-12,slack=+3.659e-13)
+[RMPCC 0023] OK solve=278.2ms pose=(0.098,0.583,-1.076) u=(0.060,0.565) s=0.228 PSDFmin=+0.003365 G=OK(+0.005062) MF=OK(active=20/20,min=+1.138e-13,slack=+3.703e-15)
+[RMPCC 0024] OK solve=399.5ms pose=(0.100,0.578,-1.020) u=(0.030,1.200) s=0.232 PSDFmin=-0.0008612 G=OK(+0.001825) MF=OK(active=15/20,min=+1.753e-11,slack=+2.541e-13)
+[RMPCC 0025] OK solve=401.3ms pose=(0.102,0.575,-0.900) u=(0.103,0.853) s=0.238 PSDFmin=+0.007197 G=OK(+0.00551) MF=OK(active=16/20,min=+2.31e-13,slack=+3.129e-16)
+[RMPCC 0026] OK solve=362.5ms pose=(0.108,0.567,-0.814) u=(0.082,0.383) s=0.243 PSDFmin=-0.02349 G=OK(+5.185e-14) MF=OK(active=19/20,min=+3.55e-14,slack=+2.415e-15)
+[RMPCC 0027] OK solve=369.9ms pose=(0.114,0.561,-0.776) u=(0.086,1.200) s=0.251 PSDFmin=+0.008075 G=OK(+0.006523) MF=OK(active=9/20,min=+3.17e-11,slack=+2.57e-14)
+[RMPCC 0028] OK solve=245.8ms pose=(0.120,0.555,-0.656) u=(0.092,0.699) s=0.265 PSDFmin=+0.009095 G=OK(+0.00759) MF=OK(active=19/20,min=+2.325e-10,slack=+2.044e-12)
+[RMPCC 0029] OK solve=251.8ms pose=(0.127,0.550,-0.586) u=(0.046,1.200) s=0.267 PSDFmin=-0.0005796 G=OK(+0.009117) MF=OK(active=20/20,min=+6.887e-14,slack=+9.581e-15)
+[RMPCC 0030] OK solve=255.8ms pose=(0.131,0.547,-0.466) u=(0.126,1.200) s=0.271 PSDFmin=+0.01077 G=OK(+0.009738) MF=OK(active=18/20,min=+4.881e-13,slack=+5.823e-15)
+[RMPCC 0031] OK solve=248.2ms pose=(0.142,0.542,-0.346) u=(0.146,0.540) s=0.284 PSDFmin=+0.01083 G=OK(+0.01181) MF=OK(active=20/20,min=+1.164e-09,slack=+1.672e-11)
+[RMPCC 0032] OK solve=365.2ms pose=(0.156,0.537,-0.292) u=(0.086,1.101) s=0.298 PSDFmin=-0.002821 G=OK(+0.015) MF=OK(active=19/20,min=+1.704e-13,slack=+4.282e-15)
+[RMPCC 0033] OK solve=250.6ms pose=(0.164,0.534,-0.182) u=(0.160,0.568) s=0.307 PSDFmin=+0.01215 G=OK(+0.009615) MF=OK(active=16/20,min=+2.659e-10,slack=+2.06e-13)
+[RMPCC 0034] OK solve=122.1ms pose=(0.180,0.531,-0.125) u=(0.140,0.203) s=0.323 PSDFmin=+0.009455 G=OK(+0.01251) MF=OK(active=20/20,min=-2.365e-14,slack=+5.657e-15)
+[RMPCC 0035] OK solve=125.5ms pose=(0.194,0.529,-0.105) u=(0.139,1.017) s=0.332 PSDFmin=+0.007483 G=OK(+0.01534) MF=OK(active=20/20,min=+1.748e-09,slack=+7.298e-12)
+[RMPCC 0036] OK solve=130.1ms pose=(0.208,0.528,-0.003) u=(0.164,0.455) s=0.345 PSDFmin=+0.01571 G=OK(+0.0147) MF=OK(active=20/20,min=+4.844e-10,slack=+3.83e-12)
+[RMPCC 0037] OK solve=145.0ms pose=(0.224,0.528,0.042) u=(0.145,0.129) s=0.362 PSDFmin=+0.01735 G=OK(+0.01584) MF=OK(active=20/20,min=-3.017e-13,slack=+1.815e-13)
+[RMPCC 0038] OK solve=133.6ms pose=(0.239,0.529,0.055) u=(0.122,-0.039) s=0.376 PSDFmin=+0.01341 G=OK(+0.012) MF=OK(active=20/20,min=+1.611e-11,slack=+9.833e-14)
+[RMPCC 0039] OK solve=137.0ms pose=(0.251,0.529,0.051) u=(0.127,0.236) s=0.388 PSDFmin=+0.01549 G=OK(+0.01447) MF=OK(active=20/20,min=+2.778e-14,slack=+2.067e-14)
+[RMPCC 0040] OK solve=139.0ms pose=(0.264,0.530,0.075) u=(0.115,0.196) s=0.399 PSDFmin=+0.01142 G=OK(+0.01) MF=OK(active=20/20,min=+1.358e-11,slack=+1.02e-12)
+[RMPCC 0041] OK solve=125.0ms pose=(0.275,0.531,0.094) u=(0.114,0.321) s=0.412 PSDFmin=+0.01243 G=OK(+0.01052) MF=OK(active=20/20,min=+4.266e-14,slack=+2.388e-16)
+[RMPCC 0042] OK solve=132.2ms pose=(0.286,0.532,0.126) u=(0.106,0.361) s=0.424 PSDFmin=+0.007765 G=OK(+0.004205) MF=OK(active=20/20,min=+9.455e-12,slack=+9.237e-14)
+[RMPCC 0043] OK solve=134.3ms pose=(0.297,0.533,0.163) u=(0.102,0.409) s=0.432 PSDFmin=+0.008492 G=OK(+9.027e-11) MF=OK(active=20/20,min=+1.123e-12,slack=+3.589e-15)
+[RMPCC 0044] OK solve=127.7ms pose=(0.307,0.535,0.204) u=(0.103,0.274) s=0.444 PSDFmin=+0.02026 G=OK(+0.019) MF=OK(active=20/20,min=+2.498e-14,slack=+1.075e-16)
+[RMPCC 0045] OK solve=119.5ms pose=(0.317,0.537,0.231) u=(0.100,0.202) s=0.454 PSDFmin=+0.02053 G=OK(+0.01935) MF=OK(active=20/20,min=+2.852e-14,slack=+1.027e-16)
+[RMPCC 0046] OK solve=125.6ms pose=(0.327,0.539,0.251) u=(0.091,0.309) s=0.462 PSDFmin=+0.01936 G=OK(+0.01829) MF=OK(active=20/20,min=+1.325e-10,slack=+2.052e-12)
+[RMPCC 0047] OK solve=124.6ms pose=(0.336,0.541,0.282) u=(0.101,0.141) s=0.471 PSDFmin=+0.0113 G=OK(+0.0204) MF=OK(active=20/20,min=+3.218e-14,slack=+2.067e-16)
+[RMPCC 0048] OK solve=114.3ms pose=(0.345,0.544,0.296) u=(0.092,0.455) s=0.482 PSDFmin=+0.01391 G=OK(+0.01348) MF=OK(active=20/20,min=+1.565e-11,slack=+2.031e-13)
+[RMPCC 0049] OK solve=125.3ms pose=(0.354,0.547,0.342) u=(0.101,0.174) s=0.491 PSDFmin=+0.007578 G=OK(+0.0197) MF=OK(active=20/20,min=+3.353e-09,slack=+1.863e-11)
+[RMPCC 0050] OK solve=116.4ms pose=(0.364,0.550,0.359) u=(0.088,0.396) s=0.501 PSDFmin=+0.01445 G=OK(+0.01383) MF=OK(active=20/20,min=+7.957e-11,slack=+6.872e-12)
+[RMPCC 0051] OK solve=124.4ms pose=(0.372,0.553,0.399) u=(0.116,0.127) s=0.512 PSDFmin=+0.001517 G=OK(+0.01317) MF=OK(active=20/20,min=+4.394e-11,slack=+2.359e-13)
+[RMPCC 0052] OK solve=122.7ms pose=(0.382,0.558,0.411) u=(0.099,0.374) s=0.521 PSDFmin=+0.01246 G=OK(+0.01161) MF=OK(active=20/20,min=+3.218e-15,slack=+1.138e-16)
+[RMPCC 0053] OK solve=127.4ms pose=(0.392,0.562,0.449) u=(0.122,0.106) s=0.531 PSDFmin=-0.001447 G=OK(+0.01009) MF=OK(active=20/20,min=+9.526e-11,slack=+2.414e-13)
+[RMPCC 0054] OK solve=116.8ms pose=(0.403,0.567,0.459) u=(0.119,0.250) s=0.544 PSDFmin=+0.01328 G=OK(+0.01207) MF=OK(active=19/20,min=+1.838e-14,slack=+2.494e-15)
+[RMPCC 0055] OK solve=122.0ms pose=(0.413,0.572,0.484) u=(0.135,-0.007) s=0.561 PSDFmin=+0.007136 G=OK(+0.008372) MF=OK(active=20/20,min=+2.018e-10,slack=+4.993e-13)
+[RMPCC 0056] OK solve=128.6ms pose=(0.425,0.579,0.484) u=(0.126,0.195) s=0.568 PSDFmin=+0.01284 G=OK(+0.01207) MF=OK(active=20/20,min=-1.2e-13,slack=+5.808e-14)
+[RMPCC 0057] OK solve=126.8ms pose=(0.436,0.585,0.503) u=(0.142,-0.077) s=0.581 PSDFmin=+0.004499 G=OK(+0.004824) MF=OK(active=20/20,min=+1.239e-10,slack=+2.638e-12)
+[RMPCC 0058] OK solve=132.3ms pose=(0.449,0.591,0.496) u=(0.145,0.057) s=0.600 PSDFmin=+0.008182 G=OK(+0.008989) MF=OK(active=20/20,min=+4.764e-11,slack=+1.822e-13)
+[RMPCC 0059] OK solve=111.6ms pose=(0.462,0.598,0.501) u=(0.151,-0.379) s=0.609 PSDFmin=+0.006741 G=OK(+0.004598) MF=OK(active=20/20,min=+1.174e-13,slack=+1.159e-15)
+[RMPCC 0060] OK solve=138.0ms pose=(0.475,0.606,0.463) u=(0.158,-0.098) s=0.624 PSDFmin=-0.01382 G=OK(+0.006028) MF=OK(active=20/20,min=+2.332e-14,slack=+2.269e-16)
+[RMPCC 0061] OK solve=152.2ms pose=(0.489,0.613,0.454) u=(0.158,-0.123) s=0.644 PSDFmin=+0.00219 G=OK(+0.001139) MF=OK(active=11/20,min=+3.561e-14,slack=+8.254e-17)
+[RMPCC 0062] OK solve=140.4ms pose=(0.503,0.620,0.441) u=(0.170,-0.164) s=0.655 PSDFmin=+0.004668 G=OK(+0.007702) MF=OK(active=20/20,min=+9.759e-12,slack=+9.889e-14)
+[RMPCC 0063] OK solve=255.9ms pose=(0.519,0.627,0.425) u=(0.306,-0.295) s=0.672 PSDFmin=-0.01714 G=OK(+1.199e-14) MF=OK(active=20/20,min=+2.255e-14,slack=+4.342e-14)
+[RMPCC 0064] OK solve=365.8ms pose=(0.547,0.639,0.395) u=(0.153,-0.755) s=0.702 PSDFmin=-0.004663 G=OK(+3.599e-12) MF=OK(active=5/20,min=+0.05793,slack=+7.587e-14)
+[RMPCC 0065] OK solve=246.5ms pose=(0.561,0.645,0.320) u=(0.120,-0.347) s=0.722 PSDFmin=-0.008854 G=OK(+0.005672) MF=OK(active=15/20,min=+1.864e-13,slack=+1.983e-13)
+[RMPCC 0066] OK solve=118.8ms pose=(0.572,0.649,0.285) u=(0.236,0.046) s=0.730 PSDFmin=-0.01102 G=OK(+9.992e-16) MF=OK(active=17/20,min=+1.991e-15,slack=+2.146e-16)
+[RMPCC 0067] OK solve=231.9ms pose=(0.595,0.656,0.290) u=(0.171,-1.011) s=0.753 PSDFmin=-0.02264 G=OK(+2.27e-12) MF=OK(active=16/20,min=+4.519e-12,slack=+3.148e-14)
+[RMPCC 0068] OK solve=258.9ms pose=(0.611,0.661,0.189) u=(0.114,-0.602) s=0.770 PSDFmin=-0.01838 G=OK(+3.775e-15) MF=OK(active=6/20,min=+1.824e-08,slack=+8.009e-13)
+[RMPCC 0069] OK solve=139.9ms pose=(0.622,0.663,0.129) u=(0.143,-0.233) s=0.782 PSDFmin=-0.00337 G=OK(+2.331e-15) MF=OK(active=16/20,min=+3.216e-14,slack=+1.909e-16)
+[RMPCC 0070] OK solve=281.1ms pose=(0.636,0.665,0.105) u=(0.155,-0.268) s=0.796 PSDFmin=-0.004168 G=OK(+3.886e-15) MF=OK(active=18/20,min=+1.081e-15,slack=+0.01049)
+[RMPCC 0071] OK solve=368.4ms pose=(0.652,0.666,0.078) u=(0.128,-0.485) s=0.811 PSDFmin=-0.01798 G=OK(+0.003981) MF=OK(active=12/20,min=+8.298e-12,slack=+3.298e-14)
+[RMPCC 0072] OK solve=234.9ms pose=(0.664,0.667,0.030) u=(0.153,-0.130) s=0.820 PSDFmin=+0.001327 G=OK(+1.492e-11) MF=OK(active=11/20,min=+6.377e-10,slack=+1.379e-12)
+[RMPCC 0073] OK solve=289.9ms pose=(0.680,0.668,0.017) u=(0.096,0.062) s=0.835 PSDFmin=-0.01573 G=OK(+0.01344) MF=OK(active=20/20,min=+1.178e-16,slack=+1.188e-16)
+[RMPCC 0074] OK solve=405.0ms pose=(0.689,0.668,0.023) u=(0.117,-0.596) s=0.845 PSDFmin=-0.02822 G=OK(+0.01054) MF=OK(active=15/20,min=+2.858e-14,slack=+1.629e-16)
+[RMPCC 0075] OK solve=297.0ms pose=(0.701,0.668,-0.036) u=(0.106,-0.504) s=0.857 PSDFmin=+0.00024 G=OK(+4.807e-14) MF=OK(active=11/20,min=-7.825e-14,slack=+2.149e-14)
+[RMPCC 0076] OK solve=134.6ms pose=(0.712,0.668,-0.087) u=(0.110,-0.168) s=0.867 PSDFmin=-0.01473 G=OK(+0.00877) MF=OK(active=16/20,min=+1.071e-14,slack=+5.409e-17)
+[RMPCC 0077] OK solve=248.1ms pose=(0.723,0.667,-0.104) u=(0.109,0.096) s=0.878 PSDFmin=+0.0008722 G=OK(+1.499e-14) MF=OK(active=18/20,min=+1.664e-16,slack=+1.766e-16)
+[RMPCC 0078] OK solve=364.0ms pose=(0.733,0.666,-0.094) u=(0.127,-0.661) s=0.889 PSDFmin=-0.009169 G=OK(+0.008894) MF=OK(active=15/20,min=+1.373e-11,slack=+4.166e-13)
+[RMPCC 0079] OK solve=358.6ms pose=(0.746,0.664,-0.160) u=(0.063,-0.935) s=0.899 PSDFmin=-0.0113 G=OK(+1.221e-14) MF=OK(active=13/20,min=+1.118e-13,slack=+1.691e-15)
+[RMPCC 0080] OK solve=350.6ms pose=(0.752,0.663,-0.254) u=(0.083,-0.517) s=0.908 PSDFmin=+0.00523 G=OK(+0.0006454) MF=OK(active=16/20,min=+4.689e-14,slack=+2.482e-15)
+[RMPCC 0081] OK solve=238.9ms pose=(0.760,0.661,-0.305) u=(0.042,-1.200) s=0.916 PSDFmin=+0.0003709 G=OK(+0.005027) MF=OK(active=17/20,min=+2.575e-13,slack=+1.686e-15)
+[RMPCC 0082] OK solve=130.6ms pose=(0.764,0.660,-0.425) u=(0.126,-0.560) s=0.918 PSDFmin=-0.02292 G=OK(+0.01339) MF=OK(active=19/20,min=+1.658e-11,slack=+9.842e-14)
+[RMPCC 0083] OK solve=252.6ms pose=(0.776,0.655,-0.481) u=(0.063,-1.042) s=0.931 PSDFmin=-0.007063 G=OK(+4.611e-12) MF=OK(active=6/20,min=+0.141,slack=+5.339e-13)
+[RMPCC 0084] OK solve=256.1ms pose=(0.781,0.652,-0.586) u=(0.040,-0.516) s=0.937 PSDFmin=-0.001191 G=OK(+0.002994) MF=OK(active=13/20,min=+1.09e-09,slack=+9.298e-12)
+[RMPCC 0085] OK solve=265.5ms pose=(0.785,0.650,-0.637) u=(0.042,-0.357) s=0.941 PSDFmin=-0.02939 G=OK(+0.001531) MF=OK(active=18/20,min=+5.302e-13,slack=+6.806e-15)
+[RMPCC 0086] OK solve=399.1ms pose=(0.788,0.647,-0.673) u=(0.098,-0.368) s=0.945 PSDFmin=+0.003129 G=OK(+0.003002) MF=OK(active=12/20,min=+3.398e-10,slack=+8.235e-12)
+[RMPCC 0087] OK solve=367.3ms pose=(0.796,0.641,-0.710) u=(0.050,-1.200) s=0.955 PSDFmin=-0.01917 G=OK(+0.01007) MF=OK(active=18/20,min=+1.441e-14,slack=+1.998e-16)
+[RMPCC 0088] OK solve=276.1ms pose=(0.800,0.638,-0.830) u=(0.103,-0.676) s=0.960 PSDFmin=-0.00508 G=OK(+7.21e-09) MF=OK(active=16/20,min=+4.45e-09,slack=+2.008e-11)
+[RMPCC 0089] OK solve=129.8ms pose=(0.807,0.630,-0.897) u=(0.053,-0.336) s=0.970 PSDFmin=-0.02782 G=OK(+0.008544) MF=OK(active=11/20,min=+5.409e-09,slack=+2.114e-10)
+[RMPCC 0090] OK solve=124.4ms pose=(0.810,0.626,-0.931) u=(0.075,-0.122) s=0.980 PSDFmin=-0.009155 G=OK(+0.005323) MF=OK(active=8/20,min=+2.92e-12,slack=+1.409e-14)
+[RMPCC 0091] OK solve=118.3ms pose=(0.814,0.620,-0.943) u=(0.040,-0.052) s=0.982 PSDFmin=-0.03644 G=OK(+0.01032) MF=OK(active=12/20,min=+2.553e-10,slack=+3.428e-12)
+[RMPCC 0092] OK solve=121.3ms pose=(0.817,0.617,-0.948) u=(0.083,0.139) s=0.986 PSDFmin=-0.01505 G=OK(+3.486e-14) MF=OK(active=6/20,min=+3.595e-14,slack=+4.25e-16)
+[RMPCC 0093] OK solve=114.7ms pose=(0.822,0.610,-0.934) u=(0.042,0.352) s=0.996 PSDFmin=-0.03293 G=OK(+0.00778) MF=OK(active=11/20,min=+2.176e-13,slack=+8.175e-15)
+[RMPCC 0094] OK solve=234.4ms pose=(0.824,0.607,-0.899) u=(0.098,0.252) s=0.998 PSDFmin=-0.01205 G=OK(+1.066e-12) MF=OK(active=5/20,min=+1.413e-12,slack=+1.994e-14)
+[RMPCC 0095] OK solve=232.1ms pose=(0.830,0.599,-0.874) u=(0.139,0.558) s=1.012 PSDFmin=-0.03574 G=OK(+0.002892) MF=OK(active=11/20,min=+6.293e-13,slack=+3.061e-14)
+[RMPCC 0096] OK solve=252.8ms pose=(0.839,0.588,-0.818) u=(0.128,0.440) s=1.021 PSDFmin=-0.002898 G=OK(+0.001861) MF=OK(active=4/20,min=+1.427e-14,slack=+5.973e-17)
+[RMPCC 0097] OK solve=254.5ms pose=(0.848,0.579,-0.774) u=(0.222,0.072) s=1.034 PSDFmin=-0.03161 G=OK(+0.005032) MF=OK(active=15/20,min=+2.217e-11,slack=+1.012e-12)
+[RMPCC 0098] OK solve=134.6ms pose=(0.864,0.564,-0.767) u=(0.111,1.097) s=1.056 PSDFmin=+0.00607 G=OK(+0.004159) MF=OK(active=5/20,min=+0.04436,slack=+3.879e-12)
+[RMPCC 0099] OK solve=249.7ms pose=(0.872,0.556,-0.657) u=(0.060,0.546) s=1.069 PSDFmin=-7.251e-05 G=OK(+0.006466) MF=OK(active=20/20,min=+9.343e-11,slack=+4.051e-12)
+[RMPCC 0100] OK solve=275.9ms pose=(0.876,0.552,-0.603) u=(0.067,0.931) s=1.073 PSDFmin=+0.007546 G=OK(+0.007137) MF=OK(active=15/20,min=+1.031e-13,slack=+7.619e-17)
+[RMPCC 0101] OK solve=142.5ms pose=(0.882,0.549,-0.510) u=(0.050,0.457) s=1.079 PSDFmin=+0.00161 G=OK(+0.008172) MF=OK(active=20/20,min=+1.097e-11,slack=+1.148e-13)
+[RMPCC 0102] OK solve=142.3ms pose=(0.886,0.546,-0.464) u=(0.091,0.795) s=1.084 PSDFmin=+0.001638 G=OK(+0.009068) MF=OK(active=20/20,min=+1.815e-11,slack=+2.143e-13)
+[RMPCC 0103] OK solve=139.3ms pose=(0.894,0.542,-0.384) u=(0.107,0.342) s=1.093 PSDFmin=-0.01082 G=OK(+0.01026) MF=OK(active=20/20,min=+2.958e-13,slack=+6.224e-15)
+[RMPCC 0104] OK solve=138.7ms pose=(0.904,0.538,-0.350) u=(0.082,0.821) s=1.104 PSDFmin=+0.004905 G=OK(+0.01249) MF=OK(active=16/20,min=+0.1151,slack=+9.168e-17)
+[RMPCC 0105] OK solve=117.0ms pose=(0.912,0.535,-0.268) u=(0.046,0.689) s=1.112 PSDFmin=+0.01639 G=OK(+0.01522) MF=OK(active=20/20,min=+8.063e-12,slack=+1.723e-13)
+[RMPCC 0106] OK solve=119.3ms pose=(0.916,0.534,-0.199) u=(0.076,0.422) s=1.112 PSDFmin=-0.0006453 G=OK(+0.01656) MF=OK(active=20/20,min=+1.26e-08,slack=+1.033e-10)
+[RMPCC 0107] OK solve=252.9ms pose=(0.924,0.532,-0.157) u=(0.069,0.427) s=1.125 PSDFmin=-0.001658 G=OK(+0.01115) MF=OK(active=19/20,min=+6.016e-12,slack=+2.1e-13)
+[RMPCC 0108] OK solve=377.2ms pose=(0.931,0.531,-0.114) u=(0.034,0.214) s=1.125 PSDFmin=+0.002983 G=OK(+0.01155) MF=OK(active=18/20,min=+5.375e-10,slack=+4.351e-12)
+[RMPCC 0109] OK solve=386.5ms pose=(0.934,0.531,-0.093) u=(0.132,0.585) s=1.127 PSDFmin=+0.0052 G=OK(+0.001271) MF=OK(active=19/20,min=+4.771e-12,slack=+3.05e-14)
+[RMPCC 0110] OK solve=257.6ms pose=(0.947,0.530,-0.034) u=(0.068,0.397) s=1.140 PSDFmin=+0.003041 G=OK(+0.005215) MF=OK(active=18/20,min=+4.49e-12,slack=+2.396e-14)
+[RMPCC 0111] OK solve=131.6ms pose=(0.954,0.529,0.005) u=(0.083,0.127) s=1.147 PSDFmin=-0.002386 G=OK(+0.01476) MF=OK(active=20/20,min=+1.187e-12,slack=+6.396e-15)
+[RMPCC 0112] OK solve=238.6ms pose=(0.962,0.530,0.018) u=(0.052,0.167) s=1.156 PSDFmin=-0.00307 G=OK(+5.255e-12) MF=OK(active=18/20,min=+1.267e-10,slack=+7.174e-13)
+[RMPCC 0113] OK solve=238.6ms pose=(0.968,0.530,0.035) u=(0.088,0.143) s=1.161 PSDFmin=+0.006546 G=OK(+0.005035) MF=OK(active=14/20,min=+3.915e-14,slack=+7.389e-17)
+[RMPCC 0114] OK solve=248.5ms pose=(0.976,0.530,0.049) u=(0.044,0.262) s=1.170 PSDFmin=+0.009186 G=OK(+0.007579) MF=OK(active=20/20,min=+3.902e-09,slack=+2.5e-11)
+[RMPCC 0115] OK solve=377.1ms pose=(0.981,0.530,0.075) u=(0.146,0.197) s=1.174 PSDFmin=-0.001812 G=OK(+0.007899) MF=OK(active=18/20,min=+1.81e-14,slack=+1.121e-16)
+[RMPCC 0116] OK solve=244.5ms pose=(0.995,0.531,0.095) u=(0.073,0.209) s=1.189 PSDFmin=+0.008183 G=OK(+0.007419) MF=OK(active=17/20,min=+1.467e-10,slack=+7.394e-13)
+[RMPCC 0117] OK solve=251.9ms pose=(1.003,0.532,0.116) u=(0.111,0.336) s=1.196 PSDFmin=+0.006042 G=OK(+0.004934) MF=OK(active=20/20,min=+1.392e-09,slack=+6.211e-12)
+[RMPCC 0118] OK solve=376.1ms pose=(1.014,0.533,0.149) u=(0.077,0.436) s=1.207 PSDFmin=+0.006937 G=OK(+0.0009134) MF=OK(active=17/20,min=+9.791e-12,slack=+7.109e-14)
+[RMPCC 0119] OK solve=365.8ms pose=(1.021,0.534,0.193) u=(0.109,0.384) s=1.215 PSDFmin=+0.005198 G=OK(+1.261e-10) MF=OK(active=15/20,min=+5.165e-13,slack=+4.911e-15)
+[RMPCC 0120] OK solve=369.9ms pose=(1.032,0.536,0.232) u=(0.055,0.554) s=1.225 PSDFmin=+0.006501 G=OK(+0.004377) MF=OK(active=19/20,min=+1.067e-14,slack=+8.459e-17)
+[RMPCC 0121] OK solve=368.3ms pose=(1.037,0.538,0.287) u=(0.121,0.308) s=1.231 PSDFmin=+0.003118 G=OK(+0.007906) MF=OK(active=18/20,min=+2.433e-11,slack=+1.067e-12)
+[RMPCC 0122] OK solve=362.1ms pose=(1.049,0.541,0.318) u=(0.060,0.628) s=1.242 PSDFmin=+0.006116 G=OK(+0.006263) MF=OK(active=19/20,min=+1.223e-12,slack=+3.647e-15)
+[RMPCC 0123] OK solve=380.1ms pose=(1.055,0.543,0.381) u=(0.095,0.392) s=1.248 PSDFmin=+0.007192 G=OK(+0.006409) MF=OK(active=19/20,min=+7.659e-14,slack=+2.037e-16)
+[RMPCC 0124] OK solve=394.3ms pose=(1.064,0.547,0.420) u=(0.048,0.653) s=1.257 PSDFmin=+0.0003659 G=OK(+0.007263) MF=OK(active=19/20,min=+1.413e-13,slack=+9.7e-16)
+[RMPCC 0125] OK solve=367.5ms pose=(1.068,0.548,0.485) u=(0.088,0.815) s=1.264 PSDFmin=+0.0006086 G=OK(+0.005908) MF=OK(active=17/20,min=+7.556e-15,slack=+4.501e-16)
+[RMPCC 0126] OK solve=363.9ms pose=(1.076,0.553,0.567) u=(0.047,0.405) s=1.273 PSDFmin=-0.01672 G=OK(+0.007664) MF=OK(active=17/20,min=+3.065e-10,slack=+1.054e-12)
+[RMPCC 0127] OK solve=371.7ms pose=(1.080,0.555,0.607) u=(0.073,0.518) s=1.277 PSDFmin=+0.00866 G=OK(+4.985e-09) MF=OK(active=16/20,min=+7.435e-08,slack=+2.807e-10)
+[RMPCC 0128] OK solve=376.1ms pose=(1.086,0.559,0.659) u=(0.058,0.237) s=1.285 PSDFmin=-0.01712 G=OK(+6.661e-14) MF=OK(active=17/20,min=+5.797e-13,slack=+5.81e-15)
+[RMPCC 0129] OK solve=374.7ms pose=(1.090,0.563,0.683) u=(0.095,0.374) s=1.291 PSDFmin=-0.002776 G=OK(+0.004994) MF=OK(active=11/20,min=+5.075e-09,slack=+1.053e-11)
+[RMPCC 0130] OK solve=241.2ms pose=(1.098,0.569,0.720) u=(0.047,0.413) s=1.300 PSDFmin=-0.01707 G=OK(+0.009393) MF=OK(active=15/20,min=+8.657e-11,slack=+1.256e-12)
+[RMPCC 0131] OK solve=128.7ms pose=(1.101,0.572,0.761) u=(0.060,0.245) s=1.305 PSDFmin=-0.002301 G=OK(+0.003473) MF=OK(active=13/20,min=+1.406e-12,slack=+1.545e-14)
+[RMPCC 0132] OK solve=235.3ms pose=(1.106,0.576,0.786) u=(0.075,0.061) s=1.311 PSDFmin=-0.03231 G=OK(+0.003473) MF=OK(active=14/20,min=-1.297e-13,slack=+2.081e-14)
+[RMPCC 0133] OK solve=365.3ms pose=(1.111,0.581,0.792) u=(0.037,0.031) s=1.318 PSDFmin=-0.006087 G=OK(+0.001932) MF=OK(active=8/20,min=+7.487e-14,slack=+2.629e-16)
+[RMPCC 0134] OK solve=261.9ms pose=(1.113,0.584,0.795) u=(0.146,0.660) s=1.322 PSDFmin=-0.01937 G=OK(+0.006325) MF=OK(active=13/20,min=+3.3e-13,slack=+8.559e-15)
+[RMPCC 0135] OK solve=134.8ms pose=(1.124,0.594,0.861) u=(0.094,0.397) s=1.336 PSDFmin=-0.002118 G=OK(+0.003628) MF=OK(active=9/20,min=+2.528e-11,slack=+4.161e-14)
+[RMPCC 0136] OK solve=119.1ms pose=(1.130,0.602,0.901) u=(0.143,0.466) s=1.345 PSDFmin=-0.04786 G=OK(+0.006186) MF=OK(active=14/20,min=+1.779e-14,slack=+2.7e-16)
+[RMPCC 0137] OK solve=123.2ms pose=(1.139,0.613,0.947) u=(0.111,0.201) s=1.359 PSDFmin=+0.01011 G=OK(+0.009311) MF=OK(active=9/20,min=+9.921e-13,slack=+8.748e-16)
+[RMPCC 0138] OK solve=248.4ms pose=(1.145,0.622,0.967) u=(0.220,-0.198) s=1.370 PSDFmin=-0.02715 G=OK(+5.773e-15) MF=OK(active=20/20,min=+1.665e-13,slack=+1.343e-15)
+[RMPCC 0139] OK solve=375.4ms pose=(1.158,0.640,0.948) u=(0.110,-1.200) s=1.391 PSDFmin=+0.004055 G=OK(+0.003005) MF=OK(active=3/20,min=+0.2237,slack=+9.456e-14)
+[RMPCC 0140] OK solve=383.5ms pose=(1.164,0.649,0.828) u=(0.700,-1.200) s=1.401 PSDFmin=-0.03033 G=OK(+2.554e-15) MF=OK(active=19/20,min=-2.908e-15,slack=+0.2058)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1602.72362    0.12       0.95065    1.22577]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1, 16]), 'minimum_residual': -0.031332043766975404}
+  - {'constraint': 'row_m_soft_after_slack', 'stages': array([ 2,  3,  4,  5,  6, 19]), 'minimum_residual': -0.9506483663177898}
+  - {'constraint': 'dynamics_or_stage0_equality', 'maximum_residual': 0.11999999999981958}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 0.0 | 4.2521541843143495e-14
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0141] SAFE_STOP solve=483.0ms pose=(1.211,0.700,0.708) u=(0.600,0.000) s=1.462 PSDFmin=-0.1526 G=FAIL(-0.1775) MF=FAIL(active=8/20,min=n/a,slack=n/a)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.      0.0456  0.1536  0.    ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.15360209143161774}
+  - {'constraint': 'dynamics_or_stage0_equality', 'maximum_residual': 0.04559699136654993}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0142] SAFE_STOP solve=207.8ms pose=(1.257,0.739,0.708) u=(0.500,0.000) s=1.504 PSDFmin=-0.1526 G=FAIL(-0.1643) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.      0.038   0.1536  0.    ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.15360209143161774}
+  - {'constraint': 'dynamics_or_stage0_equality', 'maximum_residual': 0.03799749280545761}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0143] SAFE_STOP solve=200.7ms pose=(1.295,0.772,0.708) u=(0.400,0.000) s=1.538 PSDFmin=-0.1526 G=FAIL(-0.1643) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.      0.0304  0.1536  0.    ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.15360209143161774}
+  - {'constraint': 'dynamics_or_stage0_equality', 'maximum_residual': 0.030397994244365734}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0144] SAFE_STOP solve=204.5ms pose=(1.325,0.798,0.708) u=(0.300,0.000) s=1.558 PSDFmin=-0.1526 G=FAIL(-0.1643) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.      0.0228  0.1536  0.    ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.15360209143161774}
+  - {'constraint': 'dynamics_or_stage0_equality', 'maximum_residual': 0.022798495683273412}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0145] SAFE_STOP solve=199.0ms pose=(1.348,0.817,0.708) u=(0.200,0.000) s=1.579 PSDFmin=-0.1526 G=FAIL(-0.1643) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.       0.01997  0.1536   0.     ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.15360209143161774}
+  - {'constraint': 'dynamics_or_stage0_equality', 'maximum_residual': 0.019967051242594236}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0146] SAFE_STOP solve=185.2ms pose=(1.363,0.830,0.708) u=(0.100,0.000) s=1.599 PSDFmin=-0.1461 G=FAIL(-0.1471) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.      0.0076  0.1471  0.    ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.14710226452350617}
+  - {'constraint': 'dynamics_or_stage0_equality', 'maximum_residual': 0.007599498561088769}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0147] SAFE_STOP solve=212.2ms pose=(1.371,0.837,0.708) u=(0.000,0.000) s=1.601 PSDFmin=-0.1461 G=FAIL(-0.1471) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.      0.      0.1471  0.    ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.14710226452350617}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0148] SAFE_STOP solve=225.3ms pose=(1.371,0.837,0.708) u=(0.000,0.000) s=1.601 PSDFmin=-0.1461 G=FAIL(-0.1471) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.      0.      0.1471  0.    ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.14710226452350617}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0149] SAFE_STOP solve=210.6ms pose=(1.371,0.837,0.708) u=(0.000,0.000) s=1.601 PSDFmin=-0.1461 G=FAIL(-0.1471) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.      0.      0.1471  0.    ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.14710226452350617}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0150] SAFE_STOP solve=207.9ms pose=(1.371,0.837,0.708) u=(0.000,0.000) s=1.601 PSDFmin=-0.1461 G=FAIL(-0.1471) MF=inactive(active=0/20)
+실패 조건 충족으로 시뮬레이션 종료: consecutive_solver_failures(10): failure
+Using rmpcc optimizer with differential_drive dynamics:
+median:  0.2459244728088379
+std:  0.10353215333915942
+min:  0.11162781715393066
+max:  0.48302602767944336
+Simulation finished.
+Run outcome: status=failure, reason=consecutive_solver_failures(10): failure, final_time=15.099999999999962, distance_to_goal=0.8675635846606373
+Optimizer runtime stats: safe_stop_count=10, backup_feasible_qp_success_count=0, plant_input_apply_count=151, last_solve_mode=safe_stop
+Trial history saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/p1-l30_maze_r1/data/trial_history_MPC_rmpcc_rectangle_maze_p1-l30_maze_r1.csv
+RMPCC constraint history saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/p1-l30_maze_r1/data/rmpcc_constraints_MPC_rmpcc_rectangle_maze_p1-l30_maze_r1.csv
+RMPCC debug history saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/p1-l30_maze_r1/data/cycle_raw.csv
+RMPCC debug history saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/p1-l30_maze_r1/data/covariance_trajectory.csv
+Pose-SDF data saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/p1-l30_maze_r1/data/pose_sdf_MPC_rmpcc_rectangle_maze_p1-l30_maze_r1.csv
+Total data points: 151
+SDF statistics - Min: -0.1526, Max: 0.0616, Mean: 0.0075

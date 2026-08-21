@@ -1,0 +1,219 @@
+RMPCC configured from config: horizon=20, tf=2.0, use_obstacle_constraint=True, use_row_mf=True, d_col=0.001, d_min=0.001, d_mf_mask=0.001, mf_slack_linear=30.0, mf_slack_quadratic=1.0, chance_epsilon=0.2, mf_active_start_step=1, mf_active_end_step=None, mf_active_terminal=True, sigma_f0=0.0002, sigma_l0=0.00025, sigma_psi0=0.00025, q_f0=0.0, q_l0=0.0, q_psi0=0.0, alpha_f=0.002, alpha_v=0.0004, alpha_kappa=0.01, beta_v=0.02, beta_kappa=0.008, beta_omega=0.008, enable_backup_solver=False, debug_mf=True, debug_infeasibility=True, augmented_psdf_device=cpu
+Resetting rmpcc optimizer for clean state...
+Trial failure criteria enabled: movement_window_sec=5.0, movement_threshold=0.005, max_consecutive_solver_failures=10
+generating global path with A* + Line of Sight
+시작 위치: [0.3 0.2]
+목적지: [0.8 0.8]
+도착 판정 기준: position <= 0.01m, angle <= 0.01rad
+Setting up RMPCC-MF optimizer...
+RMPCC-MF Row M configuration: enabled=True, active only when phi > d_mf_mask=0.001, configured stages=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+/home/taek111/projects/psdf_mpcc/models/geometry_utils.py:241: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at ../torch/csrc/utils/tensor_new.cpp:230.)
+  edgesA = torch.tensor(edgesA, dtype=torch.float32)
+Added two affine safety rows at intermediate/terminal stages: 0=HARD guard/recovery, 1=SOFT MF
+field AcadosOcpDims.N has been migrated to AcadosOcpOptions.N_horizon. setting AcadosOcpOptions.N_horizon = N. For future comppatibility, please use AcadosOcpOptions.N_horizon directly.
+
+WARNING: Gauss-Newton Hessian approximation with EXTERNAL cost type not well defined!
+got cost_type EXTERNAL for cost_type_0, cost_type, cost_type_e, hessian_approx: 'GAUSS_NEWTON'.
+With this setting, acados will proceed computing the exact Hessian for the cost term and no Hessian contribution from constraints and dynamics.
+If the external cost is a linear least squares cost, this coincides with the Gauss-Newton Hessian.
+Note: There is also the option to use the external cost module with a numerical Hessian approximation (see `ext_cost_num_hess`).
+OR the option to provide a symbolic custom Hessian approximation (see `cost_expr_ext_cost_custom_hess`).
+
+acados was compiled without OpenMP.
+RMPCC-MF backup SQP_WITH_FEASIBLE_QP solver disabled; using nominal safe-stop recovery.
+[RMPCC 0000] OK solve=75.5ms pose=(0.300,0.200,0.000) u=(0.091,-0.000) s=0.016 PSDFmin=-0.0149 G=OK(+0.104) MF=OK(active=20/20,min=+0.2,slack=+2.93e-13)
+[RMPCC 0001] OK solve=67.3ms pose=(0.309,0.200,-0.000) u=(0.069,1.108) s=0.026 PSDFmin=+0.01377 G=OK(+1.049e-14) MF=OK(active=18/20,min=+0.2,slack=+1.356e-16)
+[RMPCC 0002] OK solve=65.8ms pose=(0.316,0.200,0.111) u=(0.078,0.709) s=0.031 PSDFmin=+0.005899 G=OK(+0.02294) MF=OK(active=20/20,min=+1.314e-13,slack=+1.339e-15)
+[RMPCC 0003] OK solve=67.1ms pose=(0.324,0.201,0.182) u=(0.100,0.545) s=0.040 PSDFmin=+0.006874 G=OK(+0.01309) MF=OK(active=20/20,min=+1.929e-11,slack=+3.851e-12)
+[RMPCC 0004] OK solve=65.4ms pose=(0.334,0.203,0.236) u=(0.079,0.834) s=0.049 PSDFmin=-0.005204 G=OK(+0.02107) MF=OK(active=20/20,min=+1.739e-14,slack=+7.362e-17)
+[RMPCC 0005] OK solve=81.4ms pose=(0.341,0.205,0.320) u=(0.107,0.390) s=0.056 PSDFmin=+0.002859 G=OK(+0.012) MF=OK(active=19/20,min=+1.291e-11,slack=+8.319e-14)
+[RMPCC 0006] OK solve=73.4ms pose=(0.351,0.208,0.359) u=(0.092,0.945) s=0.067 PSDFmin=-0.02879 G=OK(+0.01621) MF=OK(active=20/20,min=+1.245e-14,slack=+1.866e-16)
+[RMPCC 0007] OK solve=74.8ms pose=(0.360,0.211,0.453) u=(0.110,0.442) s=0.076 PSDFmin=+0.001284 G=OK(+0.01097) MF=OK(active=17/20,min=+6.97e-13,slack=+6.982e-15)
+[RMPCC 0008] OK solve=66.0ms pose=(0.370,0.216,0.497) u=(0.117,0.496) s=0.087 PSDFmin=-0.01702 G=OK(+0.01938) MF=OK(active=20/20,min=+1.821e-13,slack=+2.45e-14)
+[RMPCC 0009] OK solve=68.6ms pose=(0.380,0.221,0.547) u=(0.103,0.400) s=0.099 PSDFmin=-0.002641 G=OK(+0.009139) MF=OK(active=12/20,min=+7.417e-12,slack=+1.222e-13)
+[RMPCC 0010] OK solve=65.7ms pose=(0.389,0.227,0.587) u=(0.138,0.270) s=0.106 PSDFmin=-0.01527 G=OK(+0.02557) MF=OK(active=15/20,min=+1.826e-15,slack=+4.94e-17)
+[RMPCC 0011] OK solve=65.3ms pose=(0.400,0.234,0.614) u=(0.101,0.954) s=0.122 PSDFmin=-0.01355 G=OK(+0.002207) MF=OK(active=11/20,min=+5.512e-10,slack=+1.679e-12)
+[RMPCC 0012] OK solve=66.6ms pose=(0.409,0.240,0.709) u=(0.132,0.421) s=0.126 PSDFmin=-0.03293 G=OK(+0.01743) MF=OK(active=8/20,min=+2.67e-13,slack=+4.709e-15)
+[RMPCC 0013] OK solve=72.1ms pose=(0.419,0.249,0.751) u=(0.103,0.398) s=0.144 PSDFmin=-0.00484 G=OK(+0.006869) MF=OK(active=9/20,min=+4.5e-15,slack=+5.967e-17)
+[RMPCC 0014] OK solve=72.5ms pose=(0.426,0.256,0.791) u=(0.152,0.207) s=0.147 PSDFmin=-0.01922 G=OK(+0.01911) MF=OK(active=15/20,min=+2.476e-10,slack=+1.998e-12)
+[RMPCC 0015] OK solve=71.3ms pose=(0.437,0.267,0.812) u=(0.098,1.132) s=0.161 PSDFmin=-0.00609 G=OK(+0.003735) MF=OK(active=6/20,min=+2.792e-08,slack=+6.327e-11)
+[RMPCC 0016] OK solve=68.5ms pose=(0.444,0.274,0.925) u=(0.124,0.517) s=0.171 PSDFmin=-0.01569 G=OK(+0.01064) MF=OK(active=10/20,min=+4.541e-12,slack=+1.679e-13)
+[RMPCC 0017] OK solve=65.8ms pose=(0.451,0.284,0.977) u=(0.097,0.446) s=0.183 PSDFmin=-0.01079 G=OK(+0.00491) MF=OK(active=6/20,min=+2.794e-13,slack=+5.875e-15)
+[RMPCC 0018] OK solve=161.0ms pose=(0.457,0.292,1.021) u=(0.150,0.039) s=0.192 PSDFmin=+0.004101 G=OK(+0.00786) MF=OK(active=13/20,min=+8.675e-11,slack=+1.222e-12)
+[RMPCC 0019] OK solve=228.8ms pose=(0.464,0.305,1.025) u=(0.075,0.576) s=0.207 PSDFmin=-0.01449 G=OK(+0.006261) MF=OK(active=14/20,min=+1.786e-10,slack=+3.956e-12)
+[RMPCC 0020] OK solve=276.7ms pose=(0.468,0.311,1.083) u=(0.132,0.186) s=0.214 PSDFmin=+0.000107 G=OK(+6.726e-11) MF=OK(active=12/20,min=+7.379e-10,slack=+6.824e-13)
+[RMPCC 0021] OK solve=223.3ms pose=(0.474,0.323,1.102) u=(0.083,0.906) s=0.227 PSDFmin=+0.009988 G=OK(+0.009729) MF=OK(active=16/20,min=+8.686e-09,slack=+6.408e-11)
+[RMPCC 0022] OK solve=232.2ms pose=(0.478,0.330,1.192) u=(0.092,0.457) s=0.234 PSDFmin=-0.02528 G=OK(+0.01062) MF=OK(active=18/20,min=+1.614e-14,slack=+1.519e-16)
+[RMPCC 0023] OK solve=241.1ms pose=(0.482,0.339,1.238) u=(0.109,0.691) s=0.242 PSDFmin=+0.01301 G=OK(+0.01139) MF=OK(active=16/20,min=+1.274e-11,slack=+3.915e-11)
+[RMPCC 0024] OK solve=233.5ms pose=(0.485,0.349,1.307) u=(0.091,0.282) s=0.255 PSDFmin=-0.02125 G=OK(+0.01269) MF=OK(active=19/20,min=+9.846e-15,slack=+7.595e-17)
+[RMPCC 0025] OK solve=143.0ms pose=(0.488,0.358,1.335) u=(0.094,0.741) s=0.269 PSDFmin=+0.0125 G=OK(+0.01431) MF=OK(active=16/20,min=+1.607e-14,slack=+8.064e-17)
+[RMPCC 0026] OK solve=64.2ms pose=(0.490,0.367,1.409) u=(0.137,0.257) s=0.271 PSDFmin=-0.008711 G=OK(+0.0156) MF=OK(active=20/20,min=+6.007e-14,slack=+5.407e-15)
+[RMPCC 0027] OK solve=65.7ms pose=(0.492,0.380,1.435) u=(0.143,0.338) s=0.285 PSDFmin=+0.004183 G=OK(+0.0173) MF=OK(active=14/20,min=+8.956e-12,slack=+9.879e-15)
+[RMPCC 0028] OK solve=66.8ms pose=(0.494,0.395,1.469) u=(0.116,0.124) s=0.300 PSDFmin=+0.01972 G=OK(+0.01858) MF=OK(active=20/20,min=+5.885e-11,slack=+8.565e-14)
+[RMPCC 0029] OK solve=74.3ms pose=(0.495,0.406,1.481) u=(0.061,0.825) s=0.317 PSDFmin=-0.03046 G=OK(+0.02344) MF=OK(active=20/20,min=+2.838e-14,slack=+3.987e-16)
+[RMPCC 0030] OK solve=69.1ms pose=(0.496,0.412,1.564) u=(0.146,0.378) s=0.319 PSDFmin=+0.01334 G=OK(+0.01169) MF=OK(active=5/20,min=+0.09574,slack=+3.189e-11)
+[RMPCC 0031] OK solve=66.2ms pose=(0.496,0.427,1.602) u=(0.073,0.304) s=0.335 PSDFmin=-0.02101 G=OK(+0.01956) MF=OK(active=20/20,min=+1.671e-12,slack=+1.965e-13)
+[RMPCC 0032] OK solve=66.3ms pose=(0.495,0.434,1.632) u=(0.164,0.214) s=0.338 PSDFmin=+0.006689 G=OK(+0.01092) MF=OK(active=7/20,min=+0.1957,slack=+1.616e-14)
+[RMPCC 0033] OK solve=69.9ms pose=(0.494,0.450,1.653) u=(0.126,-0.026) s=0.354 PSDFmin=-0.004976 G=OK(+0.005421) MF=OK(active=20/20,min=+6.763e-15,slack=+1.02e-16)
+[RMPCC 0034] OK solve=65.0ms pose=(0.493,0.463,1.651) u=(0.188,-0.422) s=0.373 PSDFmin=+0.01067 G=OK(+0.01837) MF=OK(active=16/20,min=+2.982e-14,slack=+5.73e-16)
+[RMPCC 0035] OK solve=67.2ms pose=(0.492,0.482,1.609) u=(0.265,-0.019) s=0.385 PSDFmin=-0.003498 G=OK(+0.01746) MF=OK(active=20/20,min=+1.201e-14,slack=+1.721e-16)
+[RMPCC 0036] OK solve=65.5ms pose=(0.491,0.508,1.607) u=(0.153,-0.534) s=0.412 PSDFmin=+0.003649 G=OK(+0.02134) MF=OK(active=16/20,min=+0.122,slack=+3.038e-12)
+[RMPCC 0037] OK solve=74.0ms pose=(0.490,0.523,1.553) u=(0.173,-0.153) s=0.427 PSDFmin=+0.00849 G=OK(+0.01743) MF=OK(active=20/20,min=+5.769e-11,slack=+6.878e-13)
+[RMPCC 0038] OK solve=71.3ms pose=(0.491,0.541,1.538) u=(0.162,-1.072) s=0.442 PSDFmin=-0.007234 G=OK(+0.007135) MF=OK(active=20/20,min=+1.823e-15,slack=+4.64e-17)
+[RMPCC 0039] OK solve=65.0ms pose=(0.491,0.557,1.431) u=(0.106,-1.200) s=0.455 PSDFmin=+0.005601 G=OK(+0.004185) MF=OK(active=11/20,min=+5.243e-12,slack=+5.233e-13)
+[RMPCC 0040] OK solve=73.7ms pose=(0.493,0.567,1.311) u=(0.055,-0.681) s=0.469 PSDFmin=-0.008761 G=OK(+0.001264) MF=OK(active=20/20,min=-5.914e-15,slack=+4.744e-15)
+[RMPCC 0041] OK solve=161.8ms pose=(0.494,0.573,1.243) u=(0.029,-0.340) s=0.470 PSDFmin=-0.0007667 G=OK(+0.0003612) MF=OK(active=16/20,min=+3.378e-10,slack=+1.263e-12)
+[RMPCC 0042] OK solve=152.4ms pose=(0.495,0.575,1.209) u=(0.015,-0.170) s=0.470 PSDFmin=+0.00101 G=OK(+0) MF=OK(active=17/20,min=+2.442e-15,slack=+0.184)
+[RMPCC 0043] OK solve=159.4ms pose=(0.496,0.577,1.192) u=(0.541,0.116) s=0.470 PSDFmin=-0.009929 G=OK(+0.00237) MF=OK(active=20/20,min=+3.052e-14,slack=+3.585e-14)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [365.81803   0.05643   0.46147   0.52806]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([1, 2]), 'minimum_residual': -0.01092872565984726}
+  - {'constraint': 'row_m_soft_after_slack', 'stages': array([ 3,  5,  6,  7,  8, 12, 13, 14, 15, 16, 17, 18, 19, 20]), 'minimum_residual': -0.4614724735022119}
+  - {'constraint': 'dynamics_or_stage0_equality', 'maximum_residual': 0.05642816344467172}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 2.3583589900568446e-17 | 5.520028878436278e-13
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0044] SAFE_STOP solve=264.1ms pose=(0.516,0.627,1.203) u=(0.441,0.000) s=0.527 PSDFmin=-0.01574 G=FAIL(-0.04851) MF=FAIL(active=16/20,min=n/a,slack=n/a)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.       0.04193  0.01674  0.     ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.01674384979903698}
+  - {'constraint': 'dynamics_or_stage0_equality', 'maximum_residual': 0.04193168266459124}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0045] SAFE_STOP solve=107.5ms pose=(0.531,0.668,1.203) u=(0.341,0.000) s=0.569 PSDFmin=-0.01574 G=FAIL(-0.01674) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.       0.04537  0.01674  0.     ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.01674384979903698}
+  - {'constraint': 'dynamics_or_stage0_equality', 'maximum_residual': 0.04536583277508144}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0046] SAFE_STOP solve=105.1ms pose=(0.544,0.700,1.203) u=(0.241,0.000) s=0.614 PSDFmin=-0.01574 G=FAIL(-0.01674) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.       0.0385   0.01674  0.     ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.01674384979903698}
+  - {'constraint': 'dynamics_or_stage0_equality', 'maximum_residual': 0.038497532554101155}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0047] SAFE_STOP solve=114.1ms pose=(0.552,0.723,1.203) u=(0.141,0.000) s=0.652 PSDFmin=-0.01574 G=FAIL(-0.01674) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.       0.02795  0.01674  0.     ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.01674384979903698}
+  - {'constraint': 'dynamics_or_stage0_equality', 'maximum_residual': 0.027954455109727494}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0048] SAFE_STOP solve=106.0ms pose=(0.557,0.736,1.203) u=(0.041,0.000) s=0.680 PSDFmin=-0.01574 G=FAIL(-0.01674) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.       0.00383  0.01674  0.     ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.01674384979903698}
+  - {'constraint': 'dynamics_or_stage0_equality', 'maximum_residual': 0.0038309333468935503}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0049] SAFE_STOP solve=109.3ms pose=(0.559,0.740,1.203) u=(0.000,0.000) s=0.680 PSDFmin=-0.01574 G=FAIL(-0.01674) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.       0.       0.01674  0.     ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.01674384979903698}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0050] SAFE_STOP solve=107.1ms pose=(0.559,0.740,1.203) u=(0.000,0.000) s=0.680 PSDFmin=-0.01574 G=FAIL(-0.01674) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.       0.       0.01674  0.     ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.01674384979903698}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0051] SAFE_STOP solve=105.6ms pose=(0.559,0.740,1.203) u=(0.000,0.000) s=0.680 PSDFmin=-0.01574 G=FAIL(-0.01674) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.       0.       0.01674  0.     ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.01674384979903698}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0052] SAFE_STOP solve=105.4ms pose=(0.559,0.740,1.203) u=(0.000,0.000) s=0.680 PSDFmin=-0.01574 G=FAIL(-0.01674) MF=inactive(active=0/20)
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [30.       0.       0.01674  0.     ]
+Acados SQP iterations: 1
+RMPCC-MF diagnostics captured before infeasibility recovery.
+RMPCC-MF failed-iterate infeasibility candidates:
+  - {'constraint': 'row_g_hard_guard', 'stages': array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+       18, 19, 20]), 'minimum_residual': -0.01674384979903698}
+RMPCC-MF inactive Row M stages are trivially feasible.
+RMPCC-MF minimum box residuals [state | input]: 3.9e-08 | 0.0
+SQP_RTI solver failed with status 4. Starting infeasible recovery.
+Backup solver is unavailable; falling back to safe stop.
+Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-MF solve.
+[RMPCC 0053] SAFE_STOP solve=107.5ms pose=(0.559,0.740,1.203) u=(0.000,0.000) s=0.680 PSDFmin=-0.01574 G=FAIL(-0.01674) MF=inactive(active=0/20)
+실패 조건 충족으로 시뮬레이션 종료: consecutive_solver_failures(10): failure
+Using rmpcc optimizer with differential_drive dynamics:
+median:  0.0735851526260376
+std:  0.06014043666725484
+min:  0.06415176391601562
+max:  0.2767157554626465
+Simulation finished.
+Run outcome: status=failure, reason=consecutive_solver_failures(10): failure, final_time=5.399999999999997, distance_to_goal=0.2795022322209069
+Optimizer runtime stats: safe_stop_count=10, backup_feasible_qp_success_count=0, plant_input_apply_count=54, last_solve_mode=safe_stop
+Trial history saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/p1-l30_s_path_r1/data/trial_history_MPC_rmpcc_rectangle_s_path_p1-l30_s_path_r1.csv
+RMPCC constraint history saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/p1-l30_s_path_r1/data/rmpcc_constraints_MPC_rmpcc_rectangle_s_path_p1-l30_s_path_r1.csv
+RMPCC debug history saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/p1-l30_s_path_r1/data/cycle_raw.csv
+RMPCC debug history saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/p1-l30_s_path_r1/data/covariance_trajectory.csv
+Pose-SDF data saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/p1-l30_s_path_r1/data/pose_sdf_MPC_rmpcc_rectangle_s_path_p1-l30_s_path_r1.csv
+Total data points: 54
+SDF statistics - Min: -0.0157, Max: 0.1050, Mean: 0.0230

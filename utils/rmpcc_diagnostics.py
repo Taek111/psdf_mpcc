@@ -50,10 +50,13 @@ class RMPCCDiagnosticsMixin(AcadosDiagnosticsMixin):
             physical_input = np.asarray(solver.get(0, "u"), dtype=float)[:2]
             substep_dt = float(self.param.tf) / (self.N * num_substeps)
             for _ in range(num_substeps):
-                pose = self._rollout_terminal_pose(
-                    pose,
-                    physical_input,
-                    substep_dt,
+                pose = np.asarray(
+                    self._system_dynamics.forward_dynamics(
+                        pose,
+                        physical_input,
+                        substep_dt,
+                    ),
+                    dtype=float,
                 )
                 poses.append(np.asarray(pose, dtype=float).copy())
         poses = np.asarray(poses, dtype=float)

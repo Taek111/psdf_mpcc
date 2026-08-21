@@ -1,0 +1,288 @@
+RMPCC configured from config: horizon=20, tf=2.0, use_obstacle_constraint=True, use_row_mf=False, d_col=0.001, d_min=0.001, d_mf_mask=0.001, mf_slack_linear=100.0, mf_slack_quadratic=1.0, chance_epsilon=0.2, mf_active_start_step=1, mf_active_end_step=None, mf_active_terminal=True, sigma_f0=0.0002, sigma_l0=0.00025, sigma_psi0=0.00025, q_f0=0.0, q_l0=0.0, q_psi0=0.0, alpha_f=0.002, alpha_v=0.0004, alpha_kappa=0.01, beta_v=0.02, beta_kappa=0.008, beta_omega=0.008, enable_backup_solver=False, debug_mf=True, debug_infeasibility=True, augmented_psdf_device=cuda
+Resetting rmpcc optimizer for clean state...
+Trial failure criteria enabled: movement_window_sec=5.0, movement_threshold=0.005, max_consecutive_solver_failures=10
+generating global path with A* + Line of Sight
+시작 위치: [0.3 0.2]
+목적지: [0.8 0.8]
+도착 판정 기준: position <= 0.01m, angle <= 0.01rad
+Setting up RMPCC-MF optimizer...
+RMPCC-MF Row M configuration: enabled=False, active only when phi > d_mf_mask=0.001, configured stages=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+/home/taek111/projects/psdf_mpcc/models/geometry_utils.py:241: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at /opt/conda/conda-bld/pytorch_1724789122112/work/torch/csrc/utils/tensor_new.cpp:278.)
+  edgesA = torch.tensor(edgesA, dtype=torch.float32)
+Added two affine safety rows at intermediate/terminal stages: 0=HARD guard/recovery, 1=SOFT MF
+field AcadosOcpDims.N has been migrated to AcadosOcpOptions.N_horizon. setting AcadosOcpOptions.N_horizon = N. For future comppatibility, please use AcadosOcpOptions.N_horizon directly.
+
+WARNING: Gauss-Newton Hessian approximation with EXTERNAL cost type not well defined!
+got cost_type EXTERNAL for cost_type_0, cost_type, cost_type_e, hessian_approx: 'GAUSS_NEWTON'.
+With this setting, acados will proceed computing the exact Hessian for the cost term and no Hessian contribution from constraints and dynamics.
+If the external cost is a linear least squares cost, this coincides with the Gauss-Newton Hessian.
+Note: There is also the option to use the external cost module with a numerical Hessian approximation (see `ext_cost_num_hess`).
+OR the option to provide a symbolic custom Hessian approximation (see `cost_expr_ext_cost_custom_hess`).
+
+acados was compiled without OpenMP.
+RMPCC-MF backup SQP_WITH_FEASIBLE_QP solver disabled; using nominal safe-stop recovery.
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0000] OK solve=358.5ms pose=(0.300,0.200,0.000) u=(0.091,-0.000) s=0.016
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0001] OK solve=33.1ms pose=(0.309,0.200,-0.000) u=(0.069,1.107) s=0.026
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0002] OK solve=33.5ms pose=(0.316,0.200,0.111) u=(0.068,0.895) s=0.031
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0003] OK solve=34.2ms pose=(0.323,0.201,0.200) u=(0.080,0.899) s=0.040
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0004] OK solve=34.8ms pose=(0.331,0.202,0.290) u=(0.092,0.791) s=0.046
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0005] OK solve=36.9ms pose=(0.339,0.205,0.369) u=(0.104,0.726) s=0.056
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0006] OK solve=33.0ms pose=(0.349,0.209,0.442) u=(0.114,0.629) s=0.065
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0007] OK solve=34.9ms pose=(0.359,0.214,0.505) u=(0.123,0.572) s=0.076
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0008] OK solve=35.2ms pose=(0.370,0.220,0.562) u=(0.129,0.534) s=0.088
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0009] OK solve=33.1ms pose=(0.381,0.226,0.615) u=(0.135,0.515) s=0.101
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0010] OK solve=33.8ms pose=(0.392,0.234,0.667) u=(0.138,0.505) s=0.114
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0011] OK solve=35.4ms pose=(0.403,0.243,0.717) u=(0.138,0.515) s=0.125
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0012] OK solve=33.1ms pose=(0.413,0.252,0.769) u=(0.142,0.544) s=0.140
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0013] OK solve=33.0ms pose=(0.424,0.262,0.823) u=(0.144,0.586) s=0.153
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0014] OK solve=35.3ms pose=(0.433,0.272,0.882) u=(0.140,0.630) s=0.162
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0015] OK solve=33.8ms pose=(0.442,0.283,0.945) u=(0.141,0.689) s=0.176
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0016] OK solve=33.8ms pose=(0.451,0.295,1.014) u=(0.142,0.768) s=0.190
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0017] OK solve=34.4ms pose=(0.458,0.307,1.090) u=(0.143,0.860) s=0.204
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0018] OK solve=33.5ms pose=(0.465,0.319,1.176) u=(0.146,0.714) s=0.217
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0019] OK solve=33.0ms pose=(0.470,0.333,1.248) u=(0.153,0.607) s=0.237
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0020] OK solve=33.0ms pose=(0.475,0.347,1.308) u=(0.153,0.500) s=0.251
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0021] OK solve=33.3ms pose=(0.479,0.362,1.358) u=(0.157,0.403) s=0.269
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0022] OK solve=34.2ms pose=(0.482,0.377,1.399) u=(0.157,0.311) s=0.284
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0023] OK solve=34.4ms pose=(0.485,0.393,1.430) u=(0.159,0.227) s=0.300
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0024] OK solve=33.2ms pose=(0.487,0.408,1.452) u=(0.161,0.148) s=0.317
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0025] OK solve=32.7ms pose=(0.489,0.424,1.467) u=(0.164,0.076) s=0.335
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0026] OK solve=34.2ms pose=(0.491,0.441,1.475) u=(0.168,0.083) s=0.353
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0027] OK solve=33.1ms pose=(0.492,0.458,1.483) u=(0.160,0.094) s=0.361
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0028] OK solve=33.2ms pose=(0.494,0.474,1.493) u=(0.162,0.098) s=0.377
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0029] OK solve=35.0ms pose=(0.495,0.490,1.502) u=(0.165,0.092) s=0.395
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0030] OK solve=39.4ms pose=(0.496,0.506,1.512) u=(0.165,0.071) s=0.410
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0031] OK solve=34.4ms pose=(0.497,0.523,1.519) u=(0.166,0.028) s=0.426
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0032] OK solve=34.3ms pose=(0.498,0.539,1.522) u=(0.166,-0.003) s=0.442
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0033] OK solve=65.1ms pose=(0.499,0.556,1.521) u=(0.162,-0.052) s=0.455
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0034] OK solve=35.3ms pose=(0.500,0.572,1.516) u=(0.159,-0.105) s=0.469
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0035] OK solve=35.4ms pose=(0.501,0.588,1.505) u=(0.159,-0.186) s=0.484
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0036] OK solve=34.9ms pose=(0.502,0.604,1.487) u=(0.158,-0.262) s=0.499
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0037] OK solve=33.7ms pose=(0.503,0.619,1.461) u=(0.154,-0.328) s=0.513
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0038] OK solve=33.9ms pose=(0.505,0.635,1.428) u=(0.150,-0.403) s=0.527
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0039] OK solve=37.8ms pose=(0.507,0.650,1.388) u=(0.145,-0.484) s=0.541
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0040] OK solve=41.4ms pose=(0.509,0.664,1.339) u=(0.140,-0.576) s=0.555
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0041] OK solve=37.0ms pose=(0.513,0.677,1.282) u=(0.133,-0.683) s=0.569
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0042] OK solve=35.7ms pose=(0.516,0.690,1.213) u=(0.140,-0.858) s=0.597
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0043] OK solve=33.8ms pose=(0.521,0.703,1.128) u=(0.131,-1.094) s=0.611
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0044] OK solve=33.2ms pose=(0.527,0.715,1.018) u=(0.124,-1.091) s=0.625
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0045] OK solve=33.9ms pose=(0.533,0.726,0.909) u=(0.120,-0.927) s=0.638
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0046] OK solve=32.3ms pose=(0.541,0.735,0.816) u=(0.115,-0.795) s=0.652
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0047] OK solve=33.3ms pose=(0.549,0.744,0.737) u=(0.123,-0.688) s=0.680
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0048] OK solve=34.1ms pose=(0.558,0.752,0.668) u=(0.110,-0.602) s=0.691
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0049] OK solve=34.4ms pose=(0.566,0.759,0.608) u=(0.113,-0.524) s=0.714
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0050] OK solve=35.9ms pose=(0.576,0.765,0.555) u=(0.108,-0.463) s=0.729
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0051] OK solve=33.9ms pose=(0.585,0.771,0.509) u=(0.105,-0.408) s=0.745
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0052] OK solve=33.9ms pose=(0.594,0.776,0.468) u=(0.103,-0.363) s=0.760
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0053] OK solve=32.7ms pose=(0.603,0.781,0.432) u=(0.102,-0.325) s=0.775
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0054] OK solve=35.5ms pose=(0.613,0.785,0.399) u=(0.093,-0.288) s=0.783
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0055] OK solve=34.3ms pose=(0.621,0.788,0.371) u=(0.095,-0.259) s=0.798
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0056] OK solve=34.2ms pose=(0.630,0.792,0.345) u=(0.088,-0.233) s=0.805
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0057] OK solve=33.5ms pose=(0.638,0.795,0.321) u=(0.082,-0.208) s=0.813
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0058] OK solve=34.7ms pose=(0.646,0.797,0.301) u=(0.086,-0.191) s=0.828
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0059] OK solve=34.9ms pose=(0.654,0.800,0.282) u=(0.082,-0.174) s=0.836
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0060] OK solve=35.5ms pose=(0.662,0.802,0.264) u=(0.078,-0.158) s=0.843
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0061] OK solve=35.3ms pose=(0.670,0.804,0.248) u=(0.074,-0.144) s=0.851
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0062] OK solve=44.7ms pose=(0.677,0.806,0.234) u=(0.072,-0.132) s=0.859
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0063] OK solve=34.2ms pose=(0.684,0.808,0.221) u=(0.069,-0.122) s=0.866
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0064] OK solve=33.4ms pose=(0.691,0.809,0.208) u=(0.068,-0.112) s=0.874
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0065] OK solve=34.1ms pose=(0.697,0.811,0.197) u=(0.057,-0.101) s=0.874
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0066] OK solve=34.1ms pose=(0.703,0.812,0.187) u=(0.057,-0.093) s=0.881
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0067] OK solve=34.8ms pose=(0.708,0.813,0.178) u=(0.057,-0.087) s=0.889
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0068] OK solve=35.5ms pose=(0.714,0.814,0.169) u=(0.049,-0.079) s=0.889
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0069] OK solve=35.7ms pose=(0.719,0.815,0.161) u=(0.050,-0.073) s=0.897
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0070] OK solve=48.5ms pose=(0.724,0.816,0.154) u=(0.052,-0.069) s=0.904
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0071] OK solve=35.8ms pose=(0.729,0.816,0.147) u=(0.044,-0.063) s=0.904
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0072] OK solve=37.9ms pose=(0.733,0.817,0.141) u=(0.046,-0.059) s=0.912
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0073] OK solve=36.4ms pose=(0.738,0.818,0.135) u=(0.040,-0.054) s=0.912
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0074] OK solve=34.5ms pose=(0.742,0.818,0.130) u=(0.042,-0.050) s=0.919
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0075] OK solve=35.7ms pose=(0.746,0.819,0.125) u=(0.036,-0.046) s=0.919
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0076] OK solve=34.4ms pose=(0.750,0.819,0.120) u=(0.040,-0.043) s=0.927
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0077] OK solve=33.1ms pose=(0.754,0.820,0.116) u=(0.034,-0.040) s=0.927
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0078] OK solve=37.8ms pose=(0.757,0.820,0.112) u=(0.029,-0.036) s=0.927
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0079] OK solve=34.2ms pose=(0.760,0.820,0.108) u=(0.033,-0.034) s=0.935
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0080] OK solve=35.9ms pose=(0.763,0.821,0.105) u=(0.029,-0.032) s=0.935
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0081] OK solve=69.7ms pose=(0.766,0.821,0.101) u=(0.024,-0.029) s=0.935
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0082] OK solve=35.8ms pose=(0.768,0.821,0.098) u=(0.030,-0.028) s=0.942
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0083] OK solve=34.5ms pose=(0.771,0.822,0.096) u=(0.026,-0.026) s=0.942
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0084] OK solve=34.6ms pose=(0.774,0.822,0.093) u=(0.021,-0.024) s=0.942
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0085] OK solve=35.1ms pose=(0.776,0.822,0.091) u=(0.028,-0.022) s=0.950
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0086] OK solve=35.2ms pose=(0.779,0.822,0.088) u=(0.024,-0.021) s=0.950
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0087] OK solve=34.0ms pose=(0.781,0.822,0.086) u=(0.020,-0.019) s=0.950
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0088] OK solve=35.5ms pose=(0.783,0.823,0.084) u=(0.017,-0.018) s=0.950
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0089] OK solve=33.9ms pose=(0.785,0.823,0.083) u=(0.024,-0.017) s=0.957
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0090] OK solve=35.3ms pose=(0.787,0.823,0.081) u=(0.020,-0.016) s=0.957
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0091] OK solve=38.2ms pose=(0.789,0.823,0.079) u=(0.017,-0.015) s=0.957
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0092] OK solve=36.2ms pose=(0.791,0.823,0.078) u=(0.014,-0.014) s=0.957
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0093] OK solve=35.0ms pose=(0.792,0.823,0.077) u=(0.012,-0.013) s=0.957
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0094] OK solve=33.8ms pose=(0.793,0.823,0.075) u=(0.010,-0.012) s=0.957
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0095] OK solve=34.5ms pose=(0.794,0.824,0.074) u=(0.018,-0.012) s=0.965
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0096] OK solve=33.7ms pose=(0.796,0.824,0.073) u=(0.016,-0.011) s=0.965
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0097] OK solve=37.2ms pose=(0.798,0.824,0.072) u=(0.013,-0.010) s=0.965
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0098] OK solve=35.6ms pose=(0.799,0.824,0.071) u=(0.011,-0.009) s=0.965
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0099] OK solve=35.0ms pose=(0.800,0.824,0.070) u=(0.009,-0.009) s=0.965
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0100] OK solve=36.6ms pose=(0.801,0.824,0.069) u=(0.008,-0.008) s=0.965
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0101] OK solve=37.0ms pose=(0.802,0.824,0.068) u=(0.006,-0.008) s=0.965
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0102] OK solve=35.4ms pose=(0.803,0.824,0.067) u=(0.006,-0.008) s=0.966
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0103] OK solve=36.3ms pose=(0.803,0.824,0.066) u=(0.006,-0.008) s=0.966
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0104] OK solve=35.4ms pose=(0.804,0.824,0.066) u=(0.014,-0.007) s=0.973
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0105] OK solve=36.0ms pose=(0.805,0.824,0.065) u=(0.012,-0.007) s=0.973
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0106] OK solve=35.0ms pose=(0.806,0.824,0.064) u=(0.010,-0.006) s=0.973
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0107] OK solve=33.8ms pose=(0.807,0.824,0.064) u=(0.008,-0.006) s=0.973
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0108] OK solve=34.4ms pose=(0.808,0.824,0.063) u=(0.007,-0.005) s=0.973
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0109] OK solve=36.4ms pose=(0.809,0.825,0.063) u=(0.006,-0.005) s=0.973
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0110] OK solve=34.5ms pose=(0.809,0.825,0.062) u=(0.005,-0.005) s=0.973
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0111] OK solve=35.5ms pose=(0.810,0.825,0.062) u=(0.004,-0.005) s=0.973
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0112] OK solve=36.1ms pose=(0.810,0.825,0.061) u=(0.004,-0.005) s=0.973
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0113] OK solve=34.7ms pose=(0.811,0.825,0.061) u=(0.004,-0.004) s=0.974
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0114] OK solve=34.9ms pose=(0.811,0.825,0.060) u=(0.004,-0.004) s=0.974
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0115] OK solve=35.5ms pose=(0.811,0.825,0.060) u=(0.004,-0.004) s=0.974
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0116] OK solve=35.6ms pose=(0.812,0.825,0.059) u=(0.004,-0.004) s=0.975
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0117] OK solve=34.4ms pose=(0.812,0.825,0.059) u=(0.003,-0.004) s=0.975
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0118] OK solve=34.8ms pose=(0.812,0.825,0.059) u=(0.003,-0.004) s=0.976
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0119] OK solve=37.2ms pose=(0.813,0.825,0.058) u=(0.003,-0.004) s=0.976
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0120] OK solve=34.4ms pose=(0.813,0.825,0.058) u=(0.003,-0.004) s=0.976
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0121] OK solve=34.3ms pose=(0.813,0.825,0.058) u=(0.003,-0.003) s=0.976
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0122] OK solve=35.1ms pose=(0.814,0.825,0.057) u=(0.003,-0.003) s=0.977
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0123] OK solve=35.9ms pose=(0.814,0.825,0.057) u=(0.003,-0.003) s=0.977
+Warning: could not compute final diagnostics: 'RMPCCOptimizer' object has no attribute '_rollout_terminal_pose'
+[RMPCC 0124] OK solve=34.3ms pose=(0.814,0.825,0.057) u=(0.007,-0.003) s=0.980
+목적지에 도착했습니다! 현재 위치: [0.81505 0.82489], 시간: 12.50초
+Using rmpcc optimizer with differential_drive dynamics:
+median:  0.03470158576965332
+std:  0.029246390859085862
+min:  0.0323486328125
+max:  0.3585190773010254
+Simulation finished.
+Run outcome: status=success, reason=None, final_time=12.499999999999972, distance_to_goal=0.00995030554853704
+Optimizer runtime stats: safe_stop_count=0, backup_feasible_qp_success_count=0, plant_input_apply_count=125, last_solve_mode=sqp_rti
+Trial history saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/g0_s_path_r1/data/trial_history_MPC_rmpcc_rectangle_s_path_g0_s_path_r1.csv
+RMPCC debug history saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/g0_s_path_r1/data/cycle_raw.csv
+RMPCC debug history saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/g0_s_path_r1/data/covariance_trajectory.csv
+Pose-SDF data saved to /home/taek111/projects/psdf_mpcc/debug_runs/rmpcc_tuning/g0_s_path_r1/data/pose_sdf_MPC_rmpcc_rectangle_s_path_g0_s_path_r1.csv
+Total data points: 125
+SDF statistics - Min: 0.0034, Max: 0.1050, Mean: 0.0477

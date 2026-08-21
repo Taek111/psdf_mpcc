@@ -1,4 +1,5 @@
 import copy
+import json
 import os
 import shutil
 import time
@@ -11,7 +12,6 @@ from utils.acados_diagnostics import report_solver_failure
 from utils.rmpcc_diagnostics import RMPCCDiagnosticsMixin
 from utils.spline_path import (
     clamp_progress,
-    curvature,
     normalize_path_data,
     progress_bounds,
     project_progress,
@@ -60,6 +60,9 @@ class RMPCCOptimizerParam:
         self.chance_epsilon = 0.20
         self.mf_slack_linear = 1e2
         self.mf_slack_quadratic = 1e0
+        self.mf_active_start_step = 1
+        self.mf_active_end_step = None
+        self.mf_active_terminal = True
         self.augmented_psdf_device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # Risk and covariance
@@ -69,12 +72,13 @@ class RMPCCOptimizerParam:
         self.q_f0 = 0
         self.q_l0 = 0
         self.q_psi0 = 0
-        self.alpha_f = 0.002
-        self.alpha_v = 0.0004
-        self.alpha_kappa = 0.01
-        self.beta_v = 0.02
-        self.beta_kappa = 0.008
-        self.beta_omega = 0.008
+        self.covariance_growth_scale = 0.3
+        self.alpha_f = 0.002 * self.covariance_growth_scale
+        self.alpha_v = 0.0004 * self.covariance_growth_scale
+        self.alpha_kappa = 0.01 * self.covariance_growth_scale
+        self.beta_v = 0.02 * self.covariance_growth_scale
+        self.beta_kappa = 0.008 * self.covariance_growth_scale
+        self.beta_omega = 0.008 * self.covariance_growth_scale
         self.risk_cov_jitter = 1e-9
 
         # Solver and recovery
@@ -95,6 +99,26 @@ class RMPCCOptimizerParam:
 
 
 class RMPCCOptimizer(RMPCCDiagnosticsMixin):
+    CYCLE_LOG_FIELDS = (
+        "time",
+        "solve_mode",
+        "solver_status",
+        "u0",
+        "s",
+        "psdf",
+        "mf_probability_sum",
+        "mf_slack",
+    )
+    COVARIANCE_LOG_FIELDS = (
+        "time",
+        "stage",
+        "v",
+        "omega",
+        "sigma_f",
+        "sigma_l",
+        "sigma_psi",
+        "P_lpsi",
+    )
     CONSTRAINT_LOG_FIELDS = (
         "solve_step",
         "horizon_stage",
@@ -142,8 +166,11 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
         self._last_constraint_diagnostics = None
         self._last_failed_constraint_diagnostics = None
         self._constraint_log_rows = []
+        self._cycle_log_rows = []
+        self._covariance_log_rows = []
+        self._last_nominal_probability_sum = None
+        self._last_main_status = None
         self._solve_count = 0
-        self._has_shift_source = False
         self.prints_compact_runtime_summary = True
 
         self.json_filename = "acados_ocp_rmpcc_mf.json"
@@ -158,6 +185,8 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
 
     def _reset_runtime_counters(self):
         self._backup_feasible_qp_success_count = 0
+        self._main_solver_failure_count = 0
+        self._backup_solver_failure_count = 0
         self._safe_stop_count = 0
         self._plant_input_apply_count = 0
 
@@ -224,8 +253,11 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
         self._last_constraint_diagnostics = None
         self._last_failed_constraint_diagnostics = None
         self._constraint_log_rows = []
+        self._cycle_log_rows = []
+        self._covariance_log_rows = []
+        self._last_nominal_probability_sum = None
+        self._last_main_status = None
         self._solve_count = 0
-        self._has_shift_source = False
         self._last_solve_mode = "uninitialized"
         self._last_backup_status = None
 
@@ -249,6 +281,8 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
     def get_runtime_stats(self):
         return {
             "backup_feasible_qp_success_count": int(self._backup_feasible_qp_success_count),
+            "main_solver_failure_count": int(self._main_solver_failure_count),
+            "backup_solver_failure_count": int(self._backup_solver_failure_count),
             "safe_stop_count": int(self._safe_stop_count),
             "plant_input_apply_count": int(self._plant_input_apply_count),
             "last_solve_mode": str(self._last_solve_mode),
@@ -280,6 +314,18 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
 
     def record_plant_input_applied(self):
         self._plant_input_apply_count += 1
+
+    def get_cycle_log_rows(self):
+        return [row.copy() for row in self._cycle_log_rows]
+
+    def get_cycle_log_fields(self):
+        return list(self.CYCLE_LOG_FIELDS)
+
+    def get_covariance_log_rows(self):
+        return [row.copy() for row in self._covariance_log_rows]
+
+    def get_covariance_log_fields(self):
+        return list(self.COVARIANCE_LOG_FIELDS)
 
     def _get_effective_v_s_max(self, param):
         v_s_max = float(param.v_s_max)
@@ -606,6 +652,35 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             stage_available & has_active_features,
         )
 
+    def _build_mf_stage_mask(self, num_stages):
+        """Return the configured intermediate/terminal MF stage window."""
+        if num_stages <= 0:
+            raise ValueError("num_stages must be positive")
+
+        terminal_stage = num_stages - 1
+        stage_mask = np.zeros(num_stages, dtype=bool)
+
+        start_step = int(self.param.mf_active_start_step)
+        if start_step < 1:
+            raise ValueError("mf_active_start_step must be at least 1")
+        configured_end = self.param.mf_active_end_step
+        if configured_end is None:
+            end_step = terminal_stage - 1
+        else:
+            end_step = int(configured_end)
+
+        intermediate_last = terminal_stage - 1
+        if intermediate_last >= start_step and end_step >= start_step:
+            stage_indices = np.arange(num_stages)
+            intermediate = (
+                (stage_indices >= start_step)
+                & (stage_indices <= min(end_step, intermediate_last))
+            )
+            stage_mask[intermediate] = True
+
+        stage_mask[terminal_stage] = bool(self.param.mf_active_terminal)
+        return stage_mask
+
     def _compute_constraint_affine_data(self, z_bar):
         """Build fixed Row G/Row M coefficients and the per-stage MF mask."""
         z_bar_np = np.asarray(z_bar, dtype=float)
@@ -659,7 +734,8 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             if stage_available.shape != (num_stages,):
                 raise ValueError("MF availability must contain one value per stage")
         mf_valid = row_mf_enabled & stage_available & finite_mf
-        mf_mask = (phi > d_mf_mask) & mf_valid
+        mf_stage_mask = self._build_mf_stage_mask(num_stages)
+        mf_mask = (phi > d_mf_mask) & mf_valid & mf_stage_mask
 
         A_mf = np.zeros((num_stages, 8), dtype=float)
         c_mf = epsilon.copy()
@@ -675,71 +751,12 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             "mf_A_raw": A_mf_raw,
             "mf_c_raw": c_mf_raw,
             "mf_valid": mf_valid,
+            "mf_stage_mask": mf_stage_mask,
             "mf_A": A_mf,
             "mf_c": c_mf,
             "mf_mask": mf_mask,
             "epsilon": epsilon,
         }
-
-    def _propagate_covariance_state_batch(self, inputs, stage_s_values):
-        num_stages = len(stage_s_values)
-        dt = float(self.param.tf) / float(max(self.N, 1))
-        cov_floor = max(float(self.param.risk_cov_jitter), 0.0)
-
-        covariance_state = self._build_initial_covariance_state(self.param)
-        covariance_batch = np.zeros((num_stages, 4), dtype=float)
-
-        for i in range(num_stages):
-            covariance_batch[i] = covariance_state
-            if i >= inputs.shape[0]:
-                continue
-
-            v_i = float(inputs[i, 0])
-            omega_i = float(inputs[i, 1])
-            kappa_i = (
-                0.0
-                if self.reference_path_data is None
-                else curvature(self.reference_path_data, stage_s_values[i])
-            )
-
-            q_f = max(self.param.q_f0 + self.param.alpha_f * v_i * v_i, 0.0)
-            q_l = max(
-                self.param.q_l0
-                + self.param.alpha_v * v_i * v_i
-                + self.param.alpha_kappa * v_i * v_i * abs(kappa_i),
-                0.0,
-            )
-            q_psi = max(
-                self.param.q_psi0
-                + self.param.beta_v * v_i * v_i
-                + self.param.beta_kappa * v_i * v_i * abs(kappa_i)
-                + self.param.beta_omega * omega_i * omega_i,
-                0.0,
-            )
-
-            p_f, p_l, p_psi, p_lpsi = covariance_state
-            covariance_state = np.array(
-                [
-                    p_f + (dt * omega_i) ** 2 * p_l + dt * q_f,
-                    p_l
-                    + (dt * omega_i) ** 2 * p_f
-                    + 2.0 * dt * v_i * p_lpsi
-                    + (dt * v_i) ** 2 * p_psi
-                    + dt * q_l,
-                    p_psi + dt * q_psi,
-                    p_lpsi + dt * v_i * p_psi,
-                ],
-                dtype=float,
-            )
-
-            Sigma_next = self._project_to_psd(self._covariance_state_to_matrix(covariance_state))
-            Sigma_next[0, 0] = max(Sigma_next[0, 0], cov_floor)
-            Sigma_next[1, 1] = max(Sigma_next[1, 1], cov_floor)
-            Sigma_next[2, 2] = max(Sigma_next[2, 2], cov_floor)
-            covariance_state = self._matrix_to_covariance_state(Sigma_next)
-
-        return covariance_batch
-
 
     def _clamp_s(self, s_value):
         return clamp_progress(self.reference_path_data, s_value)
@@ -778,7 +795,9 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             np.array(ubx, dtype=float),
         )
 
-    def update_reference_path_params(self, state):
+    def update_reference_path_params(self, reference_path_data, state):
+        if reference_path_data is not None:
+            self.reference_path_data = normalize_path_data(reference_path_data)
         if self.reference_path_data is None:
             return None
 
@@ -1056,82 +1075,39 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             raise ValueError("nominal state and input trajectories must be finite")
         return states, inputs
 
-    def _rollout_terminal_pose(self, pose, physical_input, dt):
-        dynamics = self._system_dynamics
-        if dynamics is not None and hasattr(dynamics, "forward_dynamics"):
-            return np.asarray(
-                dynamics.forward_dynamics(pose, physical_input, dt),
-                dtype=float,
-            )
-        return np.array(
-            [
-                pose[0] + dt * physical_input[0] * np.cos(pose[2]),
-                pose[1] + dt * physical_input[0] * np.sin(pose[2]),
-                pose[2] + dt * physical_input[1],
-            ],
-            dtype=float,
-        )
+    def _predict_stage_s_values(self, s0, s_lower, s_upper):
+        s_values = np.zeros((self.N + 1,), dtype=float)
+        s_values[0] = float(np.clip(s0, s_lower, s_upper))
+        if self.N <= 0:
+            return s_values
 
-    def _build_shifted_nominal(self, solver, s_lower, s_upper, shift_nominal=True):
-        raw_states, raw_inputs = self._read_solver_trajectory(solver)
-        nominal_states = raw_states.copy()
-        nominal_inputs = raw_inputs.copy()
         dt = float(self.param.tf) / float(max(self.N, 1))
-
-        if shift_nominal and self._has_shift_source:
-            if self.N > 1:
-                nominal_states[1:self.N] = raw_states[2:self.N + 1]
-                nominal_inputs[:-1] = raw_inputs[1:]
-            terminal_input = raw_inputs[-1].copy()
-            terminal_pose = self._rollout_terminal_pose(
-                raw_states[-1, :3],
-                terminal_input[:2],
-                dt,
-            )
-            nominal_states[-1, :3] = terminal_pose
-            nominal_states[-1, 3] = raw_states[-1, 3] + dt * terminal_input[2]
-            nominal_inputs[-1] = terminal_input
-
         effective_v_s_max = self._get_effective_v_s_max(self.param)
-        nominal_inputs[:, 2] = np.clip(
-            nominal_inputs[:, 2],
-            0.0,
-            effective_v_s_max,
-        )
-        nominal_states[:, 3] = np.clip(
-            nominal_states[:, 3],
-            s_lower,
-            s_upper,
-        )
+        for i in range(1, self.N + 1):
+            s_from_state = np.nan
+            try:
+                s_from_state = float(self.solver.get(i, "x")[3])
+            except Exception:
+                pass
 
-        if self.state is not None:
-            nominal_states[0, :3] = np.asarray(self.state._x, dtype=float)
-        nominal_states[0, 3] = float(np.clip(self._current_s0, s_lower, s_upper))
+            try:
+                v_s_prev = float(self.solver.get(i - 1, "u")[2])
+            except Exception:
+                v_s_prev = 0.0
+            v_s_prev = float(np.clip(v_s_prev, 0.0, effective_v_s_max))
+            s_from_input = s_values[i - 1] + dt * v_s_prev
 
-        covariance_batch = self._propagate_covariance_state_batch(
-            nominal_inputs,
-            nominal_states[:, 3],
-        )
-        nominal_states[:, 4:8] = covariance_batch
-        return nominal_states, nominal_inputs
+            if np.isfinite(s_from_state):
+                s_next = 0.5 * s_from_state + 0.5 * s_from_input
+            else:
+                s_next = s_from_input
 
-    def _set_solver_nominal(self, solver, states, inputs, s_lower, s_upper):
-        solver.set(0, "lbx", states[0])
-        solver.set(0, "ubx", states[0])
-        _, lower, upper = self._get_augmented_state_bounds(
-            self.param,
-            s_lower,
-            s_upper,
-        )
-        for stage in range(1, self.N + 1):
-            solver.set(stage, "lbx", lower)
-            solver.set(stage, "ubx", upper)
-        for stage in range(self.N):
-            solver.set(stage, "x", states[stage])
-            solver.set(stage, "u", inputs[stage])
-        solver.set(self.N, "x", states[-1])
+            s_next = float(np.clip(s_next, s_lower, s_upper))
+            s_values[i] = max(s_values[i - 1], s_next)
 
-    def _set_constraint_parameters(self, solver, states, constraint_data):
+        return s_values
+
+    def _set_constraint_parameters(self, solver, stage_s_values, constraint_data):
         guard_rows = np.column_stack(
             (constraint_data["guard_A"][:, :3], constraint_data["guard_c"])
         )
@@ -1151,7 +1127,7 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             0,
             "p",
             self._build_stage_param(
-                self._build_stage_path_parameter(states[0, 3]),
+                self._build_stage_path_parameter(stage_s_values[0]),
                 guard_stage_zero,
                 mf_stage_zero,
             ),
@@ -1161,41 +1137,104 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
                 stage,
                 "p",
                 self._build_stage_param(
-                    self._build_stage_path_parameter(states[stage, 3]),
+                    self._build_stage_path_parameter(stage_s_values[stage]),
                     guard_rows[stage],
                     mf_rows[stage],
                 ),
             )
 
-    def _prepare_and_solve(self, solver, shift_nominal=True):
+    def _prepare_and_solve(self, solver):
         if solver is None:
             raise RuntimeError("Solver is not initialized.")
-        if self.state is not None:
-            self.update_reference_path_params(self.state)
 
         s_lower, s_upper = self._get_current_s_bounds(self.param)
-        self._current_s0 = float(np.clip(self._current_s0, s_lower, s_upper))
-        states, inputs = self._build_shifted_nominal(
-            solver,
+        if self.state is not None:
+            self.update_reference_path_params(self.reference_path_data, self.state)
+            s_lower, s_upper = self._get_current_s_bounds(self.param)
+            self._current_s0 = float(np.clip(self._current_s0, s_lower, s_upper))
+            x0_cov = self._build_initial_covariance_state(self.param)
+            x0 = np.array(
+                [
+                    self.state._x[0],
+                    self.state._x[1],
+                    self.state._x[2],
+                    self._current_s0,
+                    x0_cov[0],
+                    x0_cov[1],
+                    x0_cov[2],
+                    x0_cov[3],
+                ],
+                dtype=float,
+            )
+            try:
+                solver.set(0, "lbx", x0)
+                solver.set(0, "ubx", x0)
+            except Exception:
+                print(
+                    "Warning: stage-0 full-state bounds update failed; "
+                    "keeping previous equality bounds."
+                )
+            solver.set(0, "x", x0)
+
+        _, lbx, ubx = self._get_augmented_state_bounds(
+            self.param,
             s_lower,
             s_upper,
-            shift_nominal=shift_nominal,
         )
-        self._set_solver_nominal(solver, states, inputs, s_lower, s_upper)
+        try:
+            for i in range(1, self.N):
+                solver.set(i, "lbx", lbx)
+                solver.set(i, "ubx", ubx)
+            solver.set(self.N, "lbx", lbx)
+            solver.set(self.N, "ubx", ubx)
+        except Exception:
+            print(
+                "Warning: failed to update per-stage augmented-state bounds "
+                "in solver."
+            )
 
-        if self.state is not None and not np.allclose(
-            states[0, :3],
-            self.state._x,
-            rtol=0.0,
-            atol=1e-12,
-        ):
-            raise AssertionError("shifted nominal stage 0 must match the measured pose")
+        try:
+            effective_v_s_max = self._get_effective_v_s_max(self.param)
+            cov_floor = max(float(self.param.risk_cov_jitter), 0.0)
+            for i in range(1, self.N + 1):
+                xi = solver.get(i, "x")
+                xi[3] = float(np.clip(xi[3], s_lower, s_upper))
+                xi[4:7] = np.maximum(xi[4:7], cov_floor)
+                solver.set(i, "x", xi)
+            for i in range(self.N):
+                ui = solver.get(i, "u")
+                ui[2] = float(np.clip(ui[2], 0.0, effective_v_s_max))
+                solver.set(i, "u", ui)
+        except Exception:
+            pass
 
-        constraint_data = self._compute_constraint_affine_data(states)
-        exact_current_phi, _ = self._compute_exact_psdf(states[0, :3])
+        x_guess = np.stack(
+            [solver.get(i, "x") for i in range(self.N + 1)],
+            axis=0,
+        )
+        stage_s_values = self._predict_stage_s_values(
+            self._current_s0,
+            s_lower,
+            s_upper,
+        )
+
+        constraint_data = self._compute_constraint_affine_data(x_guess)
+        nominal_mf_residual = (
+            np.einsum("ij,ij->i", constraint_data["mf_A_raw"], x_guess)
+            + constraint_data["mf_c_raw"]
+        )
+        nominal_probability_sum = constraint_data["epsilon"] - nominal_mf_residual
+        nominal_probability_sum[~constraint_data["mf_valid"]] = np.nan
+        self._last_nominal_probability_sum = nominal_probability_sum.copy()
+
+        exact_current_phi, _ = self._compute_exact_psdf(x_guess[0, :3])
         constraint_data["exact_current_phi"] = float(exact_current_phi)
         self._constraint_data = constraint_data
-        self._set_constraint_parameters(solver, states, constraint_data)
+        self._set_constraint_parameters(
+            solver,
+            stage_s_values,
+            constraint_data,
+        )
         return solver.solve()
 
     def _try_backup_recovery(self):
@@ -1214,11 +1253,10 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
                     self._system,
                     solver=self.backup_solver,
                 )
-            status = self._prepare_and_solve(
-                self.backup_solver,
-                shift_nominal=False,
-            )
+            status = self._prepare_and_solve(self.backup_solver)
             self._last_backup_status = int(status)
+            if status != 0:
+                self._backup_solver_failure_count += 1
             if status == 0:
                 try:
                     self._copy_primal_guess(self.backup_solver, self.solver)
@@ -1270,10 +1308,7 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             pose = np.asarray(next_pose, dtype=float)
             previous_speed = speed
 
-        states[:, 4:8] = self._propagate_covariance_state_batch(
-            inputs,
-            states[:, 3],
-        )
+        states[:, 4:8] = self._build_initial_covariance_state(self.param)
         return states, inputs
 
     def _apply_safe_stop(self, dynamics, solver_status):
@@ -1375,10 +1410,14 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             return
 
         print("Setting up RMPCC-MF optimizer...")
+        active_stages = np.flatnonzero(
+            self._build_mf_stage_mask(int(param.horizon) + 1)
+        ).tolist()
         print(
             "RMPCC-MF Row M configuration: "
             f"enabled={bool(param.use_row_mf)}, "
-            f"active only when phi > d_mf_mask={float(param.d_mf_mask):.8g}"
+            f"active only when phi > d_mf_mask={float(param.d_mf_mask):.8g}, "
+            f"configured stages={active_stages}"
         )
         if param.use_obstacle_constraint:
             self.initialize_augmented_psdf(
@@ -1492,8 +1531,108 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
                 }
             )
 
+    @staticmethod
+    def _finite_or_none(value):
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            return None
+        return value if np.isfinite(value) else None
+
+    @classmethod
+    def _json_vector(cls, values):
+        if values is None:
+            return "[]"
+        payload = [
+            cls._finite_or_none(value)
+            for value in np.asarray(values, dtype=float).reshape(-1)
+        ]
+        return json.dumps(payload, separators=(",", ":"))
+
+    def _get_cycle_log_time(self):
+        system_time = getattr(self._system, "_time", None)
+        if system_time is not None and np.isfinite(system_time):
+            return float(system_time)
+        dt = float(self.param.tf) / float(max(self.N, 1))
+        return float(self._solve_count * dt)
+
+    def _record_experiment_logs(self, mode, status, solver, diagnostics):
+        log_time = self._get_cycle_log_time()
+        try:
+            u0 = np.asarray(solver.get(0, "u"), dtype=float).reshape(-1)
+        except Exception:
+            u0 = np.full(3, np.nan, dtype=float)
+
+        if diagnostics is not None:
+            mf_slack = diagnostics.get("mf_lower_slack")
+            psdf = diagnostics.get("exact_current_psdf")
+        else:
+            mf_slack = self._read_lower_slack_trajectory(solver)[:, 1]
+            psdf = (
+                self._constraint_data.get("exact_current_phi")
+                if self._constraint_data is not None
+                else None
+            )
+
+        main_status = self._last_main_status
+        if main_status is None:
+            main_status = status
+        self._cycle_log_rows.append(
+            {
+                "time": log_time,
+                "solve_mode": str(mode),
+                "solver_status": int(main_status),
+                "u0": self._json_vector(u0),
+                "s": float(self._prev_predicted_s),
+                "psdf": self._finite_or_none(psdf),
+                "mf_probability_sum": self._json_vector(
+                    self._last_nominal_probability_sum
+                ),
+                "mf_slack": self._json_vector(mf_slack),
+            }
+        )
+
+        try:
+            states, inputs = self._read_solver_trajectory(solver)
+        except Exception:
+            return
+
+        for stage in range(self.N + 1):
+            p_f, p_l, p_psi, p_lpsi = states[stage, 4:8]
+            if stage < self.N:
+                v_value = self._finite_or_none(inputs[stage, 0])
+                omega_value = self._finite_or_none(inputs[stage, 1])
+            else:
+                v_value = None
+                omega_value = None
+            self._covariance_log_rows.append(
+                {
+                    "time": log_time,
+                    "stage": stage,
+                    "v": v_value,
+                    "omega": omega_value,
+                    "sigma_f": (
+                        float(np.sqrt(max(p_f, 0.0)))
+                        if np.isfinite(p_f)
+                        else None
+                    ),
+                    "sigma_l": (
+                        float(np.sqrt(max(p_l, 0.0)))
+                        if np.isfinite(p_l)
+                        else None
+                    ),
+                    "sigma_psi": (
+                        float(np.sqrt(max(p_psi, 0.0)))
+                        if np.isfinite(p_psi)
+                        else None
+                    ),
+                    "P_lpsi": self._finite_or_none(p_lpsi),
+                }
+            )
+
     def _finish_solve(self, start_time, mode, status, solver, diagnostics):
         self._last_solve_mode = mode
+        self._record_experiment_logs(mode, status, solver, diagnostics)
         solve_time = time.time() - start_time
         self.solver_times.append(solve_time)
 
@@ -1581,7 +1720,13 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
         self._last_backup_status = None
         self._last_constraint_diagnostics = None
         self._last_failed_constraint_diagnostics = None
+        # Match the working MPCC/RMPCC-PV lifecycle: linearize Row G/M at the
+        # solver's retained warm-start trajectory instead of manually shifting
+        # that trajectory before each RTI solve.
         status = self._prepare_and_solve(self.solver)
+        self._last_main_status = int(status)
+        if status != 0:
+            self._main_solver_failure_count += 1
         active_solver = self.solver
         mode = "sqp_rti"
 
@@ -1606,7 +1751,6 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             self._record_recovery(mode)
 
         self._update_predicted_progress(active_solver, status)
-        self._has_shift_source = True
 
         diagnostics = None
         use_debug = bool(self.param.debug_mf)

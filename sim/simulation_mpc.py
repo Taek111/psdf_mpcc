@@ -1442,7 +1442,9 @@ class simulation_mpc:
         robot = self.sim._robot
         logged_states = list(getattr(getattr(robot, "_system_logger", None), "_xs", []))
         logged_inputs = list(getattr(getattr(robot, "_system_logger", None), "_us", []))
-        solver_status_infos = list(getattr(getattr(robot, "_controller_logger", None), "_solver_status_infos", []))
+        controller_logger = getattr(robot, "_controller_logger", None)
+        solver_status_infos = list(getattr(controller_logger, "_solver_status_infos", []))
+        controller_times = list(getattr(controller_logger, "_computation_times", []))
         optimizer = getattr(getattr(robot, "_controller", None), "_optimizer", None)
         solver_times = list(getattr(optimizer, "solver_times", []))
 
@@ -1462,6 +1464,7 @@ class simulation_mpc:
             "theta",
             "v",
             "omega",
+            "controller_computation_time",
             "solver_computation_time",
             "solver_raw_status",
             "solver_status_code",
@@ -1482,7 +1485,14 @@ class simulation_mpc:
                     "theta": float(state_arr[2]) if state_arr.size > 2 else float("nan"),
                     "v": float(input_arr[0]) if input_arr.size > 0 else float("nan"),
                     "omega": float(input_arr[1]) if input_arr.size > 1 else float("nan"),
-                    "solver_computation_time": float(solver_times[idx]) if idx < len(solver_times) else "",
+                    "controller_computation_time": (
+                        float(controller_times[idx])
+                        if idx < len(controller_times)
+                        else ""
+                    ),
+                    "solver_computation_time": (
+                        float(solver_times[idx]) if idx < len(solver_times) else ""
+                    ),
                     "solver_raw_status": status_info.get("raw_status", None),
                     "solver_status_code": status_info.get("status_code", None),
                     "solver_success": status_info.get("success", None),

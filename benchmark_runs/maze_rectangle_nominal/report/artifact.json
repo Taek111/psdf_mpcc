@@ -1,0 +1,848 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "PSDF 제어기 벤치마크와 MF 공분산 스케일 분석",
+    "description": "maze 환경에서 네 제어기의 실시간성·주행안정성과 PSDF-MPCC-CC-MF covariance_growth_scale 0.1–1.0의 효과를 비교한 기술 보고서",
+    "generatedAt": "2026-08-23T10:21:15Z",
+    "cards": [
+      {
+        "id": "selected_scale",
+        "description": "성공·무충돌 후보 중 q05 clearance 우선 선정값",
+        "dataset": "selected_mf",
+        "sourceId": "scale_sweep",
+        "metrics": [
+          {
+            "label": "선정 covariance growth scale",
+            "field": "scale",
+            "format": "number"
+          }
+        ]
+      },
+      {
+        "id": "selected_clearance",
+        "description": "선정된 MF 시행의 하위 5% 및 최소 clearance",
+        "dataset": "selected_mf",
+        "sourceId": "scale_sweep",
+        "metrics": [
+          {
+            "label": "q05 clearance",
+            "field": "q05_mm",
+            "format": "number",
+            "unit": "mm"
+          },
+          {
+            "label": "최소 clearance",
+            "field": "min_mm",
+            "format": "number",
+            "unit": "mm"
+          }
+        ]
+      },
+      {
+        "id": "selected_latency",
+        "description": "전체 controller 호출 경계에서 측정한 p95 시간과 100 ms 초과 비율",
+        "dataset": "selected_mf",
+        "sourceId": "scale_sweep",
+        "metrics": [
+          {
+            "label": "controller p95",
+            "field": "p95_ms",
+            "format": "number",
+            "unit": "ms"
+          },
+          {
+            "label": "100 ms deadline miss",
+            "field": "deadline_miss_rate",
+            "format": "percent"
+          }
+        ]
+      },
+      {
+        "id": "selected_reliability",
+        "description": "선정된 MF 시행의 solver 실패 및 safe-stop 횟수",
+        "dataset": "selected_mf",
+        "sourceId": "scale_sweep",
+        "metrics": [
+          {
+            "label": "solver 실패",
+            "field": "solver_failures",
+            "format": "number"
+          },
+          {
+            "label": "safe-stop",
+            "field": "safe_stops",
+            "format": "number"
+          }
+        ]
+      }
+    ],
+    "charts": [
+      {
+        "id": "scale_q05",
+        "title": "MF scale별 q05 clearance",
+        "subtitle": "scale당 1회 시행, 단위 mm; 음수는 장애물 내부로 진입한 관측을 뜻함",
+        "type": "bar",
+        "intent": "comparison",
+        "question": "covariance_growth_scale에 따라 하위 5% clearance가 어떻게 달라지는가?",
+        "rationale": "10개의 이산 scale과 음수 clearance를 정확히 비교하기 위해 영점 기준 단일 계열 막대차트를 사용한다.",
+        "comparisonContext": {
+          "baseline": "scale 0.3 기존 기본 동작",
+          "denominator": "각 시행의 pose/SDF 관측",
+          "grain": "scale당 1회 시행",
+          "unit": "mm"
+        },
+        "dataset": "scale_sweep",
+        "sourceId": "scale_sweep",
+        "palette": {
+          "kind": "identity",
+          "name": "blue"
+        },
+        "labels": {
+          "values": "auto"
+        },
+        "encodings": {
+          "x": {
+            "field": "scale_label",
+            "type": "ordinal",
+            "label": "covariance_growth_scale"
+          },
+          "y": {
+            "field": "q05_mm",
+            "type": "quantitative",
+            "label": "q05 clearance",
+            "unit": "mm"
+          },
+          "tooltip": [
+            {
+              "field": "status",
+              "type": "nominal",
+              "label": "상태"
+            },
+            {
+              "field": "collision",
+              "type": "nominal",
+              "label": "충돌"
+            },
+            {
+              "field": "solver_failures",
+              "type": "quantitative",
+              "label": "solver 실패"
+            },
+            {
+              "field": "safe_stops",
+              "type": "quantitative",
+              "label": "safe-stop"
+            }
+          ]
+        },
+        "yAxisTitle": "q05 clearance (mm)",
+        "valueFormat": "number",
+        "layout": "full"
+      },
+      {
+        "id": "optimizer_p95",
+        "title": "Optimizer별 controller p95 계산시간",
+        "subtitle": "전체 generate_control_input() 호출 경계, 단위 ms; deadline은 100 ms",
+        "type": "horizontalBar",
+        "intent": "comparison",
+        "question": "네 optimizer의 p95 전체 controller 계산시간은 어떻게 다른가?",
+        "rationale": "긴 방법명을 읽기 쉽게 유지하면서 동일 단위의 네 값을 비교하기 위해 수평 막대차트를 사용한다.",
+        "comparisonContext": {
+          "baseline": "100 ms 제어 deadline",
+          "denominator": "각 시행의 controller 호출",
+          "grain": "optimizer당 1회 시행",
+          "unit": "ms"
+        },
+        "dataset": "optimizer_comparison",
+        "sourceId": "optimizer_comparison",
+        "palette": {
+          "kind": "identity",
+          "name": "blue"
+        },
+        "labels": {
+          "values": "all"
+        },
+        "referenceLines": [
+          {
+            "value": 100,
+            "axis": "y",
+            "label": "100 ms deadline",
+            "color": "neutral",
+            "lineStyle": "dashed"
+          }
+        ],
+        "encodings": {
+          "x": {
+            "field": "method",
+            "type": "nominal",
+            "label": "optimizer"
+          },
+          "y": {
+            "field": "p95_ms",
+            "type": "quantitative",
+            "label": "controller p95",
+            "unit": "ms"
+          },
+          "tooltip": [
+            {
+              "field": "deadline_miss_rate",
+              "type": "quantitative",
+              "label": "deadline miss",
+              "format": "percent"
+            },
+            {
+              "field": "q05_mm",
+              "type": "quantitative",
+              "label": "q05 clearance",
+              "unit": "mm"
+            },
+            {
+              "field": "driving_time_s",
+              "type": "quantitative",
+              "label": "주행시간",
+              "unit": "s"
+            }
+          ]
+        },
+        "valueFormat": "number",
+        "layout": "full"
+      }
+    ],
+    "tables": [
+      {
+        "id": "scale_detail",
+        "title": "MF scale sweep 상세 결과",
+        "subtitle": "0.1–1.0 각 1회 시행; timeout은 60 s 안에 목표에 도달하지 못한 경우",
+        "dataset": "scale_sweep",
+        "sourceId": "scale_sweep",
+        "defaultSort": {
+          "field": "scale",
+          "direction": "asc"
+        },
+        "density": "dense",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "scale",
+            "label": "scale",
+            "format": "number"
+          },
+          {
+            "field": "status",
+            "label": "상태",
+            "type": "text"
+          },
+          {
+            "field": "collision",
+            "label": "충돌",
+            "type": "text"
+          },
+          {
+            "field": "driving_time_s",
+            "label": "주행시간",
+            "format": "number",
+            "unit": "s"
+          },
+          {
+            "field": "q05_mm",
+            "label": "q05 clearance",
+            "format": "number",
+            "unit": "mm"
+          },
+          {
+            "field": "min_mm",
+            "label": "min clearance",
+            "format": "number",
+            "unit": "mm"
+          },
+          {
+            "field": "p95_ms",
+            "label": "controller p95",
+            "format": "number",
+            "unit": "ms"
+          },
+          {
+            "field": "deadline_miss_rate",
+            "label": "deadline miss",
+            "format": "percent"
+          },
+          {
+            "field": "solver_failures",
+            "label": "solver 실패",
+            "format": "number"
+          },
+          {
+            "field": "safe_stops",
+            "label": "safe-stop",
+            "format": "number"
+          }
+        ]
+      },
+      {
+        "id": "optimizer_detail",
+        "title": "네 optimizer의 실시간성·주행안정성 비교",
+        "subtitle": "동일 maze/rectangle/differential-drive/A*/60 s/no-localization-error 조건",
+        "dataset": "optimizer_comparison",
+        "sourceId": "optimizer_comparison",
+        "defaultSort": {
+          "field": "p95_ms",
+          "direction": "asc"
+        },
+        "density": "dense",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "method",
+            "label": "optimizer",
+            "type": "text"
+          },
+          {
+            "field": "driving_time_s",
+            "label": "주행시간",
+            "format": "number",
+            "unit": "s"
+          },
+          {
+            "field": "median_ms",
+            "label": "controller median",
+            "format": "number",
+            "unit": "ms"
+          },
+          {
+            "field": "p95_ms",
+            "label": "controller p95",
+            "format": "number",
+            "unit": "ms"
+          },
+          {
+            "field": "deadline_miss_rate",
+            "label": "deadline miss",
+            "format": "percent"
+          },
+          {
+            "field": "q05_mm",
+            "label": "q05 clearance",
+            "format": "number",
+            "unit": "mm"
+          },
+          {
+            "field": "min_mm",
+            "label": "min clearance",
+            "format": "number",
+            "unit": "mm"
+          },
+          {
+            "field": "rms_delta_v",
+            "label": "RMS Δv",
+            "format": "number"
+          },
+          {
+            "field": "rms_delta_omega",
+            "label": "RMS Δω",
+            "format": "number"
+          },
+          {
+            "field": "solver_failures",
+            "label": "solver 실패",
+            "format": "number"
+          },
+          {
+            "field": "safe_stops",
+            "label": "safe-stop",
+            "format": "number"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "scale_sweep",
+        "label": "MF scale sweep summary",
+        "path": "benchmark_runs/maze_rectangle_nominal/scale_sweep.csv",
+        "query": {
+          "engine": "duckdb",
+          "description": "Loads the reviewed per-scale benchmark summary and converts seconds to milliseconds and metres to millimetres for presentation.",
+          "sql": "SELECT *, 1000 * controller_time_median AS median_ms, 1000 * controller_time_p95 AS p95_ms, 1000 * clearance_q05 AS q05_mm, 1000 * clearance_min AS min_mm FROM read_csv_auto('benchmark_runs/maze_rectangle_nominal/scale_sweep.csv') ORDER BY covariance_growth_scale",
+          "executed_at": "2026-08-23T10:21:15Z",
+          "tables_used": [
+            "benchmark_runs/maze_rectangle_nominal/scale_sweep.csv"
+          ]
+        }
+      },
+      {
+        "id": "optimizer_comparison",
+        "label": "Optimizer comparison summary",
+        "path": "benchmark_runs/maze_rectangle_nominal/optimizer_comparison.csv",
+        "query": {
+          "engine": "duckdb",
+          "description": "Loads the reviewed optimizer comparison and converts seconds to milliseconds and metres to millimetres for presentation.",
+          "sql": "SELECT *, 1000 * controller_time_median AS median_ms, 1000 * controller_time_p95 AS p95_ms, 1000 * clearance_q05 AS q05_mm, 1000 * clearance_min AS min_mm FROM read_csv_auto('benchmark_runs/maze_rectangle_nominal/optimizer_comparison.csv')",
+          "executed_at": "2026-08-23T10:21:15Z",
+          "tables_used": [
+            "benchmark_runs/maze_rectangle_nominal/optimizer_comparison.csv"
+          ]
+        }
+      },
+      {
+        "id": "benchmark_runner",
+        "label": "Benchmark runner and metric definitions",
+        "path": "run_optimizer_benchmark.py"
+      },
+      {
+        "id": "report_source_notes",
+        "label": "Validation, source inventory, and chart map",
+        "path": "benchmark_runs/maze_rectangle_nominal/report/source_notes.md"
+      }
+    ],
+    "blocks": [
+      {
+        "id": "title",
+        "type": "markdown",
+        "body": "# PSDF 제어기 벤치마크와 MF 공분산 스케일 분석"
+      },
+      {
+        "id": "technical_summary_comparison",
+        "type": "markdown",
+        "sourceId": "optimizer_comparison",
+        "body": "## 기술 요약\n\n- **MF의 권장값은 `covariance_growth_scale=0.7`이다.** 이 설정은 목표에 도달했고 충돌·solver 실패·safe-stop이 없었으며 q05 clearance는 **6.87 mm**였다.\n- **안전 여유는 MF가 가장 컸지만 현재 구현은 100 ms 실시간 요구를 만족하지 못했다.** MF의 전체 controller p95는 **422.85 ms**, deadline miss율은 **100%**였다.\n- **실시간성은 PSDF-MPC와 PSDF-MPCC가 가장 좋았다.** p95는 각각 **46.66 ms**, **58.81 ms**였고 miss율은 각각 **1.30%**, **1.11%**였다. 다만 PSDF-MPC의 최소 clearance는 **-0.16 mm**로 충돌 판정이 발생했다."
+      },
+      {
+        "id": "technical_summary_scale",
+        "type": "markdown",
+        "sourceId": "scale_sweep",
+        "body": "- **scale을 크게 한다고 안전성이 단조 증가하지 않았다.** 0.8과 0.9는 timeout·충돌과 각각 **580회**, **476회** safe-stop을 기록했고, 1.0은 목표에 도달했지만 최소 clearance가 **-0.50 mm**로 충돌 판정이었다."
+      },
+      {
+        "id": "selected_metrics",
+        "type": "metric-strip",
+        "cardIds": [
+          "selected_scale",
+          "selected_clearance",
+          "selected_latency",
+          "selected_reliability"
+        ]
+      },
+      {
+        "id": "scale_finding",
+        "type": "markdown",
+        "sourceId": "scale_sweep",
+        "body": "## Scale 0.7이 충돌 없는 후보 중 q05 clearance를 최대화했다\n\n0.1에서 0.3까지 q05 clearance는 **4.27 mm → 6.37 mm**로 늘었고, 0.7에서 **6.87 mm**로 최고였다. 0.7의 주행시간은 **33.5 s**로 0.3보다 2.0 s 길었지만 solver 실패와 safe-stop 없이 완료했다. 아래 차트는 모든 scale의 하위 5% 여유를 같은 영점 기준으로 보여준다."
+      },
+      {
+        "id": "scale_chart",
+        "type": "chart",
+        "chartId": "scale_q05",
+        "layout": "full"
+      },
+      {
+        "id": "scale_failure_boundary",
+        "type": "markdown",
+        "sourceId": "scale_sweep",
+        "body": "### 0.8 이상에서는 안정성 경계가 나타났다\n\n0.8과 0.9는 60 s 내 목표에 도달하지 못했고 q05 clearance도 음수였다. 1.0은 성공 상태였지만 최소 clearance가 음수여서 선정 후보에서 제외됐다. 즉 이 시행에서는 **0.7과 0.8 사이가 실용적인 상한 경계**로 관측됐으며, 큰 scale이 자동으로 더 보수적이고 안전한 주행을 보장하지 않았다."
+      },
+      {
+        "id": "scale_table",
+        "type": "table",
+        "tableId": "scale_detail",
+        "layout": "full"
+      },
+      {
+        "id": "optimizer_finding",
+        "type": "markdown",
+        "sourceId": "optimizer_comparison",
+        "body": "## MF는 clearance를 개선했지만 100 ms 실시간 목표는 놓쳤다\n\n선정 MF는 네 방법 중 q05와 최소 clearance가 모두 가장 컸고 solver 실패도 없었다. 그러나 median **149.13 ms**, p95 **422.85 ms**로 매 스텝이 100 ms를 초과했다. SF 역시 p95 **133.90 ms**, miss율 **13.83%**, solver 실패·safe-stop **26회**로 실시간성과 수치 안정성이 저하됐다. 아래 차트의 100 ms 기준선을 넘는 정도가 계산시간 부담을 보여준다."
+      },
+      {
+        "id": "optimizer_latency_chart",
+        "type": "chart",
+        "chartId": "optimizer_p95",
+        "layout": "full"
+      },
+      {
+        "id": "optimizer_tradeoff",
+        "type": "markdown",
+        "sourceId": "optimizer_comparison",
+        "body": "PSDF-MPCC는 p95 **58.81 ms**, miss율 **1.11%**, q05 **1.71 mm**, 충돌 없음으로 실시간성과 안정성의 균형이 가장 좋았다. PSDF-MPC는 가장 빠르고 주행시간도 **15.4 s**로 짧았지만 최소 clearance가 음수였다. 입력 평활성은 PSDF-MPCC가 RMS Δv **0.0067**, RMS Δω **0.1127**로 가장 우수했다."
+      },
+      {
+        "id": "optimizer_table",
+        "type": "table",
+        "tableId": "optimizer_detail",
+        "layout": "full"
+      },
+      {
+        "id": "scope_definitions",
+        "type": "markdown",
+        "sourceId": "benchmark_runner",
+        "body": "## 범위와 지표 정의\n\n모든 시행은 `maze / rectangle / differential_drive / A* / 60 s / localization error 없음` 조건이다. **controller 시간**은 `generate_control_input()` 전체 호출의 wall-clock 시간이다. **deadline miss**는 100 ms 초과 호출의 비율이다. **clearance**는 PSDF의 signed distance이며 q05는 전체 pose 관측의 5번째 백분위수다. **RMS Δv·Δω**는 연속 제어 명령의 1차 차분 RMS이고, solver 실패와 safe-stop은 각각 최적화 실패와 fallback 제어 횟수다."
+      },
+      {
+        "id": "methodology",
+        "type": "markdown",
+        "sourceId": "report_source_notes",
+        "body": "## 재현 가능한 실행과 검증\n\nMF의 `alpha_*`·`beta_*`는 실행 설정에서 기본 계수에 scale을 곱해 만들었으며 `RMPCCOptimizerParam`은 수정하지 않았다. scale별 acados 산출물이 같은 파일명을 쓰므로, 각 시행을 새 Python 프로세스에서 빌드·실행해 동적 라이브러리 재사용을 차단했다. 13개 시행 모두 raw trial·pose/SDF 로그와 summary가 생성됐고, raw 로그에서 p95 시간·q05 clearance·solver 실패 수를 다시 계산한 값은 summary와 완전히 일치했다."
+      },
+      {
+        "id": "limitations",
+        "type": "markdown",
+        "sourceId": "report_source_notes",
+        "body": "## 이 단일 시행 벤치마크가 말할 수 있는 범위\n\n이번 결과는 각 optimizer와 scale을 **한 번씩** 실행한 기술적 비교다. 따라서 하드웨어 부하, 초기조건, map 변화, 반복 실행에 따른 분산이나 신뢰구간은 추정하지 못한다. clearance 최소값이 미세한 음수인 PSDF-MPC와 scale 1.0의 충돌 판정은 PSDF 해상도·수치 오차에 민감할 수 있으므로, 실제 충돌 여부는 footprint 기반 기하 검증을 추가하는 편이 안전하다. 계산시간은 현재 머신과 빌드 설정에 종속된다."
+      },
+      {
+        "id": "next_steps",
+        "type": "markdown",
+        "body": "## 권장 다음 단계\n\n1. **기본 후보는 scale 0.7로 두되**, 0.65·0.70·0.75를 각 5회 이상 반복해 성공률과 q05 분산을 확인한다.\n2. **실시간 운용이 우선이면 PSDF-MPCC를 기준선으로 유지한다.** MF는 100 ms deadline을 만족하도록 공분산 전파·제약 계산을 최적화한 뒤 재평가한다.\n3. 최소 clearance가 0에 가까운 시행은 footprint 충돌 검사와 PSDF 해상도 민감도 분석으로 재검증한다."
+      },
+      {
+        "id": "further_questions",
+        "type": "markdown",
+        "body": "## 추가로 답해야 할 질문\n\n- scale 0.7의 우위가 다른 maze seed와 시작 자세에서도 유지되는가?\n- MF 계산시간의 대부분은 공분산 전파, PSDF 미분, QP 반복 중 어디에서 발생하는가?\n- 100 ms deadline을 강제했을 때 safe-stop 정책이 실제 주행 안정성에 어떤 영향을 주는가?"
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-08-23T10:21:15Z",
+    "status": "ready",
+    "datasets": {
+      "selected_mf": [
+        {
+          "scale": 0.7,
+          "q05_mm": 6.870040297508239,
+          "min_mm": 5.525678396224976,
+          "p95_ms": 422.8450537000299,
+          "deadline_miss_rate": 1.0,
+          "solver_failures": 0,
+          "safe_stops": 0
+        }
+      ],
+      "scale_sweep": [
+        {
+          "scale": 0.1,
+          "scale_label": "0.1",
+          "status": "success",
+          "collision": "아니오",
+          "driving_time_s": 29.9,
+          "q05_mm": 4.270946606993675,
+          "min_mm": 3.8656890392303467,
+          "median_ms": 142.0312999998714,
+          "p95_ms": 155.10752989976026,
+          "deadline_miss_rate": 1.0,
+          "rms_delta_v": 0.00933457503068282,
+          "rms_delta_omega": 0.17581046932396827,
+          "solver_failures": 0,
+          "safe_stops": 0,
+          "step_count": 299
+        },
+        {
+          "scale": 0.2,
+          "scale_label": "0.2",
+          "status": "success",
+          "collision": "아니오",
+          "driving_time_s": 30.9,
+          "q05_mm": 5.355606973171234,
+          "min_mm": 4.9787238240242,
+          "median_ms": 143.46180299980915,
+          "p95_ms": 167.74102419994957,
+          "deadline_miss_rate": 1.0,
+          "rms_delta_v": 0.022331623939178587,
+          "rms_delta_omega": 0.25903383298911575,
+          "solver_failures": 0,
+          "safe_stops": 0,
+          "step_count": 309
+        },
+        {
+          "scale": 0.3,
+          "scale_label": "0.3",
+          "status": "success",
+          "collision": "아니오",
+          "driving_time_s": 31.5,
+          "q05_mm": 6.365733966231346,
+          "min_mm": 5.89907169342041,
+          "median_ms": 143.56969999971625,
+          "p95_ms": 281.7600000001676,
+          "deadline_miss_rate": 1.0,
+          "rms_delta_v": 0.025733837653714727,
+          "rms_delta_omega": 0.26838282695506344,
+          "solver_failures": 0,
+          "safe_stops": 0,
+          "step_count": 315
+        },
+        {
+          "scale": 0.4,
+          "scale_label": "0.4",
+          "status": "success",
+          "collision": "아니오",
+          "driving_time_s": 31.6,
+          "q05_mm": 6.082519888877869,
+          "min_mm": 5.596615374088287,
+          "median_ms": 148.61085150005238,
+          "p95_ms": 413.0056742501438,
+          "deadline_miss_rate": 1.0,
+          "rms_delta_v": 0.034357243986407424,
+          "rms_delta_omega": 0.3077086472166893,
+          "solver_failures": 0,
+          "safe_stops": 0,
+          "step_count": 316
+        },
+        {
+          "scale": 0.5,
+          "scale_label": "0.5",
+          "status": "success",
+          "collision": "아니오",
+          "driving_time_s": 32.3,
+          "q05_mm": 5.809371545910835,
+          "min_mm": 5.2735209465026855,
+          "median_ms": 149.5638000001236,
+          "p95_ms": 413.3621909003522,
+          "deadline_miss_rate": 1.0,
+          "rms_delta_v": 0.035739152799370254,
+          "rms_delta_omega": 0.2904137209355586,
+          "solver_failures": 0,
+          "safe_stops": 0,
+          "step_count": 323
+        },
+        {
+          "scale": 0.6,
+          "scale_label": "0.6",
+          "status": "success",
+          "collision": "아니오",
+          "driving_time_s": 34.0,
+          "q05_mm": 6.051514856517315,
+          "min_mm": 2.2182862740010023,
+          "median_ms": 147.86715199966238,
+          "p95_ms": 406.1672160000171,
+          "deadline_miss_rate": 1.0,
+          "rms_delta_v": 0.03626607026161719,
+          "rms_delta_omega": 0.3330096790585378,
+          "solver_failures": 1,
+          "safe_stops": 1,
+          "step_count": 340
+        },
+        {
+          "scale": 0.7,
+          "scale_label": "0.7",
+          "status": "success",
+          "collision": "아니오",
+          "driving_time_s": 33.5,
+          "q05_mm": 6.870040297508239,
+          "min_mm": 5.525678396224976,
+          "median_ms": 149.12560099992334,
+          "p95_ms": 422.8450537000299,
+          "deadline_miss_rate": 1.0,
+          "rms_delta_v": 0.03607664110981783,
+          "rms_delta_omega": 0.3258197287406695,
+          "solver_failures": 0,
+          "safe_stops": 0,
+          "step_count": 335
+        },
+        {
+          "scale": 0.8,
+          "scale_label": "0.8",
+          "status": "timeout",
+          "collision": "예",
+          "driving_time_s": null,
+          "q05_mm": -178.65750193595886,
+          "min_mm": -178.65750193595886,
+          "median_ms": 234.4216479998522,
+          "p95_ms": 261.24524090032536,
+          "deadline_miss_rate": 1.0,
+          "rms_delta_v": 0.030033819737317502,
+          "rms_delta_omega": 0.0745452801063179,
+          "solver_failures": 580,
+          "safe_stops": 580,
+          "step_count": 600
+        },
+        {
+          "scale": 0.9,
+          "scale_label": "0.9",
+          "status": "timeout",
+          "collision": "예",
+          "driving_time_s": null,
+          "q05_mm": -10.37515327334404,
+          "min_mm": -10.375190526247025,
+          "median_ms": 234.94796000022689,
+          "p95_ms": 393.87478529993125,
+          "deadline_miss_rate": 1.0,
+          "rms_delta_v": 0.03346432924746774,
+          "rms_delta_omega": 0.16424652181638646,
+          "solver_failures": 476,
+          "safe_stops": 476,
+          "step_count": 600
+        },
+        {
+          "scale": 1.0,
+          "scale_label": "1.0",
+          "status": "success",
+          "collision": "예",
+          "driving_time_s": 35.3,
+          "q05_mm": 4.624895751476288,
+          "min_mm": -0.504516065120697,
+          "median_ms": 154.72190099990257,
+          "p95_ms": 419.47786819982863,
+          "deadline_miss_rate": 1.0,
+          "rms_delta_v": 0.051164831619000976,
+          "rms_delta_omega": 0.37304465814361654,
+          "solver_failures": 3,
+          "safe_stops": 3,
+          "step_count": 353
+        }
+      ],
+      "optimizer_comparison": [
+        {
+          "method": "PSDF-MPC",
+          "scale": null,
+          "status": "success",
+          "collision": "예",
+          "driving_time_s": 15.4,
+          "median_ms": 42.330449999781194,
+          "p95_ms": 46.66087565003636,
+          "deadline_miss_rate": 0.012987012987012988,
+          "q05_mm": 2.480996213853359,
+          "min_mm": -0.16245990991592407,
+          "rms_delta_v": 0.04157595339491177,
+          "rms_delta_omega": 0.30121853806812215,
+          "solver_failures": 0,
+          "safe_stops": 0
+        },
+        {
+          "method": "PSDF-MPCC",
+          "scale": null,
+          "status": "success",
+          "collision": "아니오",
+          "driving_time_s": 27.0,
+          "median_ms": 50.76995100012027,
+          "p95_ms": 58.80979055002626,
+          "deadline_miss_rate": 0.011111111111111112,
+          "q05_mm": 1.711110956966877,
+          "min_mm": 1.1724382638931274,
+          "rms_delta_v": 0.006666186463905317,
+          "rms_delta_omega": 0.11271789761150235,
+          "solver_failures": 0,
+          "safe_stops": 0
+        },
+        {
+          "method": "PSDF-MPCC-CC-SF",
+          "scale": null,
+          "status": "success",
+          "collision": "아니오",
+          "driving_time_s": 47.0,
+          "median_ms": 89.82792249980776,
+          "p95_ms": 133.89693950000492,
+          "deadline_miss_rate": 0.13829787234042554,
+          "q05_mm": 2.456404082477093,
+          "min_mm": 1.999862492084503,
+          "rms_delta_v": 0.02185212143532214,
+          "rms_delta_omega": 0.24316140566681482,
+          "solver_failures": 26,
+          "safe_stops": 26
+        },
+        {
+          "method": "PSDF-MPCC-CC-MF (scale 0.7)",
+          "scale": 0.7,
+          "status": "success",
+          "collision": "아니오",
+          "driving_time_s": 33.5,
+          "median_ms": 149.12560099992334,
+          "p95_ms": 422.8450537000299,
+          "deadline_miss_rate": 1.0,
+          "q05_mm": 6.870040297508239,
+          "min_mm": 5.525678396224976,
+          "rms_delta_v": 0.03607664110981783,
+          "rms_delta_omega": 0.3258197287406695,
+          "solver_failures": 0,
+          "safe_stops": 0
+        }
+      ]
+    }
+  },
+  "sources": [
+    {
+      "id": "scale_sweep",
+      "label": "MF scale sweep summary",
+      "path": "benchmark_runs/maze_rectangle_nominal/scale_sweep.csv",
+      "query": {
+        "engine": "duckdb",
+        "language": "sql",
+        "description": "Loads the reviewed per-scale benchmark summary and converts seconds to milliseconds and metres to millimetres for presentation.",
+        "sql": "SELECT *, 1000 * controller_time_median AS median_ms, 1000 * controller_time_p95 AS p95_ms, 1000 * clearance_q05 AS q05_mm, 1000 * clearance_min AS min_mm FROM read_csv_auto('benchmark_runs/maze_rectangle_nominal/scale_sweep.csv') ORDER BY covariance_growth_scale",
+        "executed_at": "2026-08-23T10:21:15Z",
+        "tables_used": [
+          "benchmark_runs/maze_rectangle_nominal/scale_sweep.csv"
+        ],
+        "filters": [
+          "maze / rectangle / differential_drive / A*",
+          "simulation_time <= 60 s",
+          "localization_error disabled",
+          "covariance_growth_scale 0.1 through 1.0"
+        ],
+        "metric_definitions": {
+          "q05_clearance": "5th percentile of raw pose-level signed-distance values; reported in millimetres.",
+          "collision": "Minimum signed-distance value is below zero.",
+          "deadline_miss_rate": "Controller calls above 0.1 seconds divided by logged controller calls."
+        }
+      }
+    },
+    {
+      "id": "optimizer_comparison",
+      "label": "Optimizer comparison summary",
+      "path": "benchmark_runs/maze_rectangle_nominal/optimizer_comparison.csv",
+      "query": {
+        "engine": "duckdb",
+        "language": "sql",
+        "description": "Loads the reviewed optimizer comparison and converts seconds to milliseconds and metres to millimetres for presentation.",
+        "sql": "SELECT *, 1000 * controller_time_median AS median_ms, 1000 * controller_time_p95 AS p95_ms, 1000 * clearance_q05 AS q05_mm, 1000 * clearance_min AS min_mm FROM read_csv_auto('benchmark_runs/maze_rectangle_nominal/optimizer_comparison.csv')",
+        "executed_at": "2026-08-23T10:21:15Z",
+        "tables_used": [
+          "benchmark_runs/maze_rectangle_nominal/optimizer_comparison.csv"
+        ],
+        "filters": [
+          "maze / rectangle / differential_drive / A*",
+          "simulation_time <= 60 s",
+          "localization_error disabled",
+          "MF row uses selected scale 0.7"
+        ],
+        "metric_definitions": {
+          "controller_time_p95": "95th percentile of the full generate_control_input() wall-clock duration.",
+          "rms_delta_v": "Root mean square of first differences in commanded linear velocity.",
+          "rms_delta_omega": "Root mean square of first differences in commanded angular velocity."
+        }
+      }
+    },
+    {
+      "id": "benchmark_runner",
+      "label": "Benchmark runner and metric definitions",
+      "path": "run_optimizer_benchmark.py",
+      "query": {
+        "engine": "python",
+        "language": "python",
+        "description": "Executable benchmark configuration, raw-log aggregation, selection ordering, and isolated-worker implementation.",
+        "executed_at": "2026-08-23T10:21:15Z",
+        "tables_used": [
+          "run_optimizer_benchmark.py"
+        ]
+      }
+    },
+    {
+      "id": "report_source_notes",
+      "label": "Validation, source inventory, and chart map",
+      "path": "benchmark_runs/maze_rectangle_nominal/report/source_notes.md",
+      "query": {
+        "engine": "filesystem",
+        "language": "markdown",
+        "description": "Reviewed report notes recording metric definitions, raw-log validation, limitations, chart contracts, and audience mapping.",
+        "executed_at": "2026-08-23T10:21:15Z",
+        "tables_used": [
+          "benchmark_runs/maze_rectangle_nominal/report/source_notes.md"
+        ]
+      }
+    }
+  ],
+  "package_info": {
+    "root": "benchmark_runs/maze_rectangle_nominal/report",
+    "manifestPath": "artifact.json",
+    "snapshotPath": "artifact.json"
+  }
+}

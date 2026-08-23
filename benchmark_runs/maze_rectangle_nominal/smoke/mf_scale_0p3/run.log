@@ -1,0 +1,41 @@
+RMPCC configured from config: covariance_growth_scale=0.3, alpha_f=0.0006, alpha_v=0.00012, alpha_kappa=0.003, beta_v=0.006, beta_kappa=0.0024, beta_omega=0.0024
+Resetting rmpcc optimizer for clean state...
+generating global path with A* + Line of Sight
+시작 위치: [0.075 0.795]
+목적지: [1.8  0.09]
+도착 판정 기준: position <= 0.01m, angle <= 0.01rad
+Setting up RMPCC-MF optimizer...
+RMPCC-MF Row M configuration: enabled=True, active only when phi > d_mf_mask=0.001, configured stages=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+/home/taek111/projects/psdf_mpcc/models/geometry_utils.py:241: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at ../torch/csrc/utils/tensor_new.cpp:230.)
+  edgesA = torch.tensor(edgesA, dtype=torch.float32)
+Added two affine safety rows at intermediate/terminal stages: 0=HARD guard/recovery, 1=SOFT MF
+field AcadosOcpDims.N has been migrated to AcadosOcpOptions.N_horizon. setting AcadosOcpOptions.N_horizon = N. For future comppatibility, please use AcadosOcpOptions.N_horizon directly.
+
+WARNING: Gauss-Newton Hessian approximation with EXTERNAL cost type not well defined!
+got cost_type EXTERNAL for cost_type_0, cost_type, cost_type_e, hessian_approx: 'GAUSS_NEWTON'.
+With this setting, acados will proceed computing the exact Hessian for the cost term and no Hessian contribution from constraints and dynamics.
+If the external cost is a linear least squares cost, this coincides with the Gauss-Newton Hessian.
+Note: There is also the option to use the external cost module with a numerical Hessian approximation (see `ext_cost_num_hess`).
+OR the option to provide a symbolic custom Hessian approximation (see `cost_expr_ext_cost_custom_hess`).
+
+acados was compiled without OpenMP.
+RMPCC-MF backup SQP_WITH_FEASIBLE_QP solver disabled; using nominal safe-stop recovery.
+[RMPCC 0000] OK solve=179.3ms pose=(0.075,0.795,-1.571) u=(0.123,0.000) s=0.013 PSDFmin=+0.03 G=OK(+0.04134) MF=OK(active=20/20,min=+0.2,slack=+7.52e-12)
+[RMPCC 0001] OK solve=157.2ms pose=(0.075,0.783,-1.571) u=(0.114,0.088) s=0.024 PSDFmin=-0.002916 G=OK(+6.709e-11) MF=OK(active=20/20,min=+0.2,slack=+5.495e-11)
+[RMPCC 0002] OK solve=238.5ms pose=(0.075,0.771,-1.562) u=(0.117,0.086) s=0.035 PSDFmin=+0.003711 G=OK(+0.001578) MF=OK(active=14/20,min=+1.334e-14,slack=+1.97e-17)
+시간 초과로 시뮬레이션 종료. 현재 위치: [0.0751  0.75957], 목적지까지 거리: 1.866m
+Using rmpcc optimizer with differential_drive dynamics:
+median:  0.17925477027893066
+std:  0.04204213327869239
+min:  0.15720105171203613
+max:  0.23849773406982422
+Simulation finished.
+Run outcome: status=timeout, reason=timeout, final_time=0.30000000000000004, distance_to_goal=1.8664478473903983
+Optimizer runtime stats: safe_stop_count=0, backup_feasible_qp_success_count=0, plant_input_apply_count=3, last_solve_mode=sqp_rti
+Trial history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_nominal/smoke/mf_scale_0p3/data/trial_history_MPC_rmpcc_rectangle_maze_mf_scale_0p3.csv
+RMPCC constraint history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_nominal/smoke/mf_scale_0p3/data/rmpcc_constraints_MPC_rmpcc_rectangle_maze_mf_scale_0p3.csv
+RMPCC debug history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_nominal/smoke/mf_scale_0p3/data/cycle_raw.csv
+RMPCC debug history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_nominal/smoke/mf_scale_0p3/data/covariance_trajectory.csv
+Pose-SDF data saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_nominal/smoke/mf_scale_0p3/data/pose_sdf_MPC_rmpcc_rectangle_maze_mf_scale_0p3.csv
+Total data points: 3
+SDF statistics - Min: 0.0293, Max: 0.0300, Mean: 0.0298

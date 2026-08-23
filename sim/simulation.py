@@ -1,5 +1,6 @@
 import math
 import sys, os 
+import time
 sys.path.append(os.path.dirname((os.path.abspath(os.path.dirname(__file__)))))
 import casadi as ca
 import numpy as np
@@ -55,9 +56,13 @@ class Robot:
         self._local_planner.logging(self._local_planner_logger)
 
     def run_controller(self, obstacles):
-        self._control_action = self._controller.generate_control_input(
-            self._system, self._global_path, self._local_trajectory, obstacles
-        )
+        start = time.perf_counter()
+        try:
+            self._control_action = self._controller.generate_control_input(
+                self._system, self._global_path, self._local_trajectory, obstacles
+            )
+        finally:
+            self._controller_logger._computation_times.append(time.perf_counter() - start)
         self._controller.logging(self._controller_logger)
 
     def run_system(self):

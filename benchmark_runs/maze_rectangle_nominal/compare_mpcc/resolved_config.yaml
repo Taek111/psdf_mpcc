@@ -1,0 +1,23 @@
+test_configs:
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: mpcc
+  dynamics_type: differential_drive
+  path_planner: astar
+defaults:
+  simulation_time: 60.0
+  generate_animation: false
+  generate_plots: false
+  plot_covariance: false
+output_root_dir: /home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_nominal/compare_mpcc
+output_suffix: compare_mpcc
+localization_error:
+  enabled: false
+metadata:
+  run_id: compare_mpcc
+  source_commit: f1348fc3c2b0e974192902074d8494214057067c
+  maze_type: maze
+  robot_shape: rectangle
+  dynamics_type: differential_drive
+  path_planner: astar
+  simulation_time: 60.0

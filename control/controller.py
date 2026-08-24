@@ -108,4 +108,16 @@ class BaseController:
             except Exception:
                 risk_margin_traj = None
         logger._risk_margin_trajs.append(risk_margin_traj)
+
+        boole_risk_visualization_data = None
+        if hasattr(self._optimizer, "get_last_boole_risk_visualization_data"):
+            try:
+                boole_risk_visualization_data = (
+                    self._optimizer.get_last_boole_risk_visualization_data()
+                )
+            except Exception:
+                boole_risk_visualization_data = None
+        logger._boole_risk_visualization_data.append(
+            boole_risk_visualization_data
+        )
         logger._solver_status_infos.append(self.get_last_solver_status_info())

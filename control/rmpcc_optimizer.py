@@ -72,7 +72,7 @@ class RMPCCOptimizerParam:
         self.q_f0 = 0
         self.q_l0 = 0
         self.q_psi0 = 0
-        self.covariance_growth_scale = 0.3
+        self.covariance_growth_scale = 0.6
         self.alpha_f = 0.002 * self.covariance_growth_scale
         self.alpha_v = 0.0004 * self.covariance_growth_scale
         self.alpha_kappa = 0.01 * self.covariance_growth_scale
@@ -80,6 +80,9 @@ class RMPCCOptimizerParam:
         self.beta_kappa = 0.008 * self.covariance_growth_scale
         self.beta_omega = 0.008 * self.covariance_growth_scale
         self.risk_cov_jitter = 1e-9
+
+        # Animation diagnostics
+        self.use_risk_visualization = True
 
         # Solver and recovery
         self.qp_solver = "PARTIAL_CONDENSING_HPIPM"
@@ -92,8 +95,8 @@ class RMPCCOptimizerParam:
         self.enable_backup_solver = False
 
         # Optional diagnostics
-        self.debug_mf = True
-        self.debug_infeasibility = True
+        self.debug_mf = False
+        self.debug_infeasibility = False
         self.constraint_debug_tolerance = 1e-6
         self.first_interval_substeps = 10
 
@@ -169,6 +172,7 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
         self._cycle_log_rows = []
         self._covariance_log_rows = []
         self._last_nominal_probability_sum = None
+        self._last_boole_risk_visualization_data = None
         self._last_main_status = None
         self._solve_count = 0
         self.prints_compact_runtime_summary = True
@@ -256,6 +260,7 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
         self._cycle_log_rows = []
         self._covariance_log_rows = []
         self._last_nominal_probability_sum = None
+        self._last_boole_risk_visualization_data = None
         self._last_main_status = None
         self._solve_count = 0
         self._last_solve_mode = "uninitialized"
@@ -320,6 +325,39 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
 
     def get_cycle_log_fields(self):
         return list(self.CYCLE_LOG_FIELDS)
+
+    def get_last_boole_risk_sum_trajectory(self):
+        """Return the latest nominal stage-wise Boole risk sum.
+
+        The trajectory is evaluated at the nominal linearization points used
+        for the most recent solver attempt and has ``N + 1`` entries.  ``None``
+        is returned before the first attempt or after the optimizer is reset.
+        A copy is returned so diagnostics cannot mutate the cached values.
+        """
+        if self._last_nominal_probability_sum is None:
+            return None
+        return np.asarray(
+            self._last_nominal_probability_sum,
+            dtype=float,
+        ).copy()
+
+    def get_last_boole_risk_visualization_data(self):
+        """Return source-aligned nominal data for Boole-risk visualization.
+
+        Every array comes from the same nominal linearization pass.  The
+        returned dictionary contains ``nominal_poses`` with shape
+        ``(N + 1, 3)`` and the one-dimensional ``boole_risk_sum``, ``epsilon``,
+        and ``mf_mask`` arrays.  Copies prevent animation code from mutating
+        the optimizer's latest atomic cache.  ``None`` is returned for a
+        safe-stop cycle because that fallback plan was not the trajectory on
+        which the cached MF sum was evaluated.
+        """
+        if self._last_boole_risk_visualization_data is None:
+            return None
+        return {
+            key: np.asarray(value).copy()
+            for key, value in self._last_boole_risk_visualization_data.items()
+        }
 
     def get_covariance_log_rows(self):
         return [row.copy() for row in self._covariance_log_rows]
@@ -1147,6 +1185,11 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
         if solver is None:
             raise RuntimeError("Solver is not initialized.")
 
+        # Do not let an exception in this solve attempt expose the previous
+        # cycle's risk markers as if they belonged to the current frame.
+        self._last_nominal_probability_sum = None
+        self._last_boole_risk_visualization_data = None
+
         s_lower, s_upper = self._get_current_s_bounds(self.param)
         if self.state is not None:
             self.update_reference_path_params(self.reference_path_data, self.state)
@@ -1225,7 +1268,6 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
         )
         nominal_probability_sum = constraint_data["epsilon"] - nominal_mf_residual
         nominal_probability_sum[~constraint_data["mf_valid"]] = np.nan
-        self._last_nominal_probability_sum = nominal_probability_sum.copy()
 
         exact_current_phi, _ = self._compute_exact_psdf(x_guess[0, :3])
         constraint_data["exact_current_phi"] = float(exact_current_phi)
@@ -1235,7 +1277,21 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             stage_s_values,
             constraint_data,
         )
-        return solver.solve()
+        status = solver.solve()
+        self._last_nominal_probability_sum = nominal_probability_sum.copy()
+        self._last_boole_risk_visualization_data = {
+            "nominal_poses": x_guess[:, :3].copy(),
+            "boole_risk_sum": nominal_probability_sum.copy(),
+            "epsilon": np.asarray(
+                constraint_data["epsilon"],
+                dtype=float,
+            ).copy(),
+            "mf_mask": np.asarray(
+                constraint_data["mf_mask"],
+                dtype=bool,
+            ).copy(),
+        }
+        return status
 
     def _try_backup_recovery(self):
         if self.backup_solver is None:
@@ -1243,6 +1299,25 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             return None
 
         main_constraint_data = copy.deepcopy(self._constraint_data)
+        main_probability_sum = (
+            None
+            if self._last_nominal_probability_sum is None
+            else self._last_nominal_probability_sum.copy()
+        )
+        main_visualization_data = (
+            None
+            if self._last_boole_risk_visualization_data is None
+            else {
+                key: np.asarray(value).copy()
+                for key, value in self._last_boole_risk_visualization_data.items()
+            }
+        )
+
+        def restore_main_diagnostics():
+            self._constraint_data = main_constraint_data
+            self._last_nominal_probability_sum = main_probability_sum
+            self._last_boole_risk_visualization_data = main_visualization_data
+
         try:
             self.backup_solver.reset(reset_qp_solver_mem=1)
             try:
@@ -1265,7 +1340,7 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
                 print("Recovered with backup SQP_WITH_FEASIBLE_QP solver.")
                 return self.backup_solver, 0, "backup_feasible_qp"
 
-            self._constraint_data = main_constraint_data
+            restore_main_diagnostics()
             try:
                 self._copy_primal_guess(self.backup_solver, self.solver)
             except Exception:
@@ -1275,7 +1350,7 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
                 "falling back to safe stop."
             )
         except Exception as error:
-            self._constraint_data = main_constraint_data
+            restore_main_diagnostics()
             print(f"Warning: backup solver recovery failed: {error}")
         return None
 
@@ -1749,6 +1824,12 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
                     )
             active_solver, status, mode = self.recovery_infeasible(status)
             self._record_recovery(mode)
+
+        if mode == "safe_stop":
+            # The safe-stop state trajectory is not the nominal trajectory on
+            # which the MF sum was evaluated.  Keep the raw experiment log, but
+            # suppress the spatial overlay for this cycle to avoid mixing them.
+            self._last_boole_risk_visualization_data = None
 
         self._update_predicted_progress(active_solver, status)
 

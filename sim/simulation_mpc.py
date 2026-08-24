@@ -392,78 +392,92 @@ class simulation_mpc:
         )
         
     @staticmethod
-    def _get_controller_optimizer(simulation):
-        robot = getattr(simulation, "_robot", None)
-        controller = getattr(robot, "_controller", None)
-        return getattr(controller, "_optimizer", None)
+    def _prepare_boole_risk_visual_data(risk_frame):
+        """Build screen-space marker data for one nominal MF horizon."""
 
-    def _build_risk_active_stage_mask(self, simulation, num_stages):
-        num_stages = max(int(num_stages), 0)
-        if num_stages == 0:
-            return np.zeros((0,), dtype=bool)
-
-        optimizer = self._get_controller_optimizer(simulation)
-        if optimizer is None:
-            return np.zeros((num_stages,), dtype=bool)
-
-        param = getattr(optimizer, "param", None)
-        if (
-            param is None
-            or not getattr(param, "use_obstacle_constraint", True)
-            or not getattr(param, "use_risk_margin", False)
-        ):
-            return np.zeros((num_stages,), dtype=bool)
-
-        if hasattr(optimizer, "get_risk_margin_active_stage_mask"):
-            try:
-                stage_mask = np.asarray(
-                    optimizer.get_risk_margin_active_stage_mask(num_stages),
-                    dtype=bool,
-                ).reshape(-1)
-                if stage_mask.size == num_stages:
-                    return stage_mask
-            except Exception:
-                pass
-
-        start_idx = max(int(getattr(param, "risk_margin_active_start_step", 0)), 0)
-        end_idx = getattr(param, "risk_margin_active_end_step", None)
-
-        stage_mask = np.zeros((num_stages,), dtype=bool)
-        if start_idx >= num_stages:
-            return stage_mask
-
-        if end_idx is None:
-            stage_mask[start_idx:] = True
-            return stage_mask
-
-        end_idx = min(int(end_idx), num_stages - 1)
-        if end_idx >= start_idx:
-            stage_mask[start_idx : end_idx + 1] = True
-        return stage_mask
-
-    def _get_covariance_plot_scale(self, simulation):
-        optimizer = self._get_controller_optimizer(simulation)
-        param = getattr(optimizer, "param", None) if optimizer is not None else None
-        if param is None:
-            return 1.8
+        empty = {
+            "offsets": np.empty((0, 2), dtype=float),
+            "sizes": np.empty((0,), dtype=float),
+            "normalized_risk": np.empty((0,), dtype=float),
+            "budget_exceeded": np.empty((0,), dtype=bool),
+        }
+        if not isinstance(risk_frame, dict):
+            return empty
 
         try:
-            chance_gamma = float(getattr(param, "chance_gamma", 1.0))
-        except (TypeError, ValueError):
-            chance_gamma = 1.0
+            poses = np.asarray(risk_frame["nominal_poses"], dtype=float)
+            risk_sum = np.asarray(
+                risk_frame["boole_risk_sum"], dtype=float
+            ).reshape(-1)
+            epsilon = np.asarray(risk_frame["epsilon"], dtype=float).reshape(-1)
+            mf_mask = np.asarray(risk_frame["mf_mask"], dtype=bool).reshape(-1)
+        except (KeyError, TypeError, ValueError):
+            return empty
 
-        if not np.isfinite(chance_gamma) or chance_gamma <= 0.0:
-            return 1.8
-        return 1.8 * chance_gamma
+        if poses.ndim != 2 or poses.shape[1] < 2:
+            return empty
+
+        num_stages = min(
+            poses.shape[0],
+            risk_sum.size,
+            epsilon.size,
+            mf_mask.size,
+        )
+        if num_stages <= 1:
+            return empty
+
+        stage_indices = np.arange(num_stages)
+        risk_roundoff_tolerance = 1e-7
+        valid = (
+            (stage_indices > 0)
+            & mf_mask[:num_stages]
+            & np.all(np.isfinite(poses[:num_stages, :2]), axis=1)
+            & np.isfinite(risk_sum[:num_stages])
+            & (risk_sum[:num_stages] >= -risk_roundoff_tolerance)
+            & np.isfinite(epsilon[:num_stages])
+            & (epsilon[:num_stages] > 0.0)
+        )
+        if not np.any(valid):
+            return empty
+
+        # Roundoff in the float32 MF graph can produce tiny negative values.
+        # Clamp only that numerical noise; materially negative sums are filtered
+        # above instead of being rendered as reassuring zero-risk markers.
+        displayed_risk = np.maximum(risk_sum[:num_stages][valid], 0.0)
+        normalized_risk = displayed_risk / epsilon[:num_stages][valid]
+        clipped_risk = np.clip(normalized_risk, 0.0, 1.0)
+
+        # Matplotlib scatter sizes are screen-space areas in points squared.
+        # Keep the glyph diameter between 4 and 10 points so a dimensionless
+        # risk value is never mistaken for a distance in world coordinates.
+        min_radius_pt = 2.0
+        max_radius_pt = 5.0
+        radius_pt = np.sqrt(
+            min_radius_pt**2
+            + (max_radius_pt**2 - min_radius_pt**2) * clipped_risk
+        )
+
+        return {
+            "offsets": poses[:num_stages, :2][valid].copy(),
+            "sizes": np.square(2.0 * radius_pt),
+            "normalized_risk": clipped_risk,
+            "budget_exceeded": normalized_risk >= 1.0,
+        }
 
     @staticmethod
-    def _remove_artists(artists):
-        for artist in artists:
-            try:
-                artist.remove()
-            except (ValueError, AttributeError):
-                continue
-        artists.clear()
+    def _resolve_use_risk_visualization(simulation, override=None):
+        """Resolve an explicit override or the RMPCC optimizer parameter."""
+
+        if override is not None:
+            return bool(override)
+
+        robot = getattr(simulation, "_robot", None)
+        controller = getattr(robot, "_controller", None)
+        opt_param = getattr(controller, "_param", None)
+        if opt_param is None:
+            optimizer = getattr(controller, "_optimizer", None)
+            opt_param = getattr(optimizer, "param", None)
+        return bool(getattr(opt_param, "use_risk_visualization", False))
 
     @staticmethod
     def _style_map_patch(patch):
@@ -505,102 +519,6 @@ class simulation_mpc:
             pass
         return patch
 
-    def _get_robot_visual_radius(self, simulation, state):
-        robot = getattr(simulation, "_robot", None)
-        geometry = getattr(getattr(robot, "_system", None), "_geometry", None)
-        if geometry is None:
-            return 0.1
-
-        radii = []
-        center_xy = np.asarray(state[:2], dtype=float)
-        for geom_idx in range(getattr(geometry, "_num_geometry", 0)):
-            try:
-                patch = geometry.get_plot_patch(state, geom_idx)
-            except Exception:
-                continue
-
-            if isinstance(patch, patches.Circle):
-                radii.append(float(patch.radius))
-                continue
-
-            if isinstance(patch, patches.Polygon):
-                verts = np.asarray(patch.get_xy(), dtype=float)
-                if verts.ndim == 2 and verts.shape[0] > 0:
-                    radii.append(float(np.max(np.linalg.norm(verts[:, :2] - center_xy[None, :], axis=1))))
-
-        if not radii:
-            return 0.1
-        return max(max(radii), 1e-3)
-
-    def _build_directional_covariance_artists(
-        self,
-        ax,
-        state_traj,
-        active_stage_mask,
-        visual_radius,
-        covariance_scale,
-        alpha=0.85,
-    ):
-        xtraj = np.asarray(state_traj, dtype=float)
-        if xtraj.ndim != 2 or xtraj.shape[1] < 7:
-            return []
-
-        active_stage_mask = np.asarray(active_stage_mask, dtype=bool).reshape(-1)
-        num_stages = min(xtraj.shape[0], active_stage_mask.size)
-        active_indices = np.flatnonzero(active_stage_mask[:num_stages])
-        if active_indices.size == 0:
-            return []
-
-        artists = []
-
-        visual_radius = max(float(visual_radius), 1e-3)
-        covariance_scale = max(float(covariance_scale), 0.0)
-        min_arrow_length = 0.04 * visual_radius
-
-        for stage_idx in active_indices:
-            px = float(xtraj[stage_idx, 0])
-            py = float(xtraj[stage_idx, 1])
-            theta = float(xtraj[stage_idx, 2])
-            p_f = max(float(xtraj[stage_idx, 4]), 0.0)
-            p_l = max(float(xtraj[stage_idx, 5]), 0.0)
-
-            center_xy = np.array([px, py], dtype=float)
-            e_front = np.array([np.cos(theta), np.sin(theta)], dtype=float)
-            e_lateral = np.array([-np.sin(theta), np.cos(theta)], dtype=float)
-
-            front_arrow_length = covariance_scale * np.sqrt(p_f)
-            lateral_arrow_length = covariance_scale * np.sqrt(p_l)
-
-            if front_arrow_length > min_arrow_length:
-                front_arrow = patches.FancyArrowPatch(
-                    posA=tuple(center_xy),
-                    posB=tuple(center_xy + front_arrow_length * e_front),
-                    arrowstyle="->",
-                    mutation_scale=7.5,
-                    linewidth=1.2,
-                    color="red",
-                    alpha=min(1.0, alpha + 0.15),
-                    zorder=3.2,
-                )
-                ax.add_patch(front_arrow)
-                artists.append(front_arrow)
-
-            if lateral_arrow_length > min_arrow_length:
-                lateral_arrow = patches.FancyArrowPatch(
-                    posA=tuple(center_xy),
-                    posB=tuple(center_xy + lateral_arrow_length * e_lateral),
-                    arrowstyle="->",
-                    mutation_scale=7.0,
-                    linewidth=1.0,
-                    color="forestgreen",
-                    alpha=min(1.0, alpha + 0.05),
-                    zorder=3.1,
-                )
-                ax.add_patch(lateral_arrow)
-                artists.append(lateral_arrow)
-
-        return artists
-
     def plot_world(
         self,
         simulation,
@@ -608,7 +526,6 @@ class simulation_mpc:
         figure_name="world",
         local_traj_indexes=[],
         maze_type=None,
-        plot_covariance=False,
     ):
         # TODO: make this plotting function general applicable to different systems
         if maze_type == "maze":
@@ -675,23 +592,6 @@ class simulation_mpc:
                 linewidth=3,
                 markersize=4,
             )
-
-        if plot_covariance and optimized_trajs:
-            covariance_scale = self._get_covariance_plot_scale(simulation)
-            visual_radius = 1.15 * self._get_robot_visual_radius(simulation, closedloop_traj[0, :])
-            for index in snapshot_indexes:
-                if index >= len(optimized_trajs):
-                    continue
-                optimized_traj = np.asarray(optimized_trajs[index], dtype=float)
-                active_stage_mask = self._build_risk_active_stage_mask(simulation, optimized_traj.shape[0])
-                self._build_directional_covariance_artists(
-                    ax,
-                    optimized_traj,
-                    active_stage_mask,
-                    visual_radius=visual_radius,
-                    covariance_scale=covariance_scale,
-                    alpha=0.45,
-                )
 
         ax.set_aspect("equal", adjustable="box")
         ax.set_xticks([])
@@ -1117,8 +1017,12 @@ class simulation_mpc:
         maze_type=None,
         frame_skip=1,
         method_name=None,
-        plot_covariance=False,
+        use_risk_visualization=None,
     ):
+        use_risk_visualization = self._resolve_use_risk_visualization(
+            simulation,
+            use_risk_visualization,
+        )
         robot = simulation._robot
         logged_states = getattr(getattr(robot, "_system_logger", None), "_xs", [])
         if logged_states:
@@ -1130,7 +1034,16 @@ class simulation_mpc:
 
         local_paths = getattr(getattr(robot, "_local_planner_logger", None), "_trajs", [])
         optimized_trajs = getattr(getattr(robot, "_controller_logger", None), "_xtrajs", [])
-        risk_margin_trajs = getattr(getattr(robot, "_controller_logger", None), "_risk_margin_trajs", [])
+        risk_margin_trajs = getattr(
+            getattr(robot, "_controller_logger", None),
+            "_risk_margin_trajs",
+            [],
+        )
+        boole_risk_frames = getattr(
+            getattr(robot, "_controller_logger", None),
+            "_boole_risk_visualization_data",
+            [],
+        )
         logged_detected_caps = self.detected_obstacles_logger
 
         # Set figure size based on maze type
@@ -1180,11 +1093,11 @@ class simulation_mpc:
             optimized_traj = optimized_trajs[0]
             optimized_traj_line.set_data(optimized_traj[:, 0], optimized_traj[:, 1])
 
-        covariance_scale = self._get_covariance_plot_scale(simulation)
-        covariance_visual_radius = 1.15 * self._get_robot_visual_radius(simulation, closedloop_traj[0, :])
-
         def build_risk_margin_patches(frame_idx):
-            if frame_idx >= len(optimized_trajs) or frame_idx >= len(risk_margin_trajs):
+            if (
+                frame_idx >= len(optimized_trajs)
+                or frame_idx >= len(risk_margin_trajs)
+            ):
                 return []
 
             optimized_traj = np.asarray(optimized_trajs[frame_idx], dtype=float)
@@ -1192,7 +1105,10 @@ class simulation_mpc:
             if risk_margin_traj is None:
                 return []
 
-            risk_margin_traj = np.asarray(risk_margin_traj, dtype=float).reshape(-1)
+            risk_margin_traj = np.asarray(
+                risk_margin_traj,
+                dtype=float,
+            ).reshape(-1)
             num_stages = min(len(optimized_traj), risk_margin_traj.size)
             patches_out = []
             for stage_idx in range(num_stages):
@@ -1200,7 +1116,10 @@ class simulation_mpc:
                 if not np.isfinite(radius) or radius <= 0.0:
                     continue
                 patch = patches.Circle(
-                    (float(optimized_traj[stage_idx, 0]), float(optimized_traj[stage_idx, 1])),
+                    (
+                        float(optimized_traj[stage_idx, 0]),
+                        float(optimized_traj[stage_idx, 1]),
+                    ),
                     radius=radius,
                     facecolor="limegreen",
                     edgecolor="forestgreen",
@@ -1212,23 +1131,69 @@ class simulation_mpc:
                 patches_out.append(patch)
             return patches_out
 
-        def build_covariance_artists(frame_idx):
-            if not plot_covariance or frame_idx >= len(optimized_trajs):
-                return []
-
-            optimized_traj = np.asarray(optimized_trajs[frame_idx], dtype=float)
-            active_stage_mask = self._build_risk_active_stage_mask(simulation, optimized_traj.shape[0])
-            return self._build_directional_covariance_artists(
-                ax,
-                optimized_traj,
-                active_stage_mask,
-                visual_radius=covariance_visual_radius,
-                covariance_scale=covariance_scale,
-                alpha=0.85,
+        risk_scatter = None
+        has_boole_risk = use_risk_visualization and any(
+            self._prepare_boole_risk_visual_data(risk_frame)[
+                "normalized_risk"
+            ].size > 0
+            for risk_frame in boole_risk_frames
+        )
+        if has_boole_risk:
+            risk_norm = mpl.colors.Normalize(vmin=0.0, vmax=1.0, clip=True)
+            risk_cmap = plt.get_cmap("YlOrRd")
+            risk_scatter = ax.scatter(
+                [],
+                [],
+                s=[],
+                c=[],
+                cmap=risk_cmap,
+                norm=risk_norm,
+                zorder=3.1,
+            )
+            risk_mappable = mpl.cm.ScalarMappable(norm=risk_norm, cmap=risk_cmap)
+            risk_mappable.set_array([])
+            risk_colorbar = fig.colorbar(
+                risk_mappable,
+                ax=ax,
+                fraction=0.045,
+                pad=0.025,
+                extend="max",
+            )
+            risk_colorbar.set_ticks([0.0, 0.5, 1.0])
+            risk_colorbar.set_ticklabels(["0", "0.5", "≥1"])
+            risk_colorbar.set_label(
+                r"Nominal Boole risk utilization $B_i / \varepsilon_i$ "
+                r"(black ring: $\geq 1$)"
             )
 
+        def update_risk_scatter(frame_idx):
+            if risk_scatter is None:
+                return
+
+            risk_frame = (
+                boole_risk_frames[frame_idx]
+                if frame_idx < len(boole_risk_frames)
+                else None
+            )
+            visual_data = self._prepare_boole_risk_visual_data(risk_frame)
+            risk_scatter.set_offsets(visual_data["offsets"])
+            risk_scatter.set_sizes(visual_data["sizes"])
+            risk_scatter.set_array(visual_data["normalized_risk"])
+
+            num_points = visual_data["normalized_risk"].size
+            edge_colors = np.tile(
+                mpl.colors.to_rgba("dimgray", alpha=0.55),
+                (num_points, 1),
+            )
+            edge_widths = np.full((num_points,), 0.45, dtype=float)
+            exceeded = visual_data["budget_exceeded"]
+            edge_colors[exceeded] = mpl.colors.to_rgba("black", alpha=1.0)
+            edge_widths[exceeded] = 1.2
+            risk_scatter.set_edgecolors(edge_colors)
+            risk_scatter.set_linewidths(edge_widths)
+
         risk_margin_patches = build_risk_margin_patches(0)
-        covariance_artists = build_covariance_artists(0)
+        update_risk_scatter(0)
 
         # Initialize robot patches
         robot_patches = []
@@ -1283,8 +1248,7 @@ class simulation_mpc:
             risk_margin_patches.clear()
             risk_margin_patches.extend(build_risk_margin_patches(index))
 
-            self._remove_artists(covariance_artists)
-            covariance_artists.extend(build_covariance_artists(index))
+            update_risk_scatter(index)
 
             # Efficiently update robot patches
             for i in range(robot._system._geometry._num_geometry):
@@ -1325,7 +1289,7 @@ class simulation_mpc:
             return (
                 [reference_traj_line, optimized_traj_line]
                 + risk_margin_patches
-                + covariance_artists
+                + ([risk_scatter] if risk_scatter is not None else [])
                 + robot_patches
                 + detected_obstacle_patches
                 + ([final_traj_line] if final_traj_line else [])
@@ -1798,7 +1762,9 @@ class simulation_mpc:
             opt_param = RMPCCPVOptimizerParam()
             pv_config = {}
             if config:
-                pv_config.update(config.get("rmpcc", {}))
+                shared_rmpcc_config = dict(config.get("rmpcc", {}))
+                shared_rmpcc_config.pop("use_risk_visualization", None)
+                pv_config.update(shared_rmpcc_config)
                 pv_config.update(config.get("rmpcc_pv", {}))
             if pv_config:
                 self._apply_param_overrides(opt_param, pv_config, "RMPCC-PV")
@@ -2253,8 +2219,7 @@ class simulation_mpc:
                 'generate_animation': True,
                 'generate_plots': True,
                 'generate_risk_profile': False,
-                'plot_covariance': False,
-            }
+            },
         }
 
     def run_tests_from_config(self, config_file='config/config.yaml'):
@@ -2293,9 +2258,9 @@ class simulation_mpc:
             frame_skip = defaults.get('frame_skip', 5)
             generate_animation = defaults.get('generate_animation', True)
             generate_plots = defaults.get('generate_plots', True)
-            plot_covariance = test_config.get(
-                'plot_covariance',
-                defaults.get('plot_covariance', False),
+            use_risk_visualization = test_config.get(
+                'use_risk_visualization',
+                defaults.get('use_risk_visualization', None),
             )
             generate_risk_profile = test_config.get(
                 'generate_risk_profile',
@@ -2336,7 +2301,7 @@ class simulation_mpc:
                         maze_type=maze_type,
                         frame_skip=frame_skip,
                         method_name=optimizer_type,
-                        plot_covariance=plot_covariance,
+                        use_risk_visualization=use_risk_visualization,
                     )
 
                 if generate_plots:
@@ -2347,7 +2312,6 @@ class simulation_mpc:
                         figure_name=test_sim.current_name.lower(),
                         local_traj_indexes=[],
                         maze_type=maze_type,
-                        plot_covariance=plot_covariance,
                     )
                     test_sim.plot_profiles(
                         test_sim.sim,
@@ -2397,7 +2361,7 @@ class simulation_mpc:
                             maze_type=maze_type,
                             frame_skip=frame_skip,
                             method_name=optimizer_type,
-                            plot_covariance=plot_covariance,
+                            use_risk_visualization=use_risk_visualization,
                         )
                     else:
                         print("Interrupted before any trajectory state was available; skipping animation generation.")
@@ -2445,7 +2409,7 @@ class simulation_mpc:
                             maze_type=maze_type,
                             frame_skip=frame_skip,
                             method_name=optimizer_type,
-                            plot_covariance=plot_covariance,
+                            use_risk_visualization=use_risk_visualization,
                         )
                     else:
                         print("Interrupted before any trajectory state was available; skipping animation generation.")

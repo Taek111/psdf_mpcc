@@ -88,7 +88,7 @@ def generate_animation_if_possible(
         maze_type=args.maze_type,
         frame_skip=args.frame_skip,
         method_name=args.optimizer_type,
-        plot_covariance=args.plot_covariance,
+        use_risk_visualization=getattr(args, "use_risk_visualization", None),
     )
 
 
@@ -317,7 +317,6 @@ def run_single_test(args: argparse.Namespace, config: Optional[dict] = None) -> 
                 figure_name=test_sim.current_name.lower(),
                 local_traj_indexes=[],
                 maze_type=args.maze_type,
-                plot_covariance=args.plot_covariance,
             )
             test_sim.plot_profiles(
                 test_sim.sim,
@@ -401,10 +400,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Generate an additional risk heatmap profile when risk_margin_max is available",
     )
     parser.add_argument(
-        "--plot-covariance",
-        dest="plot_covariance",
+        "--risk-visualization",
+        dest="use_risk_visualization",
         action="store_true",
-        help="Overlay directional covariance axes for risk-active RMPCC stages",
+        help="Show active stage-wise Boole risk circles in RMPCC-MF animations",
     )
     parser.add_argument(
         "--safe-stop-batch",
@@ -438,7 +437,7 @@ def build_parser() -> argparse.ArgumentParser:
         generate_animation=True,
         generate_plots=True,
         generate_risk_profile=True,
-        plot_covariance=False,
+        use_risk_visualization=None,
     )
     return parser
 

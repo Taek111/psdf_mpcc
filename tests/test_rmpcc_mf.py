@@ -737,6 +737,12 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
         solver = _FakeSolver(states, inputs_)
         self.optimizer.solver = solver
         self.optimizer._prepare_and_solve = lambda _: 1
+        self.optimizer._last_boole_risk_visualization_data = {
+            "nominal_poses": np.zeros((4, 3)),
+            "boole_risk_sum": np.full(4, 0.02),
+            "epsilon": np.full(4, 0.05),
+            "mf_mask": np.array([False, True, True, True]),
+        }
         self.optimizer._report_solver_failure = lambda _: None
         self.param.debug_mf = False
         self.param.debug_infeasibility = True
@@ -756,6 +762,9 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
         self.optimizer.solve_nlp()
 
         self.assertEqual(events, [("diagnostics", True), ("recovery", 1)])
+        self.assertIsNone(
+            self.optimizer.get_last_boole_risk_visualization_data()
+        )
 
     def test_failed_diagnostic_report_error_does_not_block_recovery(self):
         states = np.zeros((4, 8), dtype=float)
@@ -950,6 +959,7 @@ class RMPCCMultiFeatureTest(unittest.TestCase):
             "mf_c_raw": np.zeros(num_stages),
             "epsilon": np.full(num_stages, self.param.chance_epsilon),
             "mf_valid": np.zeros(num_stages, dtype=bool),
+            "mf_mask": np.zeros(num_stages, dtype=bool),
         }
         self.optimizer._compute_exact_psdf = lambda _: (1.0, np.zeros(3))
         captured = {}

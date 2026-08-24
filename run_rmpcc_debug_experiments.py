@@ -164,7 +164,6 @@ def build_run_config(run_dir, run_id, rmpcc_config, simulation_time):
             "simulation_time": float(simulation_time),
             "generate_animation": False,
             "generate_plots": False,
-            "plot_covariance": False,
         },
         "output_root_dir": str(run_dir),
         "output_suffix": run_id,
@@ -578,4 +577,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -8,6 +8,7 @@ class ControllerLogger:
         self._xtrajs = []
         self._utrajs = []
         self._risk_margin_trajs = []
+        self._boole_risk_visualization_data = []
         self._solver_status_infos = []
         self._computation_times = []
 

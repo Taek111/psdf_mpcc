@@ -163,7 +163,6 @@ def build_run_config(
             "simulation_time": float(simulation_time),
             "generate_animation": False,
             "generate_plots": False,
-            "plot_covariance": False,
         },
         "output_root_dir": str(run_dir),
         "output_suffix": run_id,

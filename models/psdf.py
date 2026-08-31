@@ -217,10 +217,8 @@ class PSDF(nn.Module):
         separated_poly = (ov_poly < -eps_sat).any(2)               # (B,K)
         separated_seg  = (ov_seg  < -eps_sat).any(2)               # (B,K)
         
-        beta = 100.0
-        penetration = -torch.logsumexp(
-            -beta * all_ov.clamp_min(0), 2
-        ) / beta                                             # (B,K)
+        # Exact SAT penetration depth: minimum overlap over all axes.
+        penetration = all_ov.amin(dim=2).clamp_min(0.0)       # (B,K)
 
         inside = self._ray_inside(A_loc, B_loc, mask)     # (B,K)
         separated  = separated & (~inside)
@@ -228,4 +226,3 @@ class PSDF(nn.Module):
         signed_cluster = torch.where(separated, sep_dist, torch.where(inside, -sep_dist, -penetration)) # (B,K)                                                  # (B,K)
         # final: min over K clusters ----------------------------
         return signed_cluster.amin(1)                         # (B,)
-

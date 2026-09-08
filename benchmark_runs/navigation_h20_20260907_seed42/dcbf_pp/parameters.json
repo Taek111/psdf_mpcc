@@ -1,0 +1,70 @@
+{
+  "horizon": 20,
+  "horizon_dcbf": 20,
+  "mat_Q": [
+    [
+      10.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      10.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0
+    ]
+  ],
+  "mat_R": [
+    [
+      20.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0
+    ]
+  ],
+  "mat_Rold": [
+    [
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0
+    ]
+  ],
+  "mat_dR": [
+    [
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0
+    ]
+  ],
+  "gamma": 0.8,
+  "pomega": 10.0,
+  "margin_dist": 0.001,
+  "terminal_weight": 1.0,
+  "tf": 2.0,
+  "qp_solver": "PARTIAL_CONDENSING_HPIPM",
+  "hessian_approx": "GAUSS_NEWTON",
+  "integrator_type": "IRK",
+  "nlp_solver_type": "SQP_RTI",
+  "qp_solver_iter_max": 50,
+  "nlp_solver_max_iter": 20,
+  "amin": -0.5,
+  "amax": 0.5,
+  "omegamin": -0.5,
+  "omegamax": 0.5,
+  "jerk_min": -1.0,
+  "jerk_max": 1.0,
+  "omegadot_min": -0.5,
+  "omegadot_max": 0.5
+}

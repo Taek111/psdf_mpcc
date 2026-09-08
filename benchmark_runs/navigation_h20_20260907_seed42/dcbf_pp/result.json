@@ -1,0 +1,127 @@
+{
+  "method": "dcbf",
+  "wall_seconds": 183.3159364310004,
+  "error": "TimeoutError: Externally enforced wall-clock budget; see budget_checkpoint.json",
+  "start_perturbation": {
+    "enabled": true,
+    "seed": 42,
+    "position_std": 0.005,
+    "heading_std_deg": 0.0,
+    "max_sigma": 3.0,
+    "min_clearance": 0.01,
+    "max_attempts": 1000,
+    "nominal_pose": [
+      0.075,
+      0.7949999999999999,
+      -1.5707963267948966
+    ],
+    "initial_pose": [
+      0.07652358539877216,
+      0.7898000794687975,
+      -1.5707963267948966
+    ],
+    "delta_pose": [
+      0.0015235853987721568,
+      -0.005199920531202478,
+      0.0
+    ],
+    "nominal_clearance": 0.029999999999999992,
+    "initial_clearance": 0.028476414601227823,
+    "attempts": 1
+  },
+  "final_time": 0.0,
+  "final_pose": [
+    0.07652358539877216,
+    0.7898000794687975,
+    -1.5707963267948966
+  ],
+  "goal_pose": [
+    1.7999999999999998,
+    0.09,
+    0.0
+  ],
+  "distance_to_environment_goal": 1.8601320122268843,
+  "optimizer_class": "NmpcDcbfOptimizerSqp",
+  "parameters": {
+    "horizon": 20,
+    "horizon_dcbf": 20,
+    "mat_Q": [
+      [
+        10.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        10.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "mat_R": [
+      [
+        20.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "mat_Rold": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "mat_dR": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "gamma": 0.8,
+    "pomega": 10.0,
+    "margin_dist": 0.001,
+    "terminal_weight": 1.0,
+    "tf": 2.0,
+    "qp_solver": "PARTIAL_CONDENSING_HPIPM",
+    "hessian_approx": "GAUSS_NEWTON",
+    "integrator_type": "IRK",
+    "nlp_solver_type": "SQP_RTI",
+    "qp_solver_iter_max": 50,
+    "nlp_solver_max_iter": 20,
+    "amin": -0.5,
+    "amax": 0.5,
+    "omegamin": -0.5,
+    "omegamax": 0.5,
+    "jerk_min": -1.0,
+    "jerk_max": 1.0,
+    "omegadot_min": -0.5,
+    "omegadot_max": 0.5
+  },
+  "completed_steps": 0,
+  "minimum_sampled_clearance": 0.028476414601227823,
+  "minimum_clearance_time": 0.0,
+  "contact_or_collision_samples": 0,
+  "first_input": null,
+  "max_abs_inputs": null,
+  "solver_statuses": [],
+  "solver_failure_steps": 0,
+  "status": "wall_timeout",
+  "failure_reason": "TimeoutError: Externally enforced wall-clock budget; see budget_checkpoint.json",
+  "animation": "/home/taek111/projects/psdf_mpcc/benchmark_runs/navigation_h20_20260907_seed42/dcbf_pp/animations/dcbf/MPC_DCBF_rectangle_maze_startseed42_failed.mp4",
+  "wall_budget_seconds": 180
+}

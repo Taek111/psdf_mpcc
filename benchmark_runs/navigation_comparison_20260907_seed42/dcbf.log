@@ -1,0 +1,231 @@
+Start perturbation: seed=42, pose=[0.07652358539877216, 0.7898000794687975, -1.5707963267948966], delta=[0.0015235853987721568, -0.005199920531202478, 0.0], clearance=0.028476 m, attempts=1
+Start pose saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/navigation_comparison_20260907_seed42/dcbf/data/start_pose_MPC_DCBF_rectangle_maze_startseed42.json
+Resetting dcbf optimizer for clean state...
+generating global path with A* + Line of Sight
+시작 위치: [0.07652 0.7898 ]
+목적지: [1.8  0.09]
+도착 판정 기준: position <= 0.01m, angle <= 0.01rad
+rm -f libacados_ocp_solver_diff_drive_dcbf.so
+rm -f diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac.o acados_solver_diff_drive_dcbf.o
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o acados_solver_diff_drive_dcbf.o acados_solver_diff_drive_dcbf.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_z.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_z.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_u_z.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_u_z.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_u.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_u.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_jac_x_xdot_u_z.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_jac_x_xdot_u_z.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_hess.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_hess.c
+cc -shared diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac.o acados_solver_diff_drive_dcbf.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_z.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_u_z.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_u.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_jac_x_xdot_u_z.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_hess.o -o libacados_ocp_solver_diff_drive_dcbf.so -L/home/taek111/projects/acados/lib -lacados -lhpipm -lblasfeo -lm  \
+-L -l
+acados was compiled without OpenMP.
+
+******************************************************************************
+This program contains Ipopt, a library for large-scale nonlinear optimization.
+ Ipopt is released as open source code under the Eclipse Public License (EPL).
+         For more information visit https://github.com/coin-or/Ipopt
+******************************************************************************
+
+Solving DCBF SQP optimization problem
+solver time:  68.495434
+solver status:  0
+plant_input_stage0: full=[0.49452 0.     ], physical=[0.49452 0.     ]
+rm -f libacados_ocp_solver_diff_drive_dcbf.so
+rm -f diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac.o acados_solver_diff_drive_dcbf.o
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o acados_solver_diff_drive_dcbf.o acados_solver_diff_drive_dcbf.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_z.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_z.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_u_z.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_u_z.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_u.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_u.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_jac_x_xdot_u_z.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_jac_x_xdot_u_z.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_hess.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_hess.c
+cc -shared diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_0_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_fun_jac.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac_hess.o diff_drive_dcbf_cost/diff_drive_dcbf_cost_ext_cost_e_fun_jac.o acados_solver_diff_drive_dcbf.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_z.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_u_z.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_fun_jac_x_xdot_u.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_jac_x_xdot_u_z.o diff_drive_dcbf_model/diff_drive_dcbf_impl_dae_hess.o -o libacados_ocp_solver_diff_drive_dcbf.so -L/home/taek111/projects/acados/lib -lacados -lhpipm -lblasfeo -lm  \
+-L -l
+acados was compiled without OpenMP.
+Traceback (most recent call last):
+  File "/home/taek111/projects/psdf_mpcc/benchmark_runs/navigation_comparison_20260907_seed42/run_one.py", line 91, in <module>
+    sim.mpc_test('maze', 'rectangle', args.method, 'differential_drive', 'astar',
+  File "/home/taek111/projects/psdf_mpcc/sim/simulation_mpc.py", line 2039, in mpc_test
+    self.last_run_outcome = self.sim.run_navigation(simulation_time)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/taek111/projects/psdf_mpcc/sim/simulation.py", line 150, in run_navigation
+    self._robot.run_controller(self._obstacles)
+  File "/home/taek111/projects/psdf_mpcc/benchmark_runs/navigation_comparison_20260907_seed42/run_one.py", line 74, in run_controller
+    return original_controller(robot, obstacles)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/taek111/projects/psdf_mpcc/sim/simulation.py", line 61, in run_controller
+    self._control_action = self._controller.generate_control_input(
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/taek111/projects/psdf_mpcc/sim/simulation_mpc.py", line 1949, in enhanced_generate_control
+    u_opt = original_generate_control(system, global_path, local_trajectory, obstacles)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/taek111/projects/psdf_mpcc/control/controller.py", line 69, in generate_control_input
+    self._optimizer.setup(self._param, system, local_trajectory, obstacles)
+  File "/home/taek111/projects/psdf_mpcc/control/dcbf_optimizer_sqp.py", line 475, in setup
+    self.add_obstacle_avoidance_constraint(param, system, obstacles_geo)
+  File "/home/taek111/projects/psdf_mpcc/control/dcbf_optimizer_sqp.py", line 346, in add_obstacle_avoidance_constraint
+    cbf_curr, lamb_curr, mu_curr = get_dist_region_to_region(
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/taek111/projects/psdf_mpcc/models/geometry_utils.py", line 199, in get_dist_region_to_region
+    opt_sol = opti.solve()
+              ^^^^^^^^^^^^
+  File "/home/taek111/anaconda3/envs/ped/lib/python3.11/site-packages/casadi/casadi.py", line 50936, in solve
+    return _casadi.Opti_solve(self, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Error in Opti::solve [OptiNode] at .../casadi/core/optistack.cpp:217:
+.../casadi/core/optistack_internal.cpp:1279: Psd constraints not implemented yet. Perhaps you intended an element-wise inequality? In that case, make sure that the matrix is flattened (e.g. mat(:)).
+Trial history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/navigation_comparison_20260907_seed42/dcbf/data/trial_history_MPC_DCBF_rectangle_maze_startseed42.csv
+{
+  "method": "dcbf",
+  "wall_seconds": 112.09148105800023,
+  "error": "RuntimeError: Error in Opti::solve [OptiNode] at .../casadi/core/optistack.cpp:217:\n.../casadi/core/optistack_internal.cpp:1279: Psd constraints not implemented yet. Perhaps you intended an element-wise inequality? In that case, make sure that the matrix is flattened (e.g. mat(:)).",
+  "start_perturbation": {
+    "enabled": true,
+    "seed": 42,
+    "position_std": 0.005,
+    "heading_std_deg": 0.0,
+    "max_sigma": 3.0,
+    "min_clearance": 0.01,
+    "max_attempts": 1000,
+    "nominal_pose": [
+      0.075,
+      0.7949999999999999,
+      -1.5707963267948966
+    ],
+    "initial_pose": [
+      0.07652358539877216,
+      0.7898000794687975,
+      -1.5707963267948966
+    ],
+    "delta_pose": [
+      0.0015235853987721568,
+      -0.005199920531202478,
+      0.0
+    ],
+    "nominal_clearance": 0.029999999999999992,
+    "initial_clearance": 0.028476414601227823,
+    "attempts": 1
+  },
+  "final_time": 0.1,
+  "final_pose": [
+    0.07652358539877216,
+    0.7403476143876226,
+    -1.5707963267948966
+  ],
+  "goal_pose": [
+    1.7999999999999998,
+    0.09,
+    0.0
+  ],
+  "distance_to_environment_goal": 1.8420974380380573,
+  "optimizer_class": "NmpcDcbfOptimizerSqp",
+  "parameters": {
+    "horizon": 11,
+    "horizon_dcbf": 6,
+    "mat_Q": [
+      [
+        10.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        10.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "mat_R": [
+      [
+        20.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "mat_Rold": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "mat_dR": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "gamma": 0.8,
+    "pomega": 10.0,
+    "margin_dist": 0.001,
+    "terminal_weight": 1.0,
+    "tf": 1.1,
+    "qp_solver": "PARTIAL_CONDENSING_HPIPM",
+    "hessian_approx": "GAUSS_NEWTON",
+    "integrator_type": "IRK",
+    "nlp_solver_type": "SQP_RTI",
+    "qp_solver_iter_max": 50,
+    "nlp_solver_max_iter": 20,
+    "amin": -0.5,
+    "amax": 0.5,
+    "omegamin": -0.5,
+    "omegamax": 0.5,
+    "jerk_min": -1.0,
+    "jerk_max": 1.0,
+    "omegadot_min": -0.5,
+    "omegadot_max": 0.5
+  },
+  "completed_steps": 1,
+  "minimum_sampled_clearance": 0.028476414601227823,
+  "minimum_clearance_time": 0.0,
+  "contact_or_collision_samples": 0,
+  "first_input": [
+    0.49452465081174835,
+    0.0
+  ],
+  "max_abs_inputs": [
+    0.49452465081174835,
+    0.0
+  ],
+  "solver_statuses": [
+    {
+      "raw_status": "Solve_Succeeded",
+      "status_code": 0,
+      "success": true
+    }
+  ],
+  "solver_failure_steps": 0,
+  "status": "error",
+  "failure_reason": "RuntimeError: Error in Opti::solve [OptiNode] at .../casadi/core/optistack.cpp:217:\n.../casadi/core/optistack_internal.cpp:1279: Psd constraints not implemented yet. Perhaps you intended an element-wise inequality? In that case, make sure that the matrix is flattened (e.g. mat(:)).",
+  "animation": "/home/taek111/projects/psdf_mpcc/benchmark_runs/navigation_comparison_20260907_seed42/dcbf/animations/dcbf/MPC_DCBF_rectangle_maze_startseed42_failed.mp4"
+}

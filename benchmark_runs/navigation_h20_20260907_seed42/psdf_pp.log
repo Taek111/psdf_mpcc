@@ -1,0 +1,1334 @@
+Start perturbation: seed=42, pose=[0.07652358539877216, 0.7898000794687975, -1.5707963267948966], delta=[0.0015235853987721568, -0.005199920531202478, 0.0], clearance=0.028476 m, attempts=1
+Start pose saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/navigation_h20_20260907_seed42/psdf_pp/data/start_pose_MPC_psdf_rectangle_maze_startseed42.json
+Resetting psdf optimizer for clean state...
+generating global path with A* + Line of Sight
+시작 위치: [0.07652 0.7898 ]
+목적지: [1.8  0.09]
+도착 판정 기준: position <= 0.01m, angle <= 0.01rad
+Warning: PSDF wrapper not initialized, skipping obstacle update
+Setting up PSDF optimizer...
+vertices.shape: (4, 2)
+psdfWrapper initialized with vertices shape: (4, 2)
+/home/taek111/projects/psdf_mpcc/models/geometry_utils.py:241: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at /opt/conda/conda-bld/pytorch_1724789122112/work/torch/csrc/utils/tensor_new.cpp:278.)
+  edgesA = torch.tensor(edgesA, dtype=torch.float32)
+Added HARD obstacle avoidance constraint with d_safe = 0.0001
+acados PSDF cache miss or source/config changed: rebuilding.
+field AcadosOcpDims.N has been migrated to AcadosOcpOptions.N_horizon. setting AcadosOcpOptions.N_horizon = N. For future comppatibility, please use AcadosOcpOptions.N_horizon directly.
+rm -f libacados_ocp_solver_differential_drive_psdf.so
+rm -f differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun_jac_uxt_zt.o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun.o acados_solver_differential_drive_psdf.o
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun_jac_uxt_zt.o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun_jac_uxt_zt.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun.o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o acados_solver_differential_drive_psdf.o acados_solver_differential_drive_psdf.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_model/differential_drive_psdf_expl_ode_fun.o differential_drive_psdf_model/differential_drive_psdf_expl_ode_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_model/differential_drive_psdf_expl_vde_forw.o differential_drive_psdf_model/differential_drive_psdf_expl_vde_forw.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_model/differential_drive_psdf_expl_vde_adj.o differential_drive_psdf_model/differential_drive_psdf_expl_vde_adj.c
+cc -shared differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun_jac_uxt_zt.o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun.o acados_solver_differential_drive_psdf.o differential_drive_psdf_model/differential_drive_psdf_expl_ode_fun.o differential_drive_psdf_model/differential_drive_psdf_expl_vde_forw.o differential_drive_psdf_model/differential_drive_psdf_expl_vde_adj.o -o libacados_ocp_solver_differential_drive_psdf.so -L/home/taek111/projects/acados/lib -lacados -lhpipm -lblasfeo -lm  \
+-L -l
+acados was compiled without OpenMP.
+x_ws, u_ws : [ 0.07652  0.7898  -1.5708 ] [0. 0.]
+solver time:  1.4508585929870605
+plant_input_stage0: full=[0.13664 0.00518], physical=[0.13664 0.00518]
+solver time:  0.1525733470916748
+plant_input_stage0: full=[ 0.24296 -0.94968], physical=[ 0.24296 -0.94968]
+solver time:  0.12138915061950684
+plant_input_stage0: full=[0.23703 1.     ], physical=[0.23703 1.     ]
+solver time:  0.11917352676391602
+plant_input_stage0: full=[0.23724 0.18096], physical=[0.23724 0.18096]
+solver time:  0.12631916999816895
+plant_input_stage0: full=[0.2434  0.23096], physical=[0.2434  0.23096]
+solver time:  0.13187026977539062
+plant_input_stage0: full=[0.27277 0.91673], physical=[0.27277 0.91673]
+solver time:  0.11403632164001465
+plant_input_stage0: full=[0.20887 1.     ], physical=[0.20887 1.     ]
+solver time:  0.11448335647583008
+plant_input_stage0: full=[0.15243 1.     ], physical=[0.15243 1.     ]
+solver time:  0.13737034797668457
+plant_input_stage0: full=[0.10174 1.     ], physical=[0.10174 1.     ]
+solver time:  0.19147658348083496
+plant_input_stage0: full=[0.11419 1.     ], physical=[0.11419 1.     ]
+solver time:  0.1794602870941162
+plant_input_stage0: full=[0.12286 1.     ], physical=[0.12286 1.     ]
+solver time:  0.1466817855834961
+plant_input_stage0: full=[0.12584 1.     ], physical=[0.12584 1.     ]
+solver time:  0.13229584693908691
+plant_input_stage0: full=[0.13083 1.     ], physical=[0.13083 1.     ]
+solver time:  0.15117144584655762
+plant_input_stage0: full=[0.13779 1.     ], physical=[0.13779 1.     ]
+solver time:  0.1363208293914795
+plant_input_stage0: full=[0.14528 1.     ], physical=[0.14528 1.     ]
+solver time:  0.13460087776184082
+plant_input_stage0: full=[0.15294 1.     ], physical=[0.15294 1.     ]
+solver time:  0.12109518051147461
+plant_input_stage0: full=[0.16525 1.     ], physical=[0.16525 1.     ]
+solver time:  0.12418293952941895
+plant_input_stage0: full=[0.25844 1.     ], physical=[0.25844 1.     ]
+solver time:  0.12473082542419434
+plant_input_stage0: full=[0.21834 1.     ], physical=[0.21834 1.     ]
+solver time:  0.12581396102905273
+plant_input_stage0: full=[0.18697 1.     ], physical=[0.18697 1.     ]
+solver time:  0.10448050498962402
+plant_input_stage0: full=[0.1972 1.    ], physical=[0.1972 1.    ]
+solver time:  0.11482715606689453
+plant_input_stage0: full=[0.21435 0.84153], physical=[0.21435 0.84153]
+solver time:  0.16333317756652832
+plant_input_stage0: full=[0.34688 1.     ], physical=[0.34688 1.     ]
+solver time:  0.13724303245544434
+plant_input_stage0: full=[0.27052 0.94434], physical=[0.27052 0.94434]
+solver time:  0.14301204681396484
+plant_input_stage0: full=[0.22477 0.49313], physical=[0.22477 0.49313]
+solver time:  0.28068041801452637
+plant_input_stage0: full=[0.23115 0.28535], physical=[0.23115 0.28535]
+solver time:  0.26708269119262695
+plant_input_stage0: full=[0.23281 0.23843], physical=[0.23281 0.23843]
+solver time:  0.18393492698669434
+plant_input_stage0: full=[0.23081 0.24772], physical=[0.23081 0.24772]
+solver time:  0.1298685073852539
+plant_input_stage0: full=[0.22653 0.28322], physical=[0.22653 0.28322]
+solver time:  0.11758852005004883
+plant_input_stage0: full=[0.2257  0.36796], physical=[0.2257  0.36796]
+solver time:  0.12619781494140625
+plant_input_stage0: full=[0.22453 0.17656], physical=[0.22453 0.17656]
+solver time:  0.12328577041625977
+plant_input_stage0: full=[ 0.2265  -0.18353], physical=[ 0.2265  -0.18353]
+solver time:  0.12401843070983887
+plant_input_stage0: full=[ 0.23376 -0.1323 ], physical=[ 0.23376 -0.1323 ]
+solver time:  0.13181090354919434
+plant_input_stage0: full=[0.26616 0.12142], physical=[0.26616 0.12142]
+solver time:  0.11954545974731445
+plant_input_stage0: full=[ 0.21916 -1.     ], physical=[ 0.21916 -1.     ]
+solver time:  0.1289682388305664
+plant_input_stage0: full=[ 0.19089 -1.     ], physical=[ 0.19089 -1.     ]
+solver time:  0.13089871406555176
+plant_input_stage0: full=[ 0.19982 -1.     ], physical=[ 0.19982 -1.     ]
+solver time:  0.15777826309204102
+plant_input_stage0: full=[ 0.20927 -1.     ], physical=[ 0.20927 -1.     ]
+solver time:  0.11949038505554199
+plant_input_stage0: full=[ 0.3394  -0.88272], physical=[ 0.3394  -0.88272]
+solver time:  0.11295962333679199
+plant_input_stage0: full=[ 0.23373 -1.     ], physical=[ 0.23373 -1.     ]
+solver time:  0.12219452857971191
+plant_input_stage0: full=[ 0.21738 -0.5029 ], physical=[ 0.21738 -0.5029 ]
+solver time:  0.1258537769317627
+plant_input_stage0: full=[ 0.22116 -0.98535], physical=[ 0.22116 -0.98535]
+solver time:  0.12170529365539551
+plant_input_stage0: full=[ 0.20061 -1.     ], physical=[ 0.20061 -1.     ]
+solver time:  0.1338179111480713
+plant_input_stage0: full=[ 0.18727 -1.     ], physical=[ 0.18727 -1.     ]
+solver time:  0.1442115306854248
+plant_input_stage0: full=[ 0.21134 -1.     ], physical=[ 0.21134 -1.     ]
+solver time:  0.11812019348144531
+plant_input_stage0: full=[ 0.16727 -1.     ], physical=[ 0.16727 -1.     ]
+solver time:  0.16370201110839844
+plant_input_stage0: full=[ 0.15254 -0.9901 ], physical=[ 0.15254 -0.9901 ]
+solver time:  0.17737865447998047
+plant_input_stage0: full=[ 0.1399  -0.63543], physical=[ 0.1399  -0.63543]
+solver time:  0.13117194175720215
+plant_input_stage0: full=[ 0.12286 -0.54717], physical=[ 0.12286 -0.54717]
+solver time:  0.12009048461914062
+plant_input_stage0: full=[ 0.2296  -0.05192], physical=[ 0.2296  -0.05192]
+solver time:  0.13231897354125977
+plant_input_stage0: full=[ 0.22387 -0.06112], physical=[ 0.22387 -0.06112]
+solver time:  0.11930561065673828
+plant_input_stage0: full=[0.23449 0.91978], physical=[0.23449 0.91978]
+solver time:  0.11099910736083984
+plant_input_stage0: full=[0.15287 1.     ], physical=[0.15287 1.     ]
+solver time:  0.1315622329711914
+plant_input_stage0: full=[0.19572 1.     ], physical=[0.19572 1.     ]
+solver time:  0.15399622917175293
+plant_input_stage0: full=[0.19622 1.     ], physical=[0.19622 1.     ]
+solver time:  0.12166643142700195
+plant_input_stage0: full=[0.16669 1.     ], physical=[0.16669 1.     ]
+solver time:  0.1598503589630127
+plant_input_stage0: full=[0.14318 1.     ], physical=[0.14318 1.     ]
+solver time:  0.15358781814575195
+plant_input_stage0: full=[0.15047 1.     ], physical=[0.15047 1.     ]
+solver time:  0.11777687072753906
+plant_input_stage0: full=[0.16923 1.     ], physical=[0.16923 1.     ]
+solver time:  0.12020134925842285
+plant_input_stage0: full=[0.17304 1.     ], physical=[0.17304 1.     ]
+solver time:  0.12289881706237793
+plant_input_stage0: full=[0.18505 1.     ], physical=[0.18505 1.     ]
+solver time:  0.1159508228302002
+plant_input_stage0: full=[0.17496 1.     ], physical=[0.17496 1.     ]
+solver time:  0.12405252456665039
+plant_input_stage0: full=[0.18494 1.     ], physical=[0.18494 1.     ]
+solver time:  0.1256399154663086
+plant_input_stage0: full=[0.2109 1.    ], physical=[0.2109 1.    ]
+solver time:  0.10560059547424316
+plant_input_stage0: full=[0.182 1.   ], physical=[0.182 1.   ]
+solver time:  0.10441184043884277
+plant_input_stage0: full=[0.15535 1.     ], physical=[0.15535 1.     ]
+solver time:  0.11919879913330078
+plant_input_stage0: full=[0.14955 0.89501], physical=[0.14955 0.89501]
+solver time:  0.12462878227233887
+plant_input_stage0: full=[0.13963 0.59746], physical=[0.13963 0.59746]
+solver time:  0.12999391555786133
+plant_input_stage0: full=[0.11997 0.4236 ], physical=[0.11997 0.4236 ]
+solver time:  0.13729214668273926
+plant_input_stage0: full=[0.23166 0.05773], physical=[0.23166 0.05773]
+solver time:  0.12816500663757324
+plant_input_stage0: full=[0.22203 0.06857], physical=[0.22203 0.06857]
+solver time:  0.12674665451049805
+plant_input_stage0: full=[ 0.22316 -0.71986], physical=[ 0.22316 -0.71986]
+solver time:  0.14629268646240234
+plant_input_stage0: full=[ 0.15484 -1.     ], physical=[ 0.15484 -1.     ]
+solver time:  0.12628602981567383
+plant_input_stage0: full=[ 0.22074 -1.     ], physical=[ 0.22074 -1.     ]
+solver time:  0.14426183700561523
+plant_input_stage0: full=[ 0.20858 -1.     ], physical=[ 0.20858 -1.     ]
+solver time:  0.13469600677490234
+plant_input_stage0: full=[ 0.17677 -1.     ], physical=[ 0.17677 -1.     ]
+solver time:  0.11887431144714355
+plant_input_stage0: full=[ 0.16011 -1.     ], physical=[ 0.16011 -1.     ]
+solver time:  0.13979029655456543
+plant_input_stage0: full=[ 0.17498 -1.     ], physical=[ 0.17498 -1.     ]
+solver time:  0.18448328971862793
+plant_input_stage0: full=[ 0.19433 -1.     ], physical=[ 0.19433 -1.     ]
+solver time:  0.11271214485168457
+plant_input_stage0: full=[ 0.21507 -0.66627], physical=[ 0.21507 -0.66627]
+solver time:  0.1090860366821289
+plant_input_stage0: full=[ 0.23004 -0.43621], physical=[ 0.23004 -0.43621]
+solver time:  0.11476922035217285
+plant_input_stage0: full=[ 0.23826 -0.04765], physical=[ 0.23826 -0.04765]
+solver time:  0.18965792655944824
+plant_input_stage0: full=[0.24326 0.02524], physical=[0.24326 0.02524]
+solver time:  0.11588597297668457
+plant_input_stage0: full=[0.24124 0.17085], physical=[0.24124 0.17085]
+solver time:  0.12843680381774902
+plant_input_stage0: full=[0.24257 0.04162], physical=[0.24257 0.04162]
+solver time:  0.12786149978637695
+plant_input_stage0: full=[0.23818 0.21416], physical=[0.23818 0.21416]
+solver time:  0.12027287483215332
+plant_input_stage0: full=[0.24242 0.56849], physical=[0.24242 0.56849]
+solver time:  0.11852478981018066
+plant_input_stage0: full=[0.20901 1.     ], physical=[0.20901 1.     ]
+solver time:  0.12309551239013672
+plant_input_stage0: full=[0.14387 1.     ], physical=[0.14387 1.     ]
+solver time:  0.1342003345489502
+plant_input_stage0: full=[0.19213 1.     ], physical=[0.19213 1.     ]
+solver time:  0.12673616409301758
+plant_input_stage0: full=[0.17835 1.     ], physical=[0.17835 1.     ]
+solver time:  0.1265087127685547
+plant_input_stage0: full=[0.14214 1.     ], physical=[0.14214 1.     ]
+solver time:  0.12414813041687012
+plant_input_stage0: full=[0.17472 1.     ], physical=[0.17472 1.     ]
+solver time:  0.13498425483703613
+plant_input_stage0: full=[0.08841 1.     ], physical=[0.08841 1.     ]
+solver time:  0.1225745677947998
+plant_input_stage0: full=[0.20975 0.46609], physical=[0.20975 0.46609]
+solver time:  0.12604594230651855
+plant_input_stage0: full=[0.20462 0.40176], physical=[0.20462 0.40176]
+solver time:  0.11780500411987305
+plant_input_stage0: full=[ 0.25128 -0.70865], physical=[ 0.25128 -0.70865]
+solver time:  0.14326095581054688
+plant_input_stage0: full=[ 0.17582 -1.     ], physical=[ 0.17582 -1.     ]
+solver time:  0.12694001197814941
+plant_input_stage0: full=[ 0.15635 -1.     ], physical=[ 0.15635 -1.     ]
+solver time:  0.12329316139221191
+plant_input_stage0: full=[ 0.16811 -1.     ], physical=[ 0.16811 -1.     ]
+solver time:  0.11037039756774902
+plant_input_stage0: full=[ 0.17303 -1.     ], physical=[ 0.17303 -1.     ]
+solver time:  0.12677741050720215
+plant_input_stage0: full=[ 0.17366 -1.     ], physical=[ 0.17366 -1.     ]
+solver time:  0.1386549472808838
+plant_input_stage0: full=[ 0.16924 -1.     ], physical=[ 0.16924 -1.     ]
+solver time:  0.12924599647521973
+plant_input_stage0: full=[ 0.1627 -1.    ], physical=[ 0.1627 -1.    ]
+solver time:  0.12951278686523438
+plant_input_stage0: full=[ 0.15672 -1.     ], physical=[ 0.15672 -1.     ]
+solver time:  0.12610363960266113
+plant_input_stage0: full=[ 0.1492 -1.    ], physical=[ 0.1492 -1.    ]
+solver time:  0.11519861221313477
+plant_input_stage0: full=[ 0.13866 -1.     ], physical=[ 0.13866 -1.     ]
+solver time:  0.13889527320861816
+plant_input_stage0: full=[ 0.12844 -1.     ], physical=[ 0.12844 -1.     ]
+solver time:  0.13271021842956543
+plant_input_stage0: full=[ 0.12525 -1.     ], physical=[ 0.12525 -1.     ]
+solver time:  0.12280941009521484
+plant_input_stage0: full=[ 0.1198 -1.    ], physical=[ 0.1198 -1.    ]
+solver time:  0.12103390693664551
+plant_input_stage0: full=[ 0.1433 -1.    ], physical=[ 0.1433 -1.    ]
+solver time:  0.1263866424560547
+plant_input_stage0: full=[ 0.14408 -1.     ], physical=[ 0.14408 -1.     ]
+solver time:  0.12244343757629395
+plant_input_stage0: full=[ 0.13844 -1.     ], physical=[ 0.13844 -1.     ]
+solver time:  0.13210344314575195
+plant_input_stage0: full=[ 0.1399 -1.    ], physical=[ 0.1399 -1.    ]
+solver time:  0.11198854446411133
+plant_input_stage0: full=[ 0.14709 -1.     ], physical=[ 0.14709 -1.     ]
+solver time:  0.11562871932983398
+plant_input_stage0: full=[ 0.1559 -1.    ], physical=[ 0.1559 -1.    ]
+solver time:  0.11858463287353516
+plant_input_stage0: full=[ 0.16573 -1.     ], physical=[ 0.16573 -1.     ]
+solver time:  0.125441312789917
+plant_input_stage0: full=[ 0.17669 -1.     ], physical=[ 0.17669 -1.     ]
+solver time:  0.11929607391357422
+plant_input_stage0: full=[ 0.26882 -1.     ], physical=[ 0.26882 -1.     ]
+solver time:  0.12317919731140137
+plant_input_stage0: full=[ 0.22357 -1.     ], physical=[ 0.22357 -1.     ]
+solver time:  0.11864137649536133
+plant_input_stage0: full=[ 0.20222 -1.     ], physical=[ 0.20222 -1.     ]
+solver time:  0.11974978446960449
+plant_input_stage0: full=[ 0.22153 -0.47402], physical=[ 0.22153 -0.47402]
+solver time:  0.10884928703308105
+plant_input_stage0: full=[ 0.23387 -0.29168], physical=[ 0.23387 -0.29168]
+solver time:  0.11570620536804199
+plant_input_stage0: full=[ 0.23782 -0.06473], physical=[ 0.23782 -0.06473]
+solver time:  0.12451577186584473
+plant_input_stage0: full=[0.23916 0.00723], physical=[0.23916 0.00723]
+solver time:  0.11867666244506836
+plant_input_stage0: full=[ 0.23662 -0.05859], physical=[ 0.23662 -0.05859]
+solver time:  0.12094736099243164
+plant_input_stage0: full=[0.23233 0.10115], physical=[0.23233 0.10115]
+solver time:  0.12310218811035156
+plant_input_stage0: full=[ 0.22792 -0.10027], physical=[ 0.22792 -0.10027]
+solver time:  0.12241291999816895
+plant_input_stage0: full=[ 0.22505 -0.47525], physical=[ 0.22505 -0.47525]
+solver time:  0.12049460411071777
+plant_input_stage0: full=[ 0.16749 -1.     ], physical=[ 0.16749 -1.     ]
+solver time:  0.12448859214782715
+plant_input_stage0: full=[ 0.1852 -1.    ], physical=[ 0.1852 -1.    ]
+solver time:  0.11717867851257324
+plant_input_stage0: full=[ 0.18404 -1.     ], physical=[ 0.18404 -1.     ]
+solver time:  0.12863636016845703
+plant_input_stage0: full=[ 0.15535 -1.     ], physical=[ 0.15535 -1.     ]
+solver time:  0.11602401733398438
+plant_input_stage0: full=[ 0.14132 -0.9999 ], physical=[ 0.14132 -0.9999 ]
+solver time:  0.1278820037841797
+plant_input_stage0: full=[ 0.12535 -0.66563], physical=[ 0.12535 -0.66563]
+solver time:  0.12194252014160156
+plant_input_stage0: full=[ 0.10563 -0.55803], physical=[ 0.10563 -0.55803]
+solver time:  0.12839531898498535
+plant_input_stage0: full=[ 0.22767 -0.0985 ], physical=[ 0.22767 -0.0985 ]
+solver time:  0.11751794815063477
+plant_input_stage0: full=[ 0.22131 -0.11795], physical=[ 0.22131 -0.11795]
+solver time:  0.11477446556091309
+plant_input_stage0: full=[0.24162 0.79959], physical=[0.24162 0.79959]
+solver time:  0.11530017852783203
+plant_input_stage0: full=[0.17666 1.     ], physical=[0.17666 1.     ]
+solver time:  0.1376500129699707
+plant_input_stage0: full=[0.18934 1.     ], physical=[0.18934 1.     ]
+solver time:  0.19027948379516602
+plant_input_stage0: full=[0.18753 1.     ], physical=[0.18753 1.     ]
+solver time:  0.1518716812133789
+plant_input_stage0: full=[0.17824 1.     ], physical=[0.17824 1.     ]
+solver time:  0.13009405136108398
+plant_input_stage0: full=[0.16532 1.     ], physical=[0.16532 1.     ]
+solver time:  0.1711256504058838
+plant_input_stage0: full=[0.17123 1.     ], physical=[0.17123 1.     ]
+solver time:  0.1416773796081543
+plant_input_stage0: full=[0.17301 1.     ], physical=[0.17301 1.     ]
+solver time:  0.12828683853149414
+plant_input_stage0: full=[0.17031 1.     ], physical=[0.17031 1.     ]
+solver time:  0.12932133674621582
+plant_input_stage0: full=[0.16502 1.     ], physical=[0.16502 1.     ]
+solver time:  0.13493871688842773
+plant_input_stage0: full=[0.15724 1.     ], physical=[0.15724 1.     ]
+solver time:  0.3110032081604004
+plant_input_stage0: full=[0.18537 1.     ], physical=[0.18537 1.     ]
+solver time:  0.12814760208129883
+plant_input_stage0: full=[0.16376 1.     ], physical=[0.16376 1.     ]
+solver time:  0.14936614036560059
+plant_input_stage0: full=[0.1424 1.    ], physical=[0.1424 1.    ]
+solver time:  0.12151527404785156
+plant_input_stage0: full=[0.12403 1.     ], physical=[0.12403 1.     ]
+solver time:  0.12862944602966309
+plant_input_stage0: full=[0.11281 1.     ], physical=[0.11281 1.     ]
+solver time:  0.12539935111999512
+plant_input_stage0: full=[0.10773 1.     ], physical=[0.10773 1.     ]
+solver time:  0.15541720390319824
+plant_input_stage0: full=[0.09751 1.     ], physical=[0.09751 1.     ]
+solver time:  0.12848448753356934
+plant_input_stage0: full=[0.08162 1.     ], physical=[0.08162 1.     ]
+solver time:  0.12056422233581543
+plant_input_stage0: full=[0.06868 1.     ], physical=[0.06868 1.     ]
+solver time:  0.12465643882751465
+plant_input_stage0: full=[0.05875 1.     ], physical=[0.05875 1.     ]
+solver time:  0.1133871078491211
+plant_input_stage0: full=[0.05174 1.     ], physical=[0.05174 1.     ]
+solver time:  0.10010361671447754
+plant_input_stage0: full=[0.04781 0.90524], physical=[0.04781 0.90524]
+solver time:  0.1357579231262207
+plant_input_stage0: full=[0.04622 0.56616], physical=[0.04622 0.56616]
+solver time:  0.12225008010864258
+plant_input_stage0: full=[0.04343 0.347  ], physical=[0.04343 0.347  ]
+solver time:  0.12081003189086914
+plant_input_stage0: full=[0.03786 0.20236], physical=[0.03786 0.20236]
+solver time:  0.11606621742248535
+plant_input_stage0: full=[0.03153 0.10745], physical=[0.03153 0.10745]
+solver time:  0.1216440200805664
+plant_input_stage0: full=[0.02539 0.04752], physical=[0.02539 0.04752]
+solver time:  0.11975669860839844
+plant_input_stage0: full=[0.01989 0.01149], physical=[0.01989 0.01149]
+solver time:  0.16138124465942383
+plant_input_stage0: full=[ 0.0152  -0.00864], physical=[ 0.0152  -0.00864]
+목적지에 도착했습니다! 현재 위치: [1.81502 0.08517], 시간: 16.80초
+Using psdf optimizer with differential_drive dynamics:
+median:  0.12583386898040771
+std:  0.10520127199707609
+min:  0.10010361671447754
+max:  1.4508585929870605
+Simulation finished.
+Run outcome: status=success, reason=None, final_time=16.79999999999997, distance_to_goal=0.009353937569336647
+Trial history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/navigation_h20_20260907_seed42/psdf_pp/data/trial_history_MPC_psdf_rectangle_maze_startseed42.csv
+Pose-SDF data saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/navigation_h20_20260907_seed42/psdf_pp/data/pose_sdf_MPC_psdf_rectangle_maze_startseed42.csv
+Total data points: 168
+SDF statistics - Min: 0.0004, Max: 0.0585, Mean: 0.0131
+Trial history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/navigation_h20_20260907_seed42/psdf_pp/data/trial_history_MPC_psdf_rectangle_maze_startseed42.csv
+{
+  "status": "success",
+  "failure_reason": null,
+  "goal_reached": true,
+  "final_time": 16.79999999999997,
+  "distance_to_goal": 0.009353937569336647,
+  "start_perturbation": {
+    "enabled": true,
+    "seed": 42,
+    "position_std": 0.005,
+    "heading_std_deg": 0.0,
+    "max_sigma": 3.0,
+    "min_clearance": 0.01,
+    "max_attempts": 1000,
+    "nominal_pose": [
+      0.075,
+      0.7949999999999999,
+      -1.5707963267948966
+    ],
+    "initial_pose": [
+      0.07652358539877216,
+      0.7898000794687975,
+      -1.5707963267948966
+    ],
+    "delta_pose": [
+      0.0015235853987721568,
+      -0.005199920531202478,
+      0.0
+    ],
+    "nominal_clearance": 0.029999999999999992,
+    "initial_clearance": 0.028476414601227823,
+    "attempts": 1
+  },
+  "method": "psdf",
+  "wall_seconds": 29.369931102999544,
+  "error": null,
+  "final_pose": [
+    1.8150217630196466,
+    0.08517116575114231,
+    0.015700626883875923
+  ],
+  "goal_pose": [
+    1.7999999999999998,
+    0.09,
+    0.0
+  ],
+  "distance_to_environment_goal": 0.015778815051244108,
+  "optimizer_class": "PSDFOptimizer",
+  "parameters": {
+    "horizon": 20,
+    "mat_Q": [
+      [
+        50.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        50.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "mat_R": [
+      [
+        5.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.05
+      ]
+    ],
+    "terminal_weight": 1.0,
+    "tf": 2.0,
+    "qp_solver": "PARTIAL_CONDENSING_HPIPM",
+    "hessian_approx": "GAUSS_NEWTON",
+    "integrator_type": "ERK",
+    "nlp_solver_type": "SQP_RTI",
+    "qp_solver_iter_max": 50,
+    "nlp_solver_max_iter": 20,
+    "tol": 0.0001,
+    "vmin": -0.6,
+    "vmax": 0.6,
+    "omegamin": -1.0,
+    "omegamax": 1.0,
+    "d_safe": 0.0001,
+    "gamma_s": 0.000437,
+    "use_soft_constraint": false,
+    "slack_weight": 1e+16,
+    "detection_window_width": 4.0,
+    "detection_window_height": 4.0,
+    "detection_safety_margin": 0.05,
+    "detection_frequency": 10.0,
+    "reuse_acados_codegen": true
+  },
+  "completed_steps": 168,
+  "minimum_sampled_clearance": 0.0004101593863512282,
+  "minimum_clearance_time": 9.4,
+  "contact_or_collision_samples": 0,
+  "first_input": [
+    0.13664079001354876,
+    0.0051780266632171675
+  ],
+  "max_abs_inputs": [
+    0.346878811861971,
+    0.9999999999999991
+  ],
+  "solver_statuses": [
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true
+    }
+  ],
+  "solver_failure_steps": 0,
+  "animation": "/home/taek111/projects/psdf_mpcc/benchmark_runs/navigation_h20_20260907_seed42/psdf_pp/animations/psdf/MPC_psdf_rectangle_maze_startseed42.mp4"
+}

@@ -1,0 +1,52 @@
+{
+  "horizon": 20,
+  "mat_Q": [
+    [
+      50.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      50.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "mat_R": [
+    [
+      5.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.05
+    ]
+  ],
+  "terminal_weight": 1.0,
+  "tf": 2.0,
+  "qp_solver": "PARTIAL_CONDENSING_HPIPM",
+  "hessian_approx": "GAUSS_NEWTON",
+  "integrator_type": "ERK",
+  "nlp_solver_type": "SQP_RTI",
+  "qp_solver_iter_max": 50,
+  "nlp_solver_max_iter": 20,
+  "tol": 0.0001,
+  "vmin": -0.6,
+  "vmax": 0.6,
+  "omegamin": -1.0,
+  "omegamax": 1.0,
+  "d_safe": 0.0001,
+  "gamma_s": 0.000437,
+  "use_soft_constraint": false,
+  "slack_weight": 1e+16,
+  "detection_window_width": 4.0,
+  "detection_window_height": 4.0,
+  "detection_safety_margin": 0.05,
+  "detection_frequency": 10.0,
+  "reuse_acados_codegen": true
+}

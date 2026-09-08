@@ -1,10 +1,12 @@
 import argparse
+import copy
 import csv
 import signal
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from sim.simulation_mpc import simulation_mpc
+from sim.start_perturbation import resolve_start_perturbation
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -30,6 +32,8 @@ def resolve_config_path(config_arg: str) -> str:
 def build_output_name(args: argparse.Namespace, interrupted: bool = False) -> str:
     prefix_map = {
         "acados": "MPC_SQP_",
+        "obca": "MPC_OBCA_",
+        "minkowski_cbf": "MPC_minkowski_cbf_",
         "psdf": "MPC_psdf_",
         "mpcc": "MPC_mpcc_",
         "rmpcc_pv": "MPC_rmpcc_pv_",
@@ -49,6 +53,37 @@ def build_output_name(args: argparse.Namespace, interrupted: bool = False) -> st
 def load_runtime_config(config_arg: str) -> dict:
     resolved_config_path = resolve_config_path(config_arg)
     return simulation_mpc().load_config(resolved_config_path) or {}
+
+
+def apply_start_perturbation_options(config: Optional[dict], args: argparse.Namespace) -> dict:
+    """Apply explicit CLI overrides to both common and per-test YAML settings."""
+    runtime_config = copy.deepcopy(config or {})
+    cli_keys = {
+        "perturb_start": "enabled",
+        "start_seed": "seed",
+        "start_position_std": "position_std",
+        "start_heading_std_deg": "heading_std_deg",
+        "start_min_clearance": "min_clearance",
+    }
+    overrides = {
+        key: getattr(args, argument)
+        for argument, key in cli_keys.items()
+        if getattr(args, argument, None) is not None
+    }
+    common = runtime_config.get("start_perturbation", {})
+    if not isinstance(common, dict):
+        raise ValueError("start_perturbation must be a mapping.")
+    runtime_config["start_perturbation"] = resolve_start_perturbation({**common, **overrides})
+    test_configs = runtime_config.get("test_configs", [])
+    if isinstance(test_configs, dict):
+        test_configs = [test_configs]
+    for test_config in test_configs:
+        if overrides:
+            per_test = test_config.get("start_perturbation", {})
+            if not isinstance(per_test, dict):
+                raise ValueError("Per-test start_perturbation must be a mapping.")
+            test_config["start_perturbation"] = {**per_test, **overrides}
+    return runtime_config
 
 
 def has_animation_data(test_sim: simulation_mpc) -> bool:
@@ -79,7 +114,7 @@ def generate_animation_if_possible(
 
     animation_name = getattr(test_sim, "current_name", build_output_name(args, interrupted=interrupted))
     if interrupted and animation_name == getattr(test_sim, "current_name", None):
-        animation_name = build_output_name(args, interrupted=True)
+        animation_name += "_interrupted"
 
     print("Generating animation..." if not interrupted else "Generating interrupted-run animation...")
     test_sim.animate_world(
@@ -219,6 +254,7 @@ def save_safe_stop_summary(summary_path: Path, rows: List[Dict]) -> None:
 
 
 def run_safe_stop_batch(args: argparse.Namespace, config: Optional[dict] = None) -> List[Dict]:
+    config = apply_start_perturbation_options(config, args)
     robot_shapes = args.safe_stop_robot_shapes or ["rectangle"]
     maze_types = args.safe_stop_maze_types or ["maze"]
     optimizer_types = args.safe_stop_optimizer_types or ["rmpcc_pv", "rmpcc"]
@@ -280,6 +316,7 @@ def run_safe_stop_batch(args: argparse.Namespace, config: Optional[dict] = None)
 
 def run_single_test(args: argparse.Namespace, config: Optional[dict] = None) -> Optional[dict]:
     print("Running single test...")
+    config = apply_start_perturbation_options(config, args)
     test_sim = simulation_mpc()
     test_sim.profile_heatmap_scales = test_sim._resolve_profile_heatmap_scales(
         (config or {}).get("defaults", {}),
@@ -376,11 +413,32 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--maze-type", default="s_path", help="Environment type")
     parser.add_argument("--robot-shape", default="rectangle", help="Robot shape")
-    parser.add_argument("--optimizer-type", default="casadi", help="Optimizer type")
+    parser.add_argument("--optimizer-type", default="casadi",
+                        help="Optimizer type (obca, psdf, dcbf, acados, casadi, ...)")
     parser.add_argument("--dynamics-type", default="differential_drive", help="Dynamics type")
     parser.add_argument("--path-planner", default="astar", help="Path planner type")
     parser.add_argument("--simulation-time", type=float, default=60.0, help="Simulation duration [s]")
     parser.add_argument("--frame-skip", type=int, default=5, help="Animation frame skip")
+    parser.add_argument(
+        "--perturb-start", action=argparse.BooleanOptionalAction, default=None,
+        help="Enable Gaussian start-pose perturbation; --no-perturb-start disables it (default: off)",
+    )
+    parser.add_argument(
+        "--start-seed", type=int, default=None,
+        help="Nonnegative trial seed; reuse across optimizers, change between trials (default: random)",
+    )
+    parser.add_argument(
+        "--start-position-std", type=float, default=None,
+        help="Independent x/y Gaussian standard deviation [m] (default: 0.005, bounded at 3 sigma)",
+    )
+    parser.add_argument(
+        "--start-heading-std-deg", type=float, default=None,
+        help="Heading Gaussian standard deviation [degrees] (default: 0, unchanged)",
+    )
+    parser.add_argument(
+        "--start-min-clearance", type=float, default=None,
+        help="Minimum initial footprint clearance [m] (default: 0.01); unsafe samples are resampled",
+    )
     parser.add_argument(
         "--no-animation",
         dest="generate_animation",
@@ -444,7 +502,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
-    config = load_runtime_config(args.config)
+    config = apply_start_perturbation_options(load_runtime_config(args.config), args)
 
     if args.safe_stop_batch:
         run_safe_stop_batch(args, config=config)

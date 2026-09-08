@@ -5,9 +5,23 @@
 # Each test can have the following options:
 # Environment type (options: "s_path", "straight_corridor", "maze", "oblique_maze", "parking")
 # Robot shape (options: "rectangle", "pentagon", "triangle", "lshape")
-# Optimizer type (options: "psdf", "mpcc", "rmpcc", "rmpcc_pv", "acados", "casadi", "dcbf", "dcbf_casadi")
+# Optimizer type (options: "obca", "psdf", "mpcc", "rmpcc", "rmpcc_pv", "acados", "casadi", "dcbf", "dcbf_casadi")
 # Dynamics model (currently only "differential_drive" is supported)
 # Path planner type (options: "astar", "hybrid_astar")
+
+# True initial-pose randomization (independent of localization/measurement noise).
+# CLI: --perturb-start / --no-perturb-start; explicit CLI values override YAML.
+# Use the same seed for psdf/dcbf/obca, and change it for each trial.
+# A null seed is generated and recorded; methods within a config batch share it.
+# Individual test_configs entries may override this block (e.g. seed: 1, 2, ...).
+start_perturbation:
+  enabled: false
+  seed: null
+  position_std: 0.005       # Independent x/y standard deviation [m]: 5 mm.
+  heading_std_deg: 0.0     # Keep heading fixed; set > 0 to also perturb yaw.
+  max_sigma: 3.0          # Rejection truncation: |dx|, |dy| <= 15 mm by default.
+  min_clearance: 0.01     # Whole footprint to obstacles/map bounds [m].
+  max_attempts: 1000      # Fail explicitly if no safe sample can be found.
 
 test_configs:
   - maze_type: "maze"
@@ -135,7 +149,7 @@ defaults:
 #   - "parking": Parking scenario environment
 #
 # robot_shape options:
-#   - "rectangle": Rectangular robot (0.15x0.06m)
+#   - "rectangle": Rectangular robot (0.15x0.09m)
 #   - "pentagon": Pentagon robot (radius 0.05m)
 #   - "triangle": Triangle robot
 #   - "lshape": L-shaped robot
@@ -145,6 +159,7 @@ defaults:
 #   - "mpcc": MPCC optimizer with PSDF safety constraint
 #   - "rmpcc": MPCC with fixed signed-PSDF guard and stage-masked MF affine rows
 #   - "rmpcc_pv": Risk-aware MPCC optimizer with a projected-variance PSDF margin
+#   - "obca": OBCAOptimizer from control/obca_optimizer.py (CasADi/IPOPT)
 #   - "acados": ACADOS SQP-based NMPC
 #   - "casadi": CasADi-based basic NMPC  
 #   - "dcbf": DCBF-based SQP optimizer

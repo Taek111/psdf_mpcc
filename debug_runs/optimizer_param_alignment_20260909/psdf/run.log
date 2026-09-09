@@ -1,0 +1,50 @@
+COMMAND: python3 test_nmpc.py --single --config /home/taek111/projects/psdf_mpcc/debug_runs/optimizer_param_alignment_20260909/psdf/config.yaml --maze-type maze --robot-shape rectangle --dynamics-type differential_drive --optimizer-type psdf --path-planner astar --simulation-time 0.3 --no-perturb-start --no-animation --no-plots
+RUNTIME: 3.8.10 (default, Mar 18 2025, 20:04:55) 
+[GCC 9.4.0]
+Running single test...
+Resetting psdf optimizer for clean state...
+generating global path with A* + Line of Sight
+시작 위치: [0.075 0.795]
+목적지: [1.8  0.09]
+도착 판정 기준: position <= 0.01m, angle <= 0.01rad
+Warning: PSDF wrapper not initialized, skipping obstacle update
+Setting up PSDF optimizer...
+vertices.shape: (4, 2)
+psdfWrapper initialized with vertices shape: (4, 2)
+/home/taek111/projects/psdf_mpcc/models/geometry_utils.py:241: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at ../torch/csrc/utils/tensor_new.cpp:278.)
+  edgesA = torch.tensor(edgesA, dtype=torch.float32)
+Added HARD obstacle avoidance constraint with d_safe = 0.0001
+acados PSDF cache miss or source/config changed: rebuilding.
+field AcadosOcpDims.N has been migrated to AcadosOcpOptions.N_horizon. setting AcadosOcpOptions.N_horizon = N. For future comppatibility, please use AcadosOcpOptions.N_horizon directly.
+rm -f libacados_ocp_solver_differential_drive_psdf.so
+rm -f differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun_jac_uxt_zt.o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun.o acados_solver_differential_drive_psdf.o
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun_jac_uxt_zt.o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun_jac_uxt_zt.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun.o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o acados_solver_differential_drive_psdf.o acados_solver_differential_drive_psdf.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_model/differential_drive_psdf_expl_ode_fun.o differential_drive_psdf_model/differential_drive_psdf_expl_ode_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_model/differential_drive_psdf_expl_vde_forw.o differential_drive_psdf_model/differential_drive_psdf_expl_vde_forw.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_model/differential_drive_psdf_expl_vde_adj.o differential_drive_psdf_model/differential_drive_psdf_expl_vde_adj.c
+cc -shared differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun_jac_uxt_zt.o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun.o acados_solver_differential_drive_psdf.o differential_drive_psdf_model/differential_drive_psdf_expl_ode_fun.o differential_drive_psdf_model/differential_drive_psdf_expl_vde_forw.o differential_drive_psdf_model/differential_drive_psdf_expl_vde_adj.o -o libacados_ocp_solver_differential_drive_psdf.so -L/home/taek111/projects/acados/lib -lacados -lhpipm -lblasfeo -lm  \
+-L -l
+acados was compiled without OpenMP.
+x_ws, u_ws : [ 0.075   0.795  -1.5708] [0. 0.]
+solver time:  1.8498444557189941
+plant_input_stage0: full=[0.13667 0.00518], physical=[0.13667 0.00518]
+solver time:  0.2901432514190674
+plant_input_stage0: full=[ 0.23947 -0.62022], physical=[ 0.23947 -0.62022]
+solver time:  0.33902692794799805
+plant_input_stage0: full=[0.23559 0.57967], physical=[0.23559 0.57967]
+시간 초과로 시뮬레이션 종료. 현재 위치: [0.07356 0.73387], 목적지까지 거리: 1.859m
+Using psdf optimizer with differential_drive dynamics:
+median:  0.33902692794799805
+std:  0.8867193339068918
+min:  0.2901432514190674
+max:  1.8498444557189941
+Simulation finished.
+Run outcome: status=timeout, reason=timeout, final_time=0.30000000000000004, distance_to_goal=1.858878262749376
+Trial history saved to /home/taek111/projects/psdf_mpcc/debug_runs/optimizer_param_alignment_20260909/psdf/data/trial_history_MPC_psdf_rectangle_maze_20260909.csv
+Pose-SDF data saved to /home/taek111/projects/psdf_mpcc/debug_runs/optimizer_param_alignment_20260909/psdf/data/pose_sdf_MPC_psdf_rectangle_maze_20260909.csv
+Total data points: 3
+SDF statistics - Min: 0.0255, Max: 0.0300, Mean: 0.0285
+Single test completed.
+RESULT: {"status": "timeout", "failure_reason": "timeout", "goal_reached": false, "final_time": 0.30000000000000004, "distance_to_goal": 1.858878262749376, "current_name": "MPC_psdf_rectangle_maze_20260909", "output_root_dir": "/home/taek111/projects/psdf_mpcc/debug_runs/optimizer_param_alignment_20260909/psdf", "wall_seconds": 5.025412891999622, "method": "psdf", "cli": ["--single", "--config", "/home/taek111/projects/psdf_mpcc/debug_runs/optimizer_param_alignment_20260909/psdf/config.yaml", "--maze-type", "maze", "--robot-shape", "rectangle", "--dynamics-type", "differential_drive", "--optimizer-type", "psdf", "--path-planner", "astar", "--simulation-time", "0.3", "--no-perturb-start", "--no-animation", "--no-plots"], "source_commit": "467845eda44a075fe5dd8a89b37e23293febf9f7"}

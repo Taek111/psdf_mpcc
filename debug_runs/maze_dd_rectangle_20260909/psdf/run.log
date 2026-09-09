@@ -1,0 +1,384 @@
+COMMAND: python3 test_nmpc.py --single --config /home/taek111/projects/psdf_mpcc/debug_runs/maze_dd_rectangle_20260909/psdf/config.yaml --maze-type maze --robot-shape rectangle --dynamics-type differential_drive --optimizer-type psdf --path-planner astar --simulation-time 60 --no-perturb-start --no-animation
+RUNTIME: 3.8.10 (default, Mar 18 2025, 20:04:55) 
+[GCC 9.4.0]
+Running single test...
+Resetting psdf optimizer for clean state...
+generating global path with A* + Line of Sight
+시작 위치: [0.075 0.795]
+목적지: [1.8  0.09]
+도착 판정 기준: position <= 0.01m, angle <= 0.01rad
+Warning: PSDF wrapper not initialized, skipping obstacle update
+Setting up PSDF optimizer...
+vertices.shape: (4, 2)
+psdfWrapper initialized with vertices shape: (4, 2)
+/home/taek111/projects/psdf_mpcc/models/geometry_utils.py:241: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at ../torch/csrc/utils/tensor_new.cpp:278.)
+  edgesA = torch.tensor(edgesA, dtype=torch.float32)
+Added HARD obstacle avoidance constraint with d_safe = 0.0001
+acados PSDF cache miss or source/config changed: rebuilding.
+field AcadosOcpDims.N has been migrated to AcadosOcpOptions.N_horizon. setting AcadosOcpOptions.N_horizon = N. For future comppatibility, please use AcadosOcpOptions.N_horizon directly.
+rm -f libacados_ocp_solver_differential_drive_psdf.so
+rm -f differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun_jac_uxt_zt.o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun.o acados_solver_differential_drive_psdf.o
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun_jac_uxt_zt.o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun_jac_uxt_zt.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun.o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o acados_solver_differential_drive_psdf.o acados_solver_differential_drive_psdf.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_model/differential_drive_psdf_expl_ode_fun.o differential_drive_psdf_model/differential_drive_psdf_expl_ode_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_model/differential_drive_psdf_expl_vde_forw.o differential_drive_psdf_model/differential_drive_psdf_expl_vde_forw.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_psdf_model/differential_drive_psdf_expl_vde_adj.o differential_drive_psdf_model/differential_drive_psdf_expl_vde_adj.c
+cc -shared differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun_jac_uxt_zt.o differential_drive_psdf_constraints/differential_drive_psdf_constr_h_fun.o acados_solver_differential_drive_psdf.o differential_drive_psdf_model/differential_drive_psdf_expl_ode_fun.o differential_drive_psdf_model/differential_drive_psdf_expl_vde_forw.o differential_drive_psdf_model/differential_drive_psdf_expl_vde_adj.o -o libacados_ocp_solver_differential_drive_psdf.so -L/home/taek111/projects/acados/lib -lacados -lhpipm -lblasfeo -lm  \
+-L -l
+acados was compiled without OpenMP.
+x_ws, u_ws : [ 0.075   0.795  -1.5708] [0. 0.]
+solver time:  1.5845799446105957
+plant_input_stage0: full=[0.13667 0.00518], physical=[0.13667 0.00518]
+solver time:  0.23393464088439941
+plant_input_stage0: full=[ 0.23947 -0.62022], physical=[ 0.23947 -0.62022]
+solver time:  0.24797868728637695
+plant_input_stage0: full=[0.23559 0.57967], physical=[0.23559 0.57967]
+solver time:  0.2519688606262207
+plant_input_stage0: full=[0.23288 0.33395], physical=[0.23288 0.33395]
+solver time:  0.24759221076965332
+plant_input_stage0: full=[0.24803 0.03868], physical=[0.24803 0.03868]
+solver time:  0.3089895248413086
+plant_input_stage0: full=[0.25725 0.59991], physical=[0.25725 0.59991]
+solver time:  0.25983381271362305
+plant_input_stage0: full=[0.20524 1.     ], physical=[0.20524 1.     ]
+solver time:  0.26909542083740234
+plant_input_stage0: full=[0.15737 1.     ], physical=[0.15737 1.     ]
+solver time:  0.25335121154785156
+plant_input_stage0: full=[0.10434 1.     ], physical=[0.10434 1.     ]
+solver time:  0.3140757083892822
+plant_input_stage0: full=[0.11442 1.     ], physical=[0.11442 1.     ]
+solver time:  0.2689943313598633
+plant_input_stage0: full=[0.12541 1.     ], physical=[0.12541 1.     ]
+solver time:  0.25412487983703613
+plant_input_stage0: full=[0.12792 1.     ], physical=[0.12792 1.     ]
+solver time:  0.25649309158325195
+plant_input_stage0: full=[0.12984 1.     ], physical=[0.12984 1.     ]
+solver time:  0.2560851573944092
+plant_input_stage0: full=[0.13504 1.     ], physical=[0.13504 1.     ]
+solver time:  0.2535059452056885
+plant_input_stage0: full=[0.14176 1.     ], physical=[0.14176 1.     ]
+solver time:  0.2558410167694092
+plant_input_stage0: full=[0.15261 1.     ], physical=[0.15261 1.     ]
+solver time:  0.25670552253723145
+plant_input_stage0: full=[0.16034 1.     ], physical=[0.16034 1.     ]
+solver time:  0.2878289222717285
+plant_input_stage0: full=[0.2632 1.    ], physical=[0.2632 1.    ]
+solver time:  0.29938483238220215
+plant_input_stage0: full=[0.22815 1.     ], physical=[0.22815 1.     ]
+solver time:  0.29772019386291504
+plant_input_stage0: full=[0.18323 1.     ], physical=[0.18323 1.     ]
+solver time:  0.2742786407470703
+plant_input_stage0: full=[0.19225 1.     ], physical=[0.19225 1.     ]
+solver time:  0.3026008605957031
+plant_input_stage0: full=[0.20828 0.99998], physical=[0.20828 0.99998]
+solver time:  0.27419066429138184
+plant_input_stage0: full=[0.21857 1.     ], physical=[0.21857 1.     ]
+solver time:  0.2859683036804199
+plant_input_stage0: full=[0.32174 0.97936], physical=[0.32174 0.97936]
+solver time:  0.3405909538269043
+plant_input_stage0: full=[0.24948 0.58254], physical=[0.24948 0.58254]
+solver time:  0.30416417121887207
+plant_input_stage0: full=[0.23073 0.3029 ], physical=[0.23073 0.3029 ]
+solver time:  0.27372121810913086
+plant_input_stage0: full=[0.23344 0.20789], physical=[0.23344 0.20789]
+solver time:  0.27996253967285156
+plant_input_stage0: full=[0.23271 0.20977], physical=[0.23271 0.20977]
+solver time:  0.2724273204803467
+plant_input_stage0: full=[0.22889 0.25305], physical=[0.22889 0.25305]
+solver time:  0.27358388900756836
+plant_input_stage0: full=[0.22569 0.26985], physical=[0.22569 0.26985]
+solver time:  0.2612955570220947
+plant_input_stage0: full=[0.22531 0.3305 ], physical=[0.22531 0.3305 ]
+solver time:  0.28686022758483887
+plant_input_stage0: full=[0.2282  0.36867], physical=[0.2282  0.36867]
+solver time:  0.3490619659423828
+plant_input_stage0: full=[ 0.22936 -0.5205 ], physical=[ 0.22936 -0.5205 ]
+solver time:  0.2872586250305176
+plant_input_stage0: full=[ 0.23792 -0.53701], physical=[ 0.23792 -0.53701]
+solver time:  0.2801172733306885
+plant_input_stage0: full=[ 0.2147 -1.    ], physical=[ 0.2147 -1.    ]
+solver time:  0.28305888175964355
+plant_input_stage0: full=[ 0.2111  -0.83648], physical=[ 0.2111  -0.83648]
+solver time:  0.32894372940063477
+plant_input_stage0: full=[ 0.22239 -0.57986], physical=[ 0.22239 -0.57986]
+solver time:  0.27556824684143066
+plant_input_stage0: full=[ 0.22796 -0.57001], physical=[ 0.22796 -0.57001]
+solver time:  0.32744908332824707
+plant_input_stage0: full=[ 0.37659 -0.60392], physical=[ 0.37659 -0.60392]
+solver time:  0.27567052841186523
+plant_input_stage0: full=[ 0.25404 -1.     ], physical=[ 0.25404 -1.     ]
+solver time:  0.286670446395874
+plant_input_stage0: full=[ 0.22086 -0.60391], physical=[ 0.22086 -0.60391]
+solver time:  0.48006105422973633
+plant_input_stage0: full=[ 0.2126 -0.8741], physical=[ 0.2126 -0.8741]
+solver time:  0.283214807510376
+plant_input_stage0: full=[ 0.19458 -1.     ], physical=[ 0.19458 -1.     ]
+solver time:  0.2668013572692871
+plant_input_stage0: full=[ 0.16821 -1.     ], physical=[ 0.16821 -1.     ]
+solver time:  0.27869081497192383
+plant_input_stage0: full=[ 0.19801 -1.     ], physical=[ 0.19801 -1.     ]
+solver time:  0.2644383907318115
+plant_input_stage0: full=[ 0.1711 -1.    ], physical=[ 0.1711 -1.    ]
+solver time:  0.2832672595977783
+plant_input_stage0: full=[ 0.15763 -1.     ], physical=[ 0.15763 -1.     ]
+solver time:  0.278562068939209
+plant_input_stage0: full=[ 0.14819 -0.96014], physical=[ 0.14819 -0.96014]
+solver time:  0.26903247833251953
+plant_input_stage0: full=[ 0.13569 -0.62359], physical=[ 0.13569 -0.62359]
+solver time:  0.2729642391204834
+plant_input_stage0: full=[ 0.21787 -0.41803], physical=[ 0.21787 -0.41803]
+solver time:  0.29662632942199707
+plant_input_stage0: full=[ 0.21003 -0.24753], physical=[ 0.21003 -0.24753]
+solver time:  0.27854132652282715
+plant_input_stage0: full=[0.23303 0.82389], physical=[0.23303 0.82389]
+solver time:  0.26056647300720215
+plant_input_stage0: full=[0.1463 1.    ], physical=[0.1463 1.    ]
+solver time:  0.305325984954834
+plant_input_stage0: full=[0.18165 1.     ], physical=[0.18165 1.     ]
+solver time:  0.3034360408782959
+plant_input_stage0: full=[0.19722 1.     ], physical=[0.19722 1.     ]
+solver time:  0.26114583015441895
+plant_input_stage0: full=[0.17425 1.     ], physical=[0.17425 1.     ]
+solver time:  0.26978111267089844
+plant_input_stage0: full=[0.14791 1.     ], physical=[0.14791 1.     ]
+solver time:  0.2725074291229248
+plant_input_stage0: full=[0.14846 1.     ], physical=[0.14846 1.     ]
+solver time:  0.263521671295166
+plant_input_stage0: full=[0.15267 1.     ], physical=[0.15267 1.     ]
+solver time:  0.2636861801147461
+plant_input_stage0: full=[0.16595 1.     ], physical=[0.16595 1.     ]
+solver time:  0.2709777355194092
+plant_input_stage0: full=[0.18255 1.     ], physical=[0.18255 1.     ]
+solver time:  0.29784655570983887
+plant_input_stage0: full=[0.1838 1.    ], physical=[0.1838 1.    ]
+solver time:  0.2523064613342285
+plant_input_stage0: full=[0.17392 1.     ], physical=[0.17392 1.     ]
+solver time:  0.26974034309387207
+plant_input_stage0: full=[0.18138 1.     ], physical=[0.18138 1.     ]
+solver time:  0.23649001121520996
+plant_input_stage0: full=[0.20472 1.     ], physical=[0.20472 1.     ]
+solver time:  0.25717997550964355
+plant_input_stage0: full=[0.18074 1.     ], physical=[0.18074 1.     ]
+solver time:  0.25228261947631836
+plant_input_stage0: full=[0.16554 1.     ], physical=[0.16554 1.     ]
+solver time:  0.25588488578796387
+plant_input_stage0: full=[0.15954 0.73494], physical=[0.15954 0.73494]
+solver time:  0.3163280487060547
+plant_input_stage0: full=[0.14622 0.54167], physical=[0.14622 0.54167]
+solver time:  0.25339746475219727
+plant_input_stage0: full=[0.22369 0.26572], physical=[0.22369 0.26572]
+solver time:  0.2554037570953369
+plant_input_stage0: full=[0.21658 0.15072], physical=[0.21658 0.15072]
+solver time:  0.2990279197692871
+plant_input_stage0: full=[ 0.22181 -0.68227], physical=[ 0.22181 -0.68227]
+solver time:  0.2783184051513672
+plant_input_stage0: full=[ 0.1519 -1.    ], physical=[ 0.1519 -1.    ]
+solver time:  0.2584807872772217
+plant_input_stage0: full=[ 0.15175 -1.     ], physical=[ 0.15175 -1.     ]
+solver time:  0.25186872482299805
+plant_input_stage0: full=[ 0.2182 -1.    ], physical=[ 0.2182 -1.    ]
+solver time:  0.24816393852233887
+plant_input_stage0: full=[ 0.19756 -1.     ], physical=[ 0.19756 -1.     ]
+solver time:  0.3528153896331787
+plant_input_stage0: full=[ 0.16488 -1.     ], physical=[ 0.16488 -1.     ]
+solver time:  0.2830626964569092
+plant_input_stage0: full=[ 0.17421 -1.     ], physical=[ 0.17421 -1.     ]
+solver time:  0.280958890914917
+plant_input_stage0: full=[ 0.19213 -1.     ], physical=[ 0.19213 -1.     ]
+solver time:  0.24735307693481445
+plant_input_stage0: full=[ 0.21193 -0.74144], physical=[ 0.21193 -0.74144]
+solver time:  0.2751278877258301
+plant_input_stage0: full=[ 0.22689 -0.49525], physical=[ 0.22689 -0.49525]
+solver time:  0.2503526210784912
+plant_input_stage0: full=[ 0.2363 -0.1423], physical=[ 0.2363 -0.1423]
+solver time:  0.24345970153808594
+plant_input_stage0: full=[0.24133 0.08574], physical=[0.24133 0.08574]
+solver time:  0.25702595710754395
+plant_input_stage0: full=[0.24113 0.1997 ], physical=[0.24113 0.1997 ]
+solver time:  0.2823781967163086
+plant_input_stage0: full=[0.24143 0.05598], physical=[0.24143 0.05598]
+solver time:  0.24558186531066895
+plant_input_stage0: full=[0.23674 0.17104], physical=[0.23674 0.17104]
+solver time:  0.2595803737640381
+plant_input_stage0: full=[0.24375 0.20666], physical=[0.24375 0.20666]
+solver time:  0.25585436820983887
+plant_input_stage0: full=[0.24021 0.9895 ], physical=[0.24021 0.9895 ]
+solver time:  0.2519388198852539
+plant_input_stage0: full=[0.13056 1.     ], physical=[0.13056 1.     ]
+solver time:  0.2646150588989258
+plant_input_stage0: full=[0.17218 1.     ], physical=[0.17218 1.     ]
+solver time:  0.25458216667175293
+plant_input_stage0: full=[0.16772 1.     ], physical=[0.16772 1.     ]
+solver time:  0.3535003662109375
+plant_input_stage0: full=[0.14669 1.     ], physical=[0.14669 1.     ]
+solver time:  0.2693774700164795
+plant_input_stage0: full=[0.13277 1.     ], physical=[0.13277 1.     ]
+solver time:  0.2811925411224365
+plant_input_stage0: full=[0.11963 0.84493], physical=[0.11963 0.84493]
+solver time:  0.2811734676361084
+plant_input_stage0: full=[0.10412 0.53905], physical=[0.10412 0.53905]
+solver time:  0.27765798568725586
+plant_input_stage0: full=[0.22819 0.11625], physical=[0.22819 0.11625]
+solver time:  0.28250551223754883
+plant_input_stage0: full=[0.22005 0.14723], physical=[0.22005 0.14723]
+solver time:  0.26825499534606934
+plant_input_stage0: full=[ 0.2496  -0.81569], physical=[ 0.2496  -0.81569]
+solver time:  0.327542781829834
+plant_input_stage0: full=[ 0.18776 -1.     ], physical=[ 0.18776 -1.     ]
+solver time:  0.30528736114501953
+plant_input_stage0: full=[ 0.17931 -1.     ], physical=[ 0.17931 -1.     ]
+solver time:  0.3339357376098633
+plant_input_stage0: full=[ 0.17899 -1.     ], physical=[ 0.17899 -1.     ]
+solver time:  0.2752530574798584
+plant_input_stage0: full=[ 0.17864 -1.     ], physical=[ 0.17864 -1.     ]
+solver time:  0.2749805450439453
+plant_input_stage0: full=[ 0.17417 -1.     ], physical=[ 0.17417 -1.     ]
+solver time:  0.279094934463501
+plant_input_stage0: full=[ 0.16748 -1.     ], physical=[ 0.16748 -1.     ]
+solver time:  0.3649575710296631
+plant_input_stage0: full=[ 0.15878 -1.     ], physical=[ 0.15878 -1.     ]
+solver time:  0.39833688735961914
+plant_input_stage0: full=[ 0.15101 -1.     ], physical=[ 0.15101 -1.     ]
+solver time:  0.32907986640930176
+plant_input_stage0: full=[ 0.14233 -1.     ], physical=[ 0.14233 -1.     ]
+solver time:  0.2705259323120117
+plant_input_stage0: full=[ 0.13185 -1.     ], physical=[ 0.13185 -1.     ]
+solver time:  0.26689577102661133
+plant_input_stage0: full=[ 0.12381 -1.     ], physical=[ 0.12381 -1.     ]
+solver time:  0.2675347328186035
+plant_input_stage0: full=[ 0.11219 -1.     ], physical=[ 0.11219 -1.     ]
+solver time:  0.2609713077545166
+plant_input_stage0: full=[ 0.14157 -1.     ], physical=[ 0.14157 -1.     ]
+solver time:  0.26950645446777344
+plant_input_stage0: full=[ 0.14479 -1.     ], physical=[ 0.14479 -1.     ]
+solver time:  0.2596726417541504
+plant_input_stage0: full=[ 0.14054 -1.     ], physical=[ 0.14054 -1.     ]
+solver time:  0.2889137268066406
+plant_input_stage0: full=[ 0.13794 -1.     ], physical=[ 0.13794 -1.     ]
+solver time:  0.25160956382751465
+plant_input_stage0: full=[ 0.14396 -1.     ], physical=[ 0.14396 -1.     ]
+solver time:  0.24695563316345215
+plant_input_stage0: full=[ 0.15244 -1.     ], physical=[ 0.15244 -1.     ]
+solver time:  0.2664604187011719
+plant_input_stage0: full=[ 0.16195 -1.     ], physical=[ 0.16195 -1.     ]
+solver time:  0.2630326747894287
+plant_input_stage0: full=[ 0.17253 -1.     ], physical=[ 0.17253 -1.     ]
+solver time:  0.2470686435699463
+plant_input_stage0: full=[ 0.27376 -1.     ], physical=[ 0.27376 -1.     ]
+solver time:  0.3046305179595947
+plant_input_stage0: full=[ 0.23088 -1.     ], physical=[ 0.23088 -1.     ]
+solver time:  0.27325439453125
+plant_input_stage0: full=[ 0.19464 -1.     ], physical=[ 0.19464 -1.     ]
+solver time:  0.2526235580444336
+plant_input_stage0: full=[ 0.21497 -0.64266], physical=[ 0.21497 -0.64266]
+solver time:  0.26654911041259766
+plant_input_stage0: full=[ 0.2298  -0.39732], physical=[ 0.2298  -0.39732]
+solver time:  0.2536931037902832
+plant_input_stage0: full=[ 0.23614 -0.19596], physical=[ 0.23614 -0.19596]
+solver time:  0.26487207412719727
+plant_input_stage0: full=[ 0.23881 -0.06806], physical=[ 0.23881 -0.06806]
+solver time:  0.2562744617462158
+plant_input_stage0: full=[0.23797 0.03244], physical=[0.23797 0.03244]
+solver time:  0.24961209297180176
+plant_input_stage0: full=[ 0.23335 -0.06303], physical=[ 0.23335 -0.06303]
+solver time:  0.31381988525390625
+plant_input_stage0: full=[ 0.2276  -0.08408], physical=[ 0.2276  -0.08408]
+solver time:  0.2733919620513916
+plant_input_stage0: full=[ 0.23211 -0.15364], physical=[ 0.23211 -0.15364]
+solver time:  0.24625849723815918
+plant_input_stage0: full=[ 0.2045 -1.    ], physical=[ 0.2045 -1.    ]
+solver time:  0.26613283157348633
+plant_input_stage0: full=[ 0.13997 -1.     ], physical=[ 0.13997 -1.     ]
+solver time:  0.25396251678466797
+plant_input_stage0: full=[ 0.19529 -1.     ], physical=[ 0.19529 -1.     ]
+solver time:  0.26051998138427734
+plant_input_stage0: full=[ 0.17327 -1.     ], physical=[ 0.17327 -1.     ]
+solver time:  0.23780155181884766
+plant_input_stage0: full=[ 0.19795 -0.99998], physical=[ 0.19795 -0.99998]
+solver time:  0.32500338554382324
+plant_input_stage0: full=[ 0.12445 -0.90708], physical=[ 0.12445 -0.90708]
+solver time:  0.25461769104003906
+plant_input_stage0: full=[ 0.09421 -0.44447], physical=[ 0.09421 -0.44447]
+solver time:  0.24863243103027344
+plant_input_stage0: full=[ 0.23136 -0.0482 ], physical=[ 0.23136 -0.0482 ]
+solver time:  0.2521035671234131
+plant_input_stage0: full=[ 0.22236 -0.12857], physical=[ 0.22236 -0.12857]
+solver time:  0.26450657844543457
+plant_input_stage0: full=[0.24044 0.75759], physical=[0.24044 0.75759]
+solver time:  0.2619607448577881
+plant_input_stage0: full=[0.1763 1.    ], physical=[0.1763 1.    ]
+solver time:  0.25267529487609863
+plant_input_stage0: full=[0.19007 1.     ], physical=[0.19007 1.     ]
+solver time:  0.24840211868286133
+plant_input_stage0: full=[0.18745 1.     ], physical=[0.18745 1.     ]
+solver time:  0.25028538703918457
+plant_input_stage0: full=[0.17813 1.     ], physical=[0.17813 1.     ]
+solver time:  0.2791612148284912
+plant_input_stage0: full=[0.16471 1.     ], physical=[0.16471 1.     ]
+solver time:  0.3069930076599121
+plant_input_stage0: full=[0.17116 1.     ], physical=[0.17116 1.     ]
+solver time:  0.290128231048584
+plant_input_stage0: full=[0.17294 1.     ], physical=[0.17294 1.     ]
+solver time:  0.344576358795166
+plant_input_stage0: full=[0.1702 1.    ], physical=[0.1702 1.    ]
+solver time:  0.31105470657348633
+plant_input_stage0: full=[0.16467 1.     ], physical=[0.16467 1.     ]
+solver time:  0.29186153411865234
+plant_input_stage0: full=[0.15692 1.     ], physical=[0.15692 1.     ]
+solver time:  0.26615214347839355
+plant_input_stage0: full=[0.18492 1.     ], physical=[0.18492 1.     ]
+solver time:  0.2597315311431885
+plant_input_stage0: full=[0.16325 1.     ], physical=[0.16325 1.     ]
+solver time:  0.2655978202819824
+plant_input_stage0: full=[0.14189 1.     ], physical=[0.14189 1.     ]
+solver time:  0.24767732620239258
+plant_input_stage0: full=[0.12353 1.     ], physical=[0.12353 1.     ]
+solver time:  0.2623300552368164
+plant_input_stage0: full=[0.11274 1.     ], physical=[0.11274 1.     ]
+solver time:  0.2664649486541748
+plant_input_stage0: full=[0.10742 1.     ], physical=[0.10742 1.     ]
+solver time:  0.2509450912475586
+plant_input_stage0: full=[0.0969 1.    ], physical=[0.0969 1.    ]
+solver time:  0.29257655143737793
+plant_input_stage0: full=[0.08109 1.     ], physical=[0.08109 1.     ]
+solver time:  0.2845315933227539
+plant_input_stage0: full=[0.06825 1.     ], physical=[0.06825 1.     ]
+solver time:  0.26984620094299316
+plant_input_stage0: full=[0.05841 1.     ], physical=[0.05841 1.     ]
+solver time:  0.2704181671142578
+plant_input_stage0: full=[0.0515 1.    ], physical=[0.0515 1.    ]
+solver time:  0.22957968711853027
+plant_input_stage0: full=[0.04768 0.89213], physical=[0.04768 0.89213]
+solver time:  0.2906455993652344
+plant_input_stage0: full=[0.04607 0.55775], physical=[0.04607 0.55775]
+solver time:  0.26404905319213867
+plant_input_stage0: full=[0.04316 0.34151], physical=[0.04316 0.34151]
+solver time:  0.28279995918273926
+plant_input_stage0: full=[0.03756 0.19881], physical=[0.03756 0.19881]
+solver time:  0.2719705104827881
+plant_input_stage0: full=[0.03124 0.10528], physical=[0.03124 0.10528]
+solver time:  0.2805962562561035
+plant_input_stage0: full=[0.02514 0.04629], physical=[0.02514 0.04629]
+solver time:  0.2443859577178955
+plant_input_stage0: full=[0.01967 0.01089], physical=[0.01967 0.01089]
+solver time:  0.26601362228393555
+plant_input_stage0: full=[ 0.01503 -0.00885], physical=[ 0.01503 -0.00885]
+목적지에 도착했습니다! 현재 위치: [1.81507 0.08519], 시간: 16.80초
+Using psdf optimizer with differential_drive dynamics:
+median:  0.26962339878082275
+std:  0.10565783016918244
+min:  0.22957968711853027
+max:  1.5845799446105957
+Simulation finished.
+Run outcome: status=success, reason=None, final_time=16.79999999999997, distance_to_goal=0.009319409589055885
+Trial history saved to /home/taek111/projects/psdf_mpcc/debug_runs/maze_dd_rectangle_20260909/psdf/data/trial_history_MPC_psdf_rectangle_maze_20260909.csv
+Pose-SDF data saved to /home/taek111/projects/psdf_mpcc/debug_runs/maze_dd_rectangle_20260909/psdf/data/pose_sdf_MPC_psdf_rectangle_maze_20260909.csv
+Total data points: 168
+SDF statistics - Min: 0.0016, Max: 0.0566, Mean: 0.0128
+Generating plots...
+The PostScript backend does not support transparency; partially transparent artists will be rendered opaque.
+The PostScript backend does not support transparency; partially transparent artists will be rendered opaque.
+The PostScript backend does not support transparency; partially transparent artists will be rendered opaque.
+Single test completed.
+RESULT: {"status": "success", "failure_reason": null, "goal_reached": true, "final_time": 16.79999999999997, "distance_to_goal": 0.009319409589055885, "current_name": "MPC_psdf_rectangle_maze_20260909", "output_root_dir": "/home/taek111/projects/psdf_mpcc/debug_runs/maze_dd_rectangle_20260909/psdf", "wall_seconds": 53.785567883, "method": "psdf", "cli": ["--single", "--config", "/home/taek111/projects/psdf_mpcc/debug_runs/maze_dd_rectangle_20260909/psdf/config.yaml", "--maze-type", "maze", "--robot-shape", "rectangle", "--dynamics-type", "differential_drive", "--optimizer-type", "psdf", "--path-planner", "astar", "--simulation-time", "60", "--no-perturb-start", "--no-animation"], "source_commit": "467845eda44a075fe5dd8a89b37e23293febf9f7"}

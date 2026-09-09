@@ -1,0 +1,40 @@
+diff --git a/config/config.yaml b/config/config.yaml
+index 604c390..efae1f1 100644
+--- a/config/config.yaml
++++ b/config/config.yaml
+@@ -162,8 +162,8 @@ defaults:
+ #   - "obca": OBCAOptimizer from control/obca_optimizer.py (CasADi/IPOPT)
+ #   - "acados": ACADOS SQP-based NMPC
+ #   - "casadi": CasADi-based basic NMPC  
+-#   - "dcbf": DCBF-based SQP optimizer
+-#   - "dcbf_casadi": DCBF-based CasADi optimizer
++#   - "dcbf": DCBF optimizer from control/dcbf_optimizer.py (CasADi/IPOPT)
++#   - "dcbf_casadi": Alias for the same CasADi/IPOPT DCBF optimizer
+ #
+ # dynamics_type options:
+ #   - "differential_drive": Differential drive robot model (currently the only option)
+diff --git a/sim/simulation_mpc.py b/sim/simulation_mpc.py
+index 180a655..52713ed 100644
+--- a/sim/simulation_mpc.py
++++ b/sim/simulation_mpc.py
+@@ -1871,18 +1871,12 @@ class simulation_mpc:
+             )
+             optimizer = MinkowskiCBFOptimizer()
+             optimizer_name = "minkowski_cbf"
+-        elif optimizer_type == "dcbf":
+-            from control.dcbf_optimizer_sqp import NmpcDcbfOptimizerSqp, NmpcDcbfOptimizerSqpParam
+-
+-            opt_param = NmpcDcbfOptimizerSqpParam()
+-            optimizer = NmpcDcbfOptimizerSqp()
+-            optimizer_name = "dcbf"
+-        elif optimizer_type == "dcbf_casadi":
++        elif optimizer_type in ("dcbf", "dcbf_casadi"):
+             from control.dcbf_optimizer import NmpcDbcfOptimizer, NmpcDcbfOptimizerParam
+ 
+             opt_param = NmpcDcbfOptimizerParam()
+             optimizer = NmpcDbcfOptimizer({}, {}, dynamics.forward_dynamics_opt(0.1))
+-            optimizer_name = "dcbf_casadi"
++            optimizer_name = optimizer_type
+         else:  # Default to casadi
+             from control.nmpc_optimizer import NmpcOptimizer, NmpcOptimizerParam
+ 

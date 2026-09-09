@@ -1,0 +1,32 @@
+COMMAND: python3 test_nmpc.py --single --config /home/taek111/projects/psdf_mpcc/debug_runs/optimizer_param_alignment_20260909/obca/config.yaml --maze-type maze --robot-shape rectangle --dynamics-type differential_drive --optimizer-type obca --path-planner astar --simulation-time 0.3 --no-perturb-start --no-animation --no-plots
+RUNTIME: 3.8.10 (default, Mar 18 2025, 20:04:55) 
+[GCC 9.4.0]
+Running single test...
+generating global path with A* + Line of Sight
+시작 위치: [0.075 0.795]
+목적지: [1.8  0.09]
+도착 판정 기준: position <= 0.01m, angle <= 0.01rad
+
+******************************************************************************
+This program contains Ipopt, a library for large-scale nonlinear optimization.
+ Ipopt is released as open source code under the Eclipse Public License (EPL).
+         For more information visit https://github.com/coin-or/Ipopt
+******************************************************************************
+
+solver time:  0.989624
+plant_input_stage0: full=[0.22978 0.42913], physical=[0.22978 0.42913]
+solver time:  0.887138
+plant_input_stage0: full=[0.23437 0.22326], physical=[0.23437 0.22326]
+solver time:  1.100608
+plant_input_stage0: full=[ 0.23851 -0.01567], physical=[ 0.23851 -0.01567]
+시간 초과로 시뮬레이션 종료. 현재 위치: [0.07756 0.72481], 목적지까지 거리: 1.852m
+Using obca optimizer with differential_drive dynamics:
+median:  0.989624
+std:  0.1067631875944763
+min:  0.887138
+max:  1.100608
+Simulation finished.
+Run outcome: status=timeout, reason=timeout, final_time=0.30000000000000004, distance_to_goal=1.8520188845740873
+Trial history saved to /home/taek111/projects/psdf_mpcc/debug_runs/optimizer_param_alignment_20260909/obca/data/trial_history_MPC_OBCA_rectangle_maze_20260909.csv
+Single test completed.
+RESULT: {"status": "timeout", "failure_reason": "timeout", "goal_reached": false, "final_time": 0.30000000000000004, "distance_to_goal": 1.8520188845740873, "current_name": "MPC_OBCA_rectangle_maze_20260909", "output_root_dir": "/home/taek111/projects/psdf_mpcc/debug_runs/optimizer_param_alignment_20260909/obca", "wall_seconds": 5.697415212000124, "method": "obca", "cli": ["--single", "--config", "/home/taek111/projects/psdf_mpcc/debug_runs/optimizer_param_alignment_20260909/obca/config.yaml", "--maze-type", "maze", "--robot-shape", "rectangle", "--dynamics-type", "differential_drive", "--optimizer-type", "obca", "--path-planner", "astar", "--simulation-time", "0.3", "--no-perturb-start", "--no-animation", "--no-plots"], "source_commit": "467845eda44a075fe5dd8a89b37e23293febf9f7"}

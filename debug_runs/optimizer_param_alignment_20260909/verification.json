@@ -1,0 +1,116 @@
+{
+  "dcbf": {
+    "defaults_match_psdf": true,
+    "last_stage_cost_included": true,
+    "input_penalty_verified": true,
+    "custom_input_bounds_enforced": true,
+    "rectangle_obstacle_constraint_stages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "smoke": {
+      "optimizer_module": "control.dcbf_optimizer",
+      "steps": 3,
+      "final_time": 0.30000000000000004,
+      "statuses": [
+        {
+          "raw_status": "Solve_Succeeded",
+          "status_code": null,
+          "success": true
+        },
+        {
+          "raw_status": "Solve_Succeeded",
+          "status_code": null,
+          "success": true
+        },
+        {
+          "raw_status": "Solve_Succeeded",
+          "status_code": null,
+          "success": true
+        }
+      ]
+    }
+  },
+  "obca": {
+    "defaults_match_psdf": true,
+    "last_stage_cost_included": true,
+    "input_penalty_verified": true,
+    "custom_input_bounds_enforced": true,
+    "rectangle_obstacle_constraint_stages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20
+    ],
+    "smoke": {
+      "optimizer_module": "control.obca_optimizer",
+      "steps": 3,
+      "final_time": 0.30000000000000004,
+      "statuses": [
+        {
+          "raw_status": "Solve_Succeeded",
+          "status_code": null,
+          "success": true
+        },
+        {
+          "raw_status": "Solve_Succeeded",
+          "status_code": null,
+          "success": true
+        },
+        {
+          "raw_status": "Solve_Succeeded",
+          "status_code": null,
+          "success": true
+        }
+      ]
+    }
+  },
+  "psdf": {
+    "smoke": {
+      "optimizer_module": "control.psdf_optimizer",
+      "steps": 3,
+      "final_time": 0.30000000000000004,
+      "statuses": [
+        {
+          "raw_status": "success",
+          "status_code": 0,
+          "success": true
+        },
+        {
+          "raw_status": "success",
+          "status_code": 0,
+          "success": true
+        },
+        {
+          "raw_status": "success",
+          "status_code": 0,
+          "success": true
+        }
+      ]
+    }
+  }
+}

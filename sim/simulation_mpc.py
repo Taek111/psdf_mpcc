@@ -1871,18 +1871,12 @@ class simulation_mpc:
             )
             optimizer = MinkowskiCBFOptimizer()
             optimizer_name = "minkowski_cbf"
-        elif optimizer_type == "dcbf":
-            from control.dcbf_optimizer_sqp import NmpcDcbfOptimizerSqp, NmpcDcbfOptimizerSqpParam
-
-            opt_param = NmpcDcbfOptimizerSqpParam()
-            optimizer = NmpcDcbfOptimizerSqp()
-            optimizer_name = "dcbf"
-        elif optimizer_type == "dcbf_casadi":
+        elif optimizer_type in ("dcbf", "dcbf_casadi"):
             from control.dcbf_optimizer import NmpcDbcfOptimizer, NmpcDcbfOptimizerParam
 
             opt_param = NmpcDcbfOptimizerParam()
             optimizer = NmpcDbcfOptimizer({}, {}, dynamics.forward_dynamics_opt(0.1))
-            optimizer_name = "dcbf_casadi"
+            optimizer_name = optimizer_type
         else:  # Default to casadi
             from control.nmpc_optimizer import NmpcOptimizer, NmpcOptimizerParam
 

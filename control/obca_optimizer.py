@@ -10,14 +10,18 @@ class OBCAOptimizerParam:
     def __init__(self):
         self.horizon = 20
         self.horizon_dcbf = self.horizon
-        self.mat_Q = np.diag([100.0, 100.0, 1.0])  # Changed from 4 to 3 dimensions
-        self.mat_R = np.diag([0.0, 0.0])
+        # Match the tracking and input weights in PSDFOptimizerParam.
+        self.mat_Q = np.diag([50.0, 50.0, 1.0])
+        self.mat_R = np.diag([5.0, 0.05])
         self.mat_Rold = np.diag([1.0, 1.0]) * 0.0
         self.mat_dR = np.diag([1.0, 1.0]) * 0.0
         self.gamma = 0.8
         self.pomega = 10.0
-        self.margin_dist = 0.01
-        self.terminal_weight = 10.0
+        # Match PSDF d_safe; gamma_s is a separate PSDF approximation margin.
+        self.margin_dist = 0.0001
+        self.terminal_weight = 1.0
+        self.vmin, self.vmax = -0.6, 0.6
+        self.omegamin, self.omegamax = -1.0, 1.0
 
 
 class OBCAOptimizer:
@@ -39,15 +43,12 @@ class OBCAOptimizer:
         self.opti.subject_to(self.variables["x"][:, 0] == self.state._x)
 
     def add_input_constraint(self, param):
-        # TODO: wrap params
-        amin, amax = -0.5, 0.5
-        omegamin, omegamax = -0.5, 0.5
         for i in range(param.horizon):
             # input constraints
-            self.opti.subject_to(self.variables["u"][0, i] <= amax)
-            self.opti.subject_to(amin <= self.variables["u"][0, i])
-            self.opti.subject_to(self.variables["u"][1, i] <= omegamax)
-            self.opti.subject_to(omegamin <= self.variables["u"][1, i])
+            self.opti.subject_to(self.variables["u"][0, i] <= param.vmax)
+            self.opti.subject_to(param.vmin <= self.variables["u"][0, i])
+            self.opti.subject_to(self.variables["u"][1, i] <= param.omegamax)
+            self.opti.subject_to(param.omegamin <= self.variables["u"][1, i])
 
     def add_input_derivative_constraint(self, param):
         # TODO: Remove this hardcoded function with timestep
@@ -72,7 +73,7 @@ class OBCAOptimizer:
 
     def add_reference_trajectory_tracking_cost(self, param, reference_trajectory):
         self.costs["reference_trajectory_tracking"] = 0
-        for i in range(param.horizon - 1):
+        for i in range(param.horizon):
             x_diff = self.variables["x"][:, i] - reference_trajectory[i, :3]  # Take only first 3 elements
             self.costs["reference_trajectory_tracking"] += ca.mtimes(x_diff.T, ca.mtimes(param.mat_Q, x_diff))
         x_diff = self.variables["x"][:, -1] - reference_trajectory[-1, :3]  # Take only first 3 elements

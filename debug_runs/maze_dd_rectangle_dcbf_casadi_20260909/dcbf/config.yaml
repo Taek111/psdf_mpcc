@@ -1,0 +1,35 @@
+start_perturbation:
+  enabled: false
+  seed: null
+  position_std: 0.005
+  heading_std_deg: 0.0
+  max_sigma: 3.0
+  min_clearance: 0.01
+  max_attempts: 1000
+test_configs:
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: rmpcc
+  dynamics_type: differential_drive
+  path_planner: astar
+- maze_type: s_path
+  robot_shape: rectangle
+  optimizer_type: rmpcc
+  dynamics_type: differential_drive
+  path_planner: astar
+defaults:
+  frame_skip: 2
+  simulation_time: 20.0
+  generate_animation: true
+  generate_plots: true
+  speed_range:
+  - 0.0
+  - 0.3
+  clearance_range:
+  - 0.0
+  - 0.03
+  risk_range:
+  - 0.0
+  - 0.045
+output_root_dir: /home/taek111/projects/psdf_mpcc/debug_runs/maze_dd_rectangle_dcbf_casadi_20260909/dcbf
+output_suffix: '20260909'

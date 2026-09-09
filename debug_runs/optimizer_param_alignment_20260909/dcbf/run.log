@@ -1,0 +1,32 @@
+COMMAND: python3 test_nmpc.py --single --config /home/taek111/projects/psdf_mpcc/debug_runs/optimizer_param_alignment_20260909/dcbf/config.yaml --maze-type maze --robot-shape rectangle --dynamics-type differential_drive --optimizer-type dcbf --path-planner astar --simulation-time 0.3 --no-perturb-start --no-animation --no-plots
+RUNTIME: 3.8.10 (default, Mar 18 2025, 20:04:55) 
+[GCC 9.4.0]
+Running single test...
+generating global path with A* + Line of Sight
+시작 위치: [0.075 0.795]
+목적지: [1.8  0.09]
+도착 판정 기준: position <= 0.01m, angle <= 0.01rad
+
+******************************************************************************
+This program contains Ipopt, a library for large-scale nonlinear optimization.
+ Ipopt is released as open source code under the Eclipse Public License (EPL).
+         For more information visit https://github.com/coin-or/Ipopt
+******************************************************************************
+
+solver time:  0.405879
+plant_input_stage0: full=[0.2278  0.48339], physical=[0.2278  0.48339]
+solver time:  0.414974
+plant_input_stage0: full=[0.2328  0.26448], physical=[0.2328  0.26448]
+solver time:  0.442394
+plant_input_stage0: full=[ 0.237   -0.02524], physical=[ 0.237   -0.02524]
+시간 초과로 시뮬레이션 종료. 현재 위치: [0.0779  0.72533], 목적지까지 거리: 1.852m
+Using dcbf optimizer with differential_drive dynamics:
+median:  0.414974
+std:  0.019008422036911263
+min:  0.405879
+max:  0.442394
+Simulation finished.
+Run outcome: status=timeout, reason=timeout, final_time=0.30000000000000004, distance_to_goal=1.8518832884267
+Trial history saved to /home/taek111/projects/psdf_mpcc/debug_runs/optimizer_param_alignment_20260909/dcbf/data/trial_history_MPC_DCBF_rectangle_maze_20260909.csv
+Single test completed.
+RESULT: {"status": "timeout", "failure_reason": "timeout", "goal_reached": false, "final_time": 0.30000000000000004, "distance_to_goal": 1.8518832884267, "current_name": "MPC_DCBF_rectangle_maze_20260909", "output_root_dir": "/home/taek111/projects/psdf_mpcc/debug_runs/optimizer_param_alignment_20260909/dcbf", "wall_seconds": 3.345682809000209, "method": "dcbf", "cli": ["--single", "--config", "/home/taek111/projects/psdf_mpcc/debug_runs/optimizer_param_alignment_20260909/dcbf/config.yaml", "--maze-type", "maze", "--robot-shape", "rectangle", "--dynamics-type", "differential_drive", "--optimizer-type", "dcbf", "--path-planner", "astar", "--simulation-time", "0.3", "--no-perturb-start", "--no-animation", "--no-plots"], "source_commit": "467845eda44a075fe5dd8a89b37e23293febf9f7"}

@@ -1,0 +1,27 @@
+diff --git a/control/dcbf_optimizer.py b/control/dcbf_optimizer.py
+index ddcc127..0cc824a 100644
+--- a/control/dcbf_optimizer.py
++++ b/control/dcbf_optimizer.py
+@@ -11,15 +11,14 @@ class NmpcDcbfOptimizerParam:
+         self.horizon = 20
+         self.horizon_dcbf = 10
+         # Match the tracking and input weights in PSDFOptimizerParam.
+-        self.mat_Q = np.diag([50.0, 50.0, 1.0])
+-        self.mat_R = np.diag([5.0, 0.05])
+-        self.mat_Rold = np.diag([1.0, 1.0]) * 0.0
+-        self.mat_dR = np.diag([1.0, 1.0]) * 0.0
+-        self.gamma = 0.8
++        self.mat_Q = np.diag([10.0, 10.0, 0.0])  # np.diag([100.0, 100.0, 1.0, 1.0])
++        self.mat_R = np.diag([20.0, 0.0])
++        self.mat_Rold = np.diag([10.0, 1.0]) * 0.0  # np.diag([1.0, 1.0, 1.0]) * 0.0 
++        self.mat_dR = np.diag([1.0, 1.0]) * 0.0  # np.diag([1.0, 1.0, 1.0]) * 0.0
++        self.gamma = 0.8  # 0.8
+         self.pomega = 10.0
+-        # Match PSDF d_safe; gamma_s is a separate PSDF approximation margin.
+-        self.margin_dist = 0.0001
+-        self.terminal_weight = 1.0
++        self.margin_dist = 0.0001  # 0.0
++        self.terminal_weight = 1.0  # 10.0
+         self.vmin, self.vmax = -0.6, 0.6
+         self.omegamin, self.omegamax = -1.0, 1.0
+ 

@@ -1,0 +1,28 @@
+{
+  "status": "interrupted",
+  "failure_reason": "Error in Opti::solve [OptiNode] at .../casadi/core/optistack.cpp:217:\n.../casadi/core/optistack_internal.cpp:1338: Assertion \"return_success(accept_limit)\" failed:\nSolver failed. You may use opti.debug.value to investigate the latest values of variables. return_status is 'NonIpopt_Exception_Thrown'",
+  "current_name": "MPC_OBCA_rectangle_maze_20260910",
+  "output_root_dir": "/home/taek111/projects/psdf_mpcc/debug_runs/maze_dd_rectangle_20260910/obca",
+  "wall_seconds": 475.1377841010001,
+  "method": "obca",
+  "cli": [
+    "--single",
+    "--config",
+    "/home/taek111/projects/psdf_mpcc/debug_runs/maze_dd_rectangle_20260910/obca/config.yaml",
+    "--maze-type",
+    "maze",
+    "--robot-shape",
+    "rectangle",
+    "--dynamics-type",
+    "differential_drive",
+    "--optimizer-type",
+    "obca",
+    "--path-planner",
+    "astar",
+    "--simulation-time",
+    "60",
+    "--no-perturb-start",
+    "--no-animation"
+  ],
+  "source_commit": "65b8b6f37408873e2638b3e20ea01c5be5b46bbd"
+}

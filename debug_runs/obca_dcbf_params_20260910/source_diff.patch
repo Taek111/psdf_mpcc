@@ -1,0 +1,19 @@
+diff --git a/control/obca_optimizer.py b/control/obca_optimizer.py
+index 6cab38b..5b51bc5 100644
+--- a/control/obca_optimizer.py
++++ b/control/obca_optimizer.py
+@@ -10,10 +10,10 @@ class OBCAOptimizerParam:
+     def __init__(self):
+         self.horizon = 20
+         self.horizon_dcbf = self.horizon
+-        # Match the tracking and input weights in PSDFOptimizerParam.
+-        self.mat_Q = np.diag([50.0, 50.0, 1.0])
+-        self.mat_R = np.diag([5.0, 0.05])
+-        self.mat_Rold = np.diag([1.0, 1.0]) * 0.0
++        # Match the common weights in NmpcDcbfOptimizerParam.
++        self.mat_Q = np.diag([10.0, 10.0, 0.0])
++        self.mat_R = np.diag([20.0, 0.0])
++        self.mat_Rold = np.diag([10.0, 1.0]) * 0.0
+         self.mat_dR = np.diag([1.0, 1.0]) * 0.0
+         self.gamma = 0.8
+         self.pomega = 10.0

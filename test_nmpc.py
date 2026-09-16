@@ -2,11 +2,13 @@ import argparse
 import copy
 import csv
 import signal
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from sim.simulation_mpc import simulation_mpc
 from sim.start_perturbation import resolve_start_perturbation
+from sim.trial_metrics import TrialMetricsRecorder, collect_successful_solver_steps
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -314,7 +316,46 @@ def run_safe_stop_batch(args: argparse.Namespace, config: Optional[dict] = None)
     return rows
 
 
-def run_single_test(args: argparse.Namespace, config: Optional[dict] = None) -> Optional[dict]:
+def failed_trial_result(test_sim: simulation_mpc, exc: Exception) -> dict:
+    # An output/plot error must not turn an already completed navigation into a failure.
+    result = dict(test_sim.last_run_outcome or {})
+    result.setdefault("status", "error")
+    result.setdefault("failure_reason", f"{type(exc).__name__}: {exc}")
+    result["error"] = f"{type(exc).__name__}: {exc}"
+    print(f"Trial error: {result['error']}")
+    return result
+
+
+def finalize_interrupted_trial(
+    test_sim: simulation_mpc,
+    args: argparse.Namespace,
+    failure_reason: str,
+    collect_metrics: bool,
+) -> dict:
+    result = {
+        "status": "interrupted",
+        "failure_reason": failure_reason,
+        "current_name": getattr(test_sim, "current_name", None),
+        "output_root_dir": getattr(test_sim, "output_root_dir", ""),
+    }
+    result = attach_runtime_stats(result, test_sim)
+    try:
+        generate_animation_if_possible(test_sim, args, interrupted=True)
+    except Exception as exc:
+        if not collect_metrics:
+            raise
+        # An optional animation failure must not prevent saving the interruption.
+        result["error"] = f"{type(exc).__name__}: {exc}"
+        print(f"Interrupted-run output error: {exc}")
+    return result
+
+
+def run_single_test(
+    args: argparse.Namespace,
+    config: Optional[dict] = None,
+    *,
+    collect_metrics: bool = False,
+) -> Optional[dict]:
     print("Running single test...")
     config = apply_start_perturbation_options(config, args)
     test_sim = simulation_mpc()
@@ -370,31 +411,163 @@ def run_single_test(args: argparse.Namespace, config: Optional[dict] = None) -> 
     except KeyboardInterrupt:
         interrupt_requested = True
         print("\nKeyboard interrupt received. Finalizing outputs from the partial run...")
-        generate_animation_if_possible(test_sim, args, interrupted=True)
-        result = {
-            "status": "interrupted",
-            "failure_reason": "keyboard_interrupt",
-            "current_name": getattr(test_sim, "current_name", None),
-            "output_root_dir": getattr(test_sim, "output_root_dir", ""),
-        }
-        result = attach_runtime_stats(result, test_sim)
+        result = finalize_interrupted_trial(
+            test_sim, args, "keyboard_interrupt", collect_metrics,
+        )
     except RuntimeError as exc:
-        if not is_interrupt_runtime_error(exc, interrupt_requested):
+        interrupted = is_interrupt_runtime_error(exc, interrupt_requested)
+        if collect_metrics and interrupt_requested:
+            interrupted = True
+        if not interrupted:
+            if not collect_metrics:
+                raise
+            result = failed_trial_result(test_sim, exc)
+        else:
+            print("\nSIGINT interrupted the solver. Finalizing outputs from the partial run...")
+            result = finalize_interrupted_trial(
+                test_sim, args, str(exc), collect_metrics,
+            )
+    except Exception as exc:
+        if not collect_metrics:
             raise
-        print("\nSIGINT interrupted the solver. Finalizing outputs from the partial run...")
-        generate_animation_if_possible(test_sim, args, interrupted=True)
-        result = {
-            "status": "interrupted",
-            "failure_reason": str(exc),
-            "current_name": getattr(test_sim, "current_name", None),
-            "output_root_dir": getattr(test_sim, "output_root_dir", ""),
-        }
-        result = attach_runtime_stats(result, test_sim)
+        result = failed_trial_result(test_sim, exc)
     finally:
         signal.signal(signal.SIGINT, previous_sigint_handler)
-        cleanup_simulation(test_sim)
+        try:
+            if collect_metrics:
+                result = dict(result or test_sim.last_run_outcome or {})
+                result.setdefault("status", "error")
+                result["current_name"] = getattr(test_sim, "current_name", None)
+                result["output_root_dir"] = getattr(test_sim, "output_root_dir", "")
+                result["initial_pose"] = getattr(test_sim, "initial_pose", None)
+                result["start_perturbation"] = getattr(test_sim, "start_perturbation_info", None)
+                result["successful_solver_steps"] = collect_successful_solver_steps(test_sim)
+                system = getattr(getattr(test_sim, "robot", None), "_system", None)
+                if system is not None:
+                    result.setdefault("final_time", float(system._time))
+                result = attach_runtime_stats(result, test_sim)
+        finally:
+            try:
+                cleanup_simulation(test_sim)
+            except Exception as exc:
+                if not collect_metrics:
+                    raise
+                print(f"Warning: trial cleanup failed: {exc}")
+                result["error"] = f"{result.get('error', '')} Cleanup: {exc}".strip()
 
     return result
+
+
+def run_trial_batch(args: argparse.Namespace, config: Optional[dict] = None) -> List[Dict]:
+    """Repeat each configuration with matched seeds and persist every trial."""
+    import yaml
+
+    config = apply_start_perturbation_options(config, args)
+    trials = args.trials if args.trials is not None else config.get("trials", 1)
+    if isinstance(trials, bool) or not isinstance(trials, int) or trials < 1:
+        raise ValueError("trials must be a positive integer.")
+    defaults = config.get("defaults", {})
+    if args.single:
+        test_configs = [{
+            key: getattr(args, key) for key in (
+                "maze_type", "robot_shape", "optimizer_type", "dynamics_type", "path_planner"
+            )
+        }]
+    else:
+        test_configs = config.get("test_configs", [])
+        if isinstance(test_configs, dict):
+            test_configs = [test_configs]
+    if not test_configs:
+        raise ValueError("No test configurations found; provide test_configs or --single.")
+
+    configurations = []
+    for index, test_config in enumerate(test_configs, 1):
+        run_args = argparse.Namespace(**vars(args))
+        for key, default in (
+            ("maze_type", "s_path"), ("robot_shape", "pentagon"),
+            ("optimizer_type", "psdf"), ("dynamics_type", "differential_drive"),
+            ("path_planner", "astar"),
+        ):
+            setattr(run_args, key, test_config.get(key, default))
+        if not args.single:
+            run_args.simulation_time = test_config.get(
+                "simulation_time", defaults.get("simulation_time", 20.0)
+            )
+            run_args.frame_skip = defaults.get("frame_skip", 5)
+            run_args.generate_animation = (
+                args.generate_animation and defaults.get("generate_animation", True)
+            )
+            run_args.generate_plots = (
+                args.generate_plots and defaults.get("generate_plots", True)
+            )
+            run_args.generate_risk_profile = test_config.get(
+                "generate_risk_profile", defaults.get("generate_risk_profile", False)
+            )
+            run_args.use_risk_visualization = test_config.get(
+                "use_risk_visualization", defaults.get("use_risk_visualization", None)
+            )
+        start_settings = resolve_start_perturbation({
+            **config["start_perturbation"], **test_config.get("start_perturbation", {}),
+        })
+        identity = {
+            key: getattr(run_args, key) for key in (
+                "maze_type", "robot_shape", "optimizer_type", "dynamics_type", "path_planner"
+            )
+        }
+        identity["configuration_id"] = f"config{index:02d}"
+        configurations.append((identity, run_args, start_settings))
+
+    results_dir = args.results_dir or config.get("results_dir")
+    if results_dir is None:
+        output_root = Path(config.get("output_root_dir") or PROJECT_ROOT)
+        results_dir = output_root / "data" / f"trials_{datetime.now():%Y%m%d_%H%M%S_%f}"
+    results_dir = Path(results_dir)
+    if not results_dir.is_absolute():
+        results_dir = PROJECT_ROOT / results_dir
+    recorder = TrialMetricsRecorder(results_dir)
+    manifest = {
+        "trials_per_configuration": trials, "config": config, "cli": vars(args),
+        "configurations": [
+            {**identity, "start_perturbation": settings}
+            for identity, _, settings in configurations
+        ],
+    }
+    with (results_dir / "run_manifest.yaml").open("w", encoding="utf-8") as manifest_file:
+        yaml.safe_dump(manifest, manifest_file, sort_keys=False)
+    print(f"Trial CSV directory: {results_dir}")
+
+    rows = []
+    for trial_number in range(1, trials + 1):
+        for identity, base_args, base_settings in configurations:
+            run_args = argparse.Namespace(**vars(base_args))
+            settings = dict(base_settings)
+            if settings["seed"] is not None:
+                settings["seed"] += trial_number - 1
+            run_args.start_seed = settings["seed"]
+            run_config = copy.deepcopy(config)
+            run_config["start_perturbation"] = settings
+            # Isolate raw histories/figures, including repeated unperturbed runs.
+            run_config["output_root_dir"] = str(
+                results_dir / "runs" / identity["configuration_id"] / f"trial_{trial_number:04d}"
+            )
+            print(
+                f"\n[Trials] {identity['maze_type']} / {identity['optimizer_type']} "
+                f"trial {trial_number}/{trials}, seed={settings['seed']}"
+            )
+            result = run_single_test(run_args, run_config, collect_metrics=True) or {}
+            row = recorder.record(identity, trial_number, settings, result)
+            rows.append(row)
+            print(
+                f"[Trials] Saved: status={row['status']}, "
+                f"successful solver steps={row['successful_solver_steps']}"
+            )
+            if row["status"] == "interrupted":
+                print(f"Trial batch interrupted. Results saved in {results_dir}")
+                return rows
+
+    print(f"Trial outcomes: {recorder.trial_path}")
+    print(f"Success rates and solver mean/p95 [s]: {recorder.summary_path}")
+    return rows
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -410,6 +583,14 @@ def build_parser() -> argparse.ArgumentParser:
         "-s",
         action="store_true",
         help="Run one test from CLI options instead of config file",
+    )
+    parser.add_argument(
+        "--trials", type=int, default=None,
+        help="Repeat every YAML configuration (or --single) N times and save trial/timing CSVs",
+    )
+    parser.add_argument(
+        "--results-dir", default=None,
+        help="Directory for trial CSVs and raw runs; enables CSV mode (default: data/trials_<timestamp>)",
     )
     parser.add_argument("--maze-type", default="s_path", help="Environment type")
     parser.add_argument("--robot-shape", default="rectangle", help="Robot shape")
@@ -506,6 +687,11 @@ def main() -> None:
 
     if args.safe_stop_batch:
         run_safe_stop_batch(args, config=config)
+        return
+
+    if (args.trials is not None or args.results_dir is not None
+            or "trials" in config or "results_dir" in config):
+        run_trial_batch(args, config=config)
         return
 
     if args.single:

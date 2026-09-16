@@ -28,6 +28,7 @@ class BaseController:
     def _update_last_solver_status_info(self, exc=None):
         raw_status = None
         status_code = None
+        reported_success = None
 
         if exc is not None:
             raw_status = f"{type(exc).__name__}: {exc}"
@@ -38,6 +39,7 @@ class BaseController:
                 stats = {}
             if isinstance(stats, dict):
                 raw_status = stats.get("return_status", None)
+                reported_success = stats.get("success")
 
         solver_obj = None
         if self._opt_sol is not None and hasattr(self._opt_sol, "solver"):
@@ -51,10 +53,15 @@ class BaseController:
             except Exception:
                 status_code = None
 
+        success = self._infer_success(raw_status, status_code)
+        if status_code is None and isinstance(reported_success, bool):
+            success = reported_success
+        if exc is not None:
+            success = False
         self._last_solver_status_info = {
             "raw_status": raw_status,
             "status_code": status_code,
-            "success": self._infer_success(raw_status, status_code),
+            "success": success,
         }
 
     def get_last_solver_status_info(self):

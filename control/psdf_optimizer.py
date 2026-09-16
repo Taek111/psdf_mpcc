@@ -528,7 +528,6 @@ class PSDFOptimizer:
 
     def solve_nlp(self):
         """Solve the NLP using SQP"""
-        start = time.time()
         # Ensure the initial state constraint is updated
         if self.state is not None:
             self.solver.set(0, "lbx", self.state._x)
@@ -547,9 +546,9 @@ class PSDFOptimizer:
             self.solver.set(self.N, "p", params_batch[-1])
 
         
+        start = time.perf_counter()
         status = self.solver.solve()
-        end = time.time()
-        solve_time = end - start
+        solve_time = time.perf_counter() - start
         
         # Record solver time
         self.solver_times.append(solve_time)

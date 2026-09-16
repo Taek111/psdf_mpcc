@@ -1,0 +1,772 @@
+COMMAND: python3 test_nmpc.py --single --config /home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_gaussian_20260916/safe/obca/seed44/config.yaml --maze-type maze --robot-shape rectangle --dynamics-type differential_drive --optimizer-type obca --path-planner astar --simulation-time 60 --no-animation --no-plots
+Running single test...
+Start perturbation: seed=44, pose=[0.06741658832558539, 0.7746225289832026, -1.551987881985233], delta=[-0.007583411674414606, -0.020377471016797277, 0.018808444809663406], clearance=0.021014 m, attempts=3
+Start pose saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_gaussian_20260916/safe/obca/seed44/data/start_pose_MPC_OBCA_rectangle_maze_gaussian_20260916_startseed44.json
+generating global path with A* + Line of Sight
+시작 위치: [0.06742 0.77462]
+목적지: [1.8  0.09]
+도착 판정 기준: position <= 0.01m, angle <= 0.01rad
+
+******************************************************************************
+This program contains Ipopt, a library for large-scale nonlinear optimization.
+ Ipopt is released as open source code under the Eclipse Public License (EPL).
+         For more information visit https://github.com/coin-or/Ipopt
+******************************************************************************
+
+solver time:  1.375393
+plant_input_stage0: full=[0.0849  0.59897], physical=[0.0849  0.59897]
+solver time:  1.41846
+plant_input_stage0: full=[0.08416 0.57519], physical=[0.08416 0.57519]
+solver time:  1.33378
+plant_input_stage0: full=[0.08389 0.57288], physical=[0.08389 0.57288]
+solver time:  1.373072
+plant_input_stage0: full=[0.08332 0.43817], physical=[0.08332 0.43817]
+solver time:  1.771499
+plant_input_stage0: full=[0.08269 0.25463], physical=[0.08269 0.25463]
+solver time:  1.594696
+plant_input_stage0: full=[0.08175 0.11333], physical=[0.08175 0.11333]
+solver time:  1.777052
+plant_input_stage0: full=[0.08076 0.00995], physical=[0.08076 0.00995]
+solver time:  1.783505
+plant_input_stage0: full=[ 0.07953 -0.06041], physical=[ 0.07953 -0.06041]
+solver time:  1.886847
+plant_input_stage0: full=[ 0.07822 -0.10583], physical=[ 0.07822 -0.10583]
+solver time:  2.062925
+plant_input_stage0: full=[ 0.07684 -0.13267], physical=[ 0.07684 -0.13267]
+solver time:  1.609562
+plant_input_stage0: full=[ 0.07539 -0.14616], physical=[ 0.07539 -0.14616]
+solver time:  2.19745
+plant_input_stage0: full=[ 0.07385 -0.15075], physical=[ 0.07385 -0.15075]
+solver time:  1.939647
+plant_input_stage0: full=[ 0.07219 -0.14919], physical=[ 0.07219 -0.14919]
+solver time:  1.66029
+plant_input_stage0: full=[ 0.07049 -0.14396], physical=[ 0.07049 -0.14396]
+solver time:  1.613575
+plant_input_stage0: full=[0.06875 0.02011], physical=[0.06875 0.02011]
+solver time:  1.69812
+plant_input_stage0: full=[0.06693 0.04777], physical=[0.06693 0.04777]
+solver time:  1.668419
+plant_input_stage0: full=[0.06743 0.04256], physical=[0.06743 0.04256]
+solver time:  1.870689
+plant_input_stage0: full=[0.07266 0.03838], physical=[0.07266 0.03838]
+solver time:  1.918028
+plant_input_stage0: full=[0.07585 0.03558], physical=[0.07585 0.03558]
+solver time:  2.193059
+plant_input_stage0: full=[0.07744 0.03351], physical=[0.07744 0.03351]
+solver time:  2.131296
+plant_input_stage0: full=[ 0.07827 -0.36415], physical=[ 0.07827 -0.36415]
+solver time:  2.640523
+plant_input_stage0: full=[ 0.07747 -0.74237], physical=[ 0.07747 -0.74237]
+solver time:  2.595414
+plant_input_stage0: full=[0.07539 0.61845], physical=[0.07539 0.61845]
+solver time:  3.119999
+plant_input_stage0: full=[0.07232 1.     ], physical=[0.07232 1.     ]
+solver time:  3.225109
+plant_input_stage0: full=[0.05594 1.     ], physical=[0.05594 1.     ]
+solver time:  2.038198
+plant_input_stage0: full=[0.05337 1.     ], physical=[0.05337 1.     ]
+solver time:  2.284397
+plant_input_stage0: full=[0.05187 1.     ], physical=[0.05187 1.     ]
+solver time:  2.531052
+plant_input_stage0: full=[0.056 1.   ], physical=[0.056 1.   ]
+solver time:  2.342988
+plant_input_stage0: full=[0.06161 1.     ], physical=[0.06161 1.     ]
+solver time:  3.094013
+plant_input_stage0: full=[0.06606 1.     ], physical=[0.06606 1.     ]
+solver time:  2.260325
+plant_input_stage0: full=[0.06934 1.     ], physical=[0.06934 1.     ]
+solver time:  1.748714
+plant_input_stage0: full=[0.0715 1.    ], physical=[0.0715 1.    ]
+solver time:  1.876526
+plant_input_stage0: full=[0.07311 1.     ], physical=[0.07311 1.     ]
+solver time:  1.762142
+plant_input_stage0: full=[0.07635 1.     ], physical=[0.07635 1.     ]
+solver time:  1.728337
+plant_input_stage0: full=[0.07924 1.     ], physical=[0.07924 1.     ]
+solver time:  2.173753
+plant_input_stage0: full=[0.08171 1.     ], physical=[0.08171 1.     ]
+solver time:  1.744785
+plant_input_stage0: full=[0.08367 1.     ], physical=[0.08367 1.     ]
+solver time:  1.801835
+plant_input_stage0: full=[0.08495 0.42878], physical=[0.08495 0.42878]
+solver time:  1.62361
+plant_input_stage0: full=[0.08526 0.1834 ], physical=[0.08526 0.1834 ]
+solver time:  1.836168
+plant_input_stage0: full=[0.08538 0.11904], physical=[0.08538 0.11904]
+solver time:  1.978253
+plant_input_stage0: full=[0.08546 0.06978], physical=[0.08546 0.06978]
+solver time:  2.117088
+plant_input_stage0: full=[0.08552 0.03319], physical=[0.08552 0.03319]
+solver time:  2.045865
+plant_input_stage0: full=[0.08556 0.00613], physical=[0.08556 0.00613]
+solver time:  1.861191
+plant_input_stage0: full=[ 0.0856 -0.0131], physical=[ 0.0856 -0.0131]
+solver time:  2.079305
+plant_input_stage0: full=[0.08563 0.05723], physical=[0.08563 0.05723]
+solver time:  1.954211
+plant_input_stage0: full=[0.08566 0.05731], physical=[0.08566 0.05731]
+solver time:  2.808287
+plant_input_stage0: full=[0.08568 0.05333], physical=[0.08568 0.05333]
+solver time:  2.996733
+plant_input_stage0: full=[0.08571 0.05055], physical=[0.08571 0.05055]
+solver time:  3.0104
+plant_input_stage0: full=[0.08572 0.04982], physical=[0.08572 0.04982]
+solver time:  2.989784
+plant_input_stage0: full=[0.08571 0.05152], physical=[0.08571 0.05152]
+solver time:  4.877399
+plant_input_stage0: full=[ 0.09721 -0.44932], physical=[ 0.09721 -0.44932]
+solver time:  4.755514
+plant_input_stage0: full=[0.09624 0.2039 ], physical=[0.09624 0.2039 ]
+solver time:  3.744485
+plant_input_stage0: full=[ 0.10137 -0.25184], physical=[ 0.10137 -0.25184]
+solver time:  5.079377
+plant_input_stage0: full=[0.09272 0.76226], physical=[0.09272 0.76226]
+solver time:  3.142007
+plant_input_stage0: full=[0.08532 0.50286], physical=[0.08532 0.50286]
+solver time:  3.439769
+plant_input_stage0: full=[0.0853  0.03532], physical=[0.0853  0.03532]
+solver time:  4.056833
+plant_input_stage0: full=[0.08515 0.04416], physical=[0.08515 0.04416]
+solver time:  4.647075
+plant_input_stage0: full=[0.08498 0.0528 ], physical=[0.08498 0.0528 ]
+solver time:  3.535179
+plant_input_stage0: full=[0.0848  0.06123], physical=[0.0848  0.06123]
+solver time:  3.11612
+plant_input_stage0: full=[0.08461 0.0695 ], physical=[0.08461 0.0695 ]
+solver time:  2.930829
+plant_input_stage0: full=[0.0844  0.07763], physical=[0.0844  0.07763]
+solver time:  3.276967
+plant_input_stage0: full=[0.08418 0.0874 ], physical=[0.08418 0.0874 ]
+solver time:  3.197737
+plant_input_stage0: full=[0.08395 0.09696], physical=[0.08395 0.09696]
+solver time:  2.851711
+plant_input_stage0: full=[0.08371 0.10508], physical=[0.08371 0.10508]
+solver time:  3.172841
+plant_input_stage0: full=[0.08346 0.11315], physical=[0.08346 0.11315]
+solver time:  3.549829
+plant_input_stage0: full=[0.08321 0.09678], physical=[0.08321 0.09678]
+solver time:  4.02525
+plant_input_stage0: full=[0.08294 0.09336], physical=[0.08294 0.09336]
+solver time:  3.278101
+plant_input_stage0: full=[0.08221 0.12714], physical=[0.08221 0.12714]
+solver time:  3.785404
+plant_input_stage0: full=[0.08054 0.20428], physical=[0.08054 0.20428]
+solver time:  3.439348
+plant_input_stage0: full=[0.07737 0.32786], physical=[0.07737 0.32786]
+solver time:  3.144727
+plant_input_stage0: full=[0.07414 0.36716], physical=[0.07414 0.36716]
+solver time:  3.270233
+plant_input_stage0: full=[0.0708 0.4123], physical=[0.0708 0.4123]
+solver time:  3.401361
+plant_input_stage0: full=[0.08009 1.     ], physical=[0.08009 1.     ]
+solver time:  4.06896
+plant_input_stage0: full=[0.07354 1.     ], physical=[0.07354 1.     ]
+solver time:  4.746265
+plant_input_stage0: full=[0.0762 0.9483], physical=[0.0762 0.9483]
+solver time:  3.817195
+plant_input_stage0: full=[ 0.08433 -0.81664], physical=[ 0.08433 -0.81664]
+solver time:  3.763337
+plant_input_stage0: full=[ 0.08295 -0.53877], physical=[ 0.08295 -0.53877]
+solver time:  4.011818
+plant_input_stage0: full=[ 0.08415 -0.45752], physical=[ 0.08415 -0.45752]
+solver time:  4.074024
+plant_input_stage0: full=[ 0.08516 -0.50689], physical=[ 0.08516 -0.50689]
+solver time:  3.449469
+plant_input_stage0: full=[ 0.08588 -0.4537 ], physical=[ 0.08588 -0.4537 ]
+solver time:  3.960489
+plant_input_stage0: full=[ 0.08637 -0.40138], physical=[ 0.08637 -0.40138]
+solver time:  3.656737
+plant_input_stage0: full=[ 0.08663 -0.36191], physical=[ 0.08663 -0.36191]
+solver time:  3.810668
+plant_input_stage0: full=[ 0.08671 -0.33359], physical=[ 0.08671 -0.33359]
+solver time:  4.359885
+plant_input_stage0: full=[ 0.0866  -0.31659], physical=[ 0.0866  -0.31659]
+solver time:  4.011172
+plant_input_stage0: full=[ 0.08636 -0.31159], physical=[ 0.08636 -0.31159]
+solver time:  5.253146
+plant_input_stage0: full=[ 0.086   -0.32374], physical=[ 0.086   -0.32374]
+solver time:  4.709742
+plant_input_stage0: full=[ 0.08556 -0.36586], physical=[ 0.08556 -0.36586]
+solver time:  5.454553
+plant_input_stage0: full=[ 0.11008 -0.61479], physical=[ 0.11008 -0.61479]
+solver time:  5.083192
+plant_input_stage0: full=[ 0.1032 -1.    ], physical=[ 0.1032 -1.    ]
+solver time:  4.602855
+plant_input_stage0: full=[ 0.09775 -0.38491], physical=[ 0.09775 -0.38491]
+solver time:  5.32623
+plant_input_stage0: full=[ 0.09185 -0.0035 ], physical=[ 0.09185 -0.0035 ]
+solver time:  5.743255
+plant_input_stage0: full=[0.08627 0.00509], physical=[0.08627 0.00509]
+solver time:  6.027045
+plant_input_stage0: full=[ 0.083   -0.02143], physical=[ 0.083   -0.02143]
+solver time:  7.254392
+plant_input_stage0: full=[ 0.08257 -0.01966], physical=[ 0.08257 -0.01966]
+solver time:  6.996278
+plant_input_stage0: full=[ 0.0821  -0.01223], physical=[ 0.0821  -0.01223]
+solver time:  6.92184
+plant_input_stage0: full=[ 0.08159 -0.00402], physical=[ 0.08159 -0.00402]
+solver time:  6.587916
+plant_input_stage0: full=[0.08113 0.07601], physical=[0.08113 0.07601]
+solver time:  8.079105
+plant_input_stage0: full=[0.08159 0.03073], physical=[0.08159 0.03073]
+solver time:  7.255515
+plant_input_stage0: full=[ 0.08207 -0.01188], physical=[ 0.08207 -0.01188]
+solver time:  8.018432
+plant_input_stage0: full=[ 0.08215 -0.02483], physical=[ 0.08215 -0.02483]
+solver time:  7.146469
+plant_input_stage0: full=[ 0.082   -0.00977], physical=[ 0.082   -0.00977]
+solver time:  6.809028
+plant_input_stage0: full=[ 0.08199 -0.02008], physical=[ 0.08199 -0.02008]
+solver time:  10.131858
+plant_input_stage0: full=[0.08166 0.02431], physical=[0.08166 0.02431]
+solver time:  9.383703
+plant_input_stage0: full=[0.08151 0.05133], physical=[0.08151 0.05133]
+solver time:  7.15131
+plant_input_stage0: full=[0.1047  0.03971], physical=[0.1047  0.03971]
+solver time:  7.705081
+plant_input_stage0: full=[ 0.09806 -0.29632], physical=[ 0.09806 -0.29632]
+solver time:  7.721577
+plant_input_stage0: full=[ 0.10114 -0.84943], physical=[ 0.10114 -0.84943]
+solver time:  5.740473
+plant_input_stage0: full=[ 0.07885 -1.     ], physical=[ 0.07885 -1.     ]
+solver time:  6.13712
+plant_input_stage0: full=[ 0.07714 -1.     ], physical=[ 0.07714 -1.     ]
+solver time:  5.479454
+plant_input_stage0: full=[ 0.07736 -1.     ], physical=[ 0.07736 -1.     ]
+solver time:  5.17308
+plant_input_stage0: full=[ 0.07687 -1.     ], physical=[ 0.07687 -1.     ]
+solver time:  4.96742
+plant_input_stage0: full=[ 0.075 -1.   ], physical=[ 0.075 -1.   ]
+solver time:  5.539856
+plant_input_stage0: full=[ 0.07523 -1.     ], physical=[ 0.07523 -1.     ]
+solver time:  5.330351
+plant_input_stage0: full=[ 0.0786  -0.98708], physical=[ 0.0786  -0.98708]
+solver time:  3.895738
+plant_input_stage0: full=[ 0.08115 -0.26256], physical=[ 0.08115 -0.26256]
+solver time:  4.500876
+plant_input_stage0: full=[0.08147 0.32425], physical=[0.08147 0.32425]
+solver time:  4.56727
+plant_input_stage0: full=[0.08329 0.32289], physical=[0.08329 0.32289]
+solver time:  4.623125
+plant_input_stage0: full=[0.08328 0.23896], physical=[0.08328 0.23896]
+solver time:  4.133382
+plant_input_stage0: full=[0.08388 0.16154], physical=[0.08388 0.16154]
+solver time:  3.961976
+plant_input_stage0: full=[0.08403 0.11229], physical=[0.08403 0.11229]
+solver time:  3.873335
+plant_input_stage0: full=[0.08435 0.32212], physical=[0.08435 0.32212]
+solver time:  5.062809
+plant_input_stage0: full=[0.08437 0.32047], physical=[0.08437 0.32047]
+solver time:  3.625762
+plant_input_stage0: full=[0.08422 0.3387 ], physical=[0.08422 0.3387 ]
+solver time:  4.001841
+plant_input_stage0: full=[0.08414 0.06743], physical=[0.08414 0.06743]
+solver time:  4.475466
+plant_input_stage0: full=[0.08143 0.75002], physical=[0.08143 0.75002]
+solver time:  4.042342
+plant_input_stage0: full=[0.07665 1.     ], physical=[0.07665 1.     ]
+solver time:  4.495984
+plant_input_stage0: full=[0.10034 1.     ], physical=[0.10034 1.     ]
+solver time:  3.910958
+plant_input_stage0: full=[0.09865 1.     ], physical=[0.09865 1.     ]
+solver time:  4.472002
+plant_input_stage0: full=[0.09588 1.     ], physical=[0.09588 1.     ]
+solver time:  4.095497
+plant_input_stage0: full=[0.09218 1.     ], physical=[0.09218 1.     ]
+solver time:  4.401902
+plant_input_stage0: full=[0.0877  0.66114], physical=[0.0877  0.66114]
+solver time:  4.315291
+plant_input_stage0: full=[0.08321 0.08596], physical=[0.08321 0.08596]
+solver time:  4.636931
+plant_input_stage0: full=[0.08283 0.05359], physical=[0.08283 0.05359]
+solver time:  4.427132
+plant_input_stage0: full=[0.08241 0.02929], physical=[0.08241 0.02929]
+solver time:  4.999248
+plant_input_stage0: full=[0.08198 0.01132], physical=[0.08198 0.01132]
+solver time:  4.273105
+plant_input_stage0: full=[ 0.08154 -0.01464], physical=[ 0.08154 -0.01464]
+solver time:  4.564801
+plant_input_stage0: full=[ 0.08158 -0.05726], physical=[ 0.08158 -0.05726]
+solver time:  6.000175
+plant_input_stage0: full=[ 0.08205 -0.00372], physical=[ 0.08205 -0.00372]
+solver time:  5.547103
+plant_input_stage0: full=[0.08221 0.02688], physical=[0.08221 0.02688]
+solver time:  5.629784
+plant_input_stage0: full=[0.08213 0.02706], physical=[0.08213 0.02706]
+solver time:  7.168851
+plant_input_stage0: full=[0.08198 0.01793], physical=[0.08198 0.01793]
+solver time:  7.820379
+plant_input_stage0: full=[0.08203 0.02502], physical=[0.08203 0.02502]
+solver time:  7.262513
+plant_input_stage0: full=[ 0.08174 -0.01728], physical=[ 0.08174 -0.01728]
+solver time:  12.324188
+plant_input_stage0: full=[ 0.08112 -0.13892], physical=[ 0.08112 -0.13892]
+solver time:  8.577628
+plant_input_stage0: full=[ 0.10276 -0.15639], physical=[ 0.10276 -0.15639]
+solver time:  6.994369
+plant_input_stage0: full=[0.09256 0.49308], physical=[0.09256 0.49308]
+solver time:  7.519577
+plant_input_stage0: full=[0.08037 1.     ], physical=[0.08037 1.     ]
+solver time:  8.541298
+plant_input_stage0: full=[0.0791 1.    ], physical=[0.0791 1.    ]
+solver time:  6.608865
+plant_input_stage0: full=[0.07769 1.     ], physical=[0.07769 1.     ]
+solver time:  6.508665
+plant_input_stage0: full=[0.07748 1.     ], physical=[0.07748 1.     ]
+solver time:  7.425609
+plant_input_stage0: full=[0.078 1.   ], physical=[0.078 1.   ]
+solver time:  7.847302
+plant_input_stage0: full=[0.0765 1.    ], physical=[0.0765 1.    ]
+solver time:  5.113855
+plant_input_stage0: full=[0.07835 1.     ], physical=[0.07835 1.     ]
+solver time:  5.555096
+plant_input_stage0: full=[0.08183 0.75539], physical=[0.08183 0.75539]
+solver time:  4.162111
+plant_input_stage0: full=[ 0.08233 -0.18011], physical=[ 0.08233 -0.18011]
+solver time:  4.624248
+plant_input_stage0: full=[ 0.08258 -0.35153], physical=[ 0.08258 -0.35153]
+solver time:  4.965781
+plant_input_stage0: full=[ 0.08316 -0.27865], physical=[ 0.08316 -0.27865]
+solver time:  4.774489
+plant_input_stage0: full=[ 0.08391 -0.1847 ], physical=[ 0.08391 -0.1847 ]
+solver time:  5.244386
+plant_input_stage0: full=[ 0.08436 -0.12704], physical=[ 0.08436 -0.12704]
+solver time:  5.872853
+plant_input_stage0: full=[ 0.08447 -0.08932], physical=[ 0.08447 -0.08932]
+solver time:  6.228311
+plant_input_stage0: full=[ 0.08463 -0.37974], physical=[ 0.08463 -0.37974]
+solver time:  8.361987
+plant_input_stage0: full=[ 0.08478 -0.38593], physical=[ 0.08478 -0.38593]
+solver time:  5.972187
+plant_input_stage0: full=[ 0.08464 -0.42228], physical=[ 0.08464 -0.42228]
+solver time:  6.054006
+plant_input_stage0: full=[ 0.08483 -0.40049], physical=[ 0.08483 -0.40049]
+solver time:  6.339042
+plant_input_stage0: full=[ 0.08531 -0.89201], physical=[ 0.08531 -0.89201]
+solver time:  6.031159
+plant_input_stage0: full=[ 0.11075 -1.     ], physical=[ 0.11075 -1.     ]
+solver time:  5.694596
+plant_input_stage0: full=[ 0.10694 -1.     ], physical=[ 0.10694 -1.     ]
+solver time:  5.17724
+plant_input_stage0: full=[ 0.10219 -1.     ], physical=[ 0.10219 -1.     ]
+solver time:  4.816454
+plant_input_stage0: full=[ 0.09666 -0.23169], physical=[ 0.09666 -0.23169]
+solver time:  6.651839
+plant_input_stage0: full=[ 0.0908  -0.00001], physical=[ 0.0908  -0.00001]
+solver time:  5.855519
+plant_input_stage0: full=[ 0.08571 -0.00116], physical=[ 0.08571 -0.00116]
+solver time:  6.101163
+plant_input_stage0: full=[ 0.08571 -0.01386], physical=[ 0.08571 -0.01386]
+solver time:  5.34097
+plant_input_stage0: full=[ 0.0857 -0.013 ], physical=[ 0.0857 -0.013 ]
+solver time:  4.698308
+plant_input_stage0: full=[ 0.0857 -0.0122], physical=[ 0.0857 -0.0122]
+solver time:  4.030696
+plant_input_stage0: full=[ 0.0857  -0.01146], physical=[ 0.0857  -0.01146]
+solver time:  3.933977
+plant_input_stage0: full=[ 0.0857  -0.01073], physical=[ 0.0857  -0.01073]
+solver time:  4.427043
+plant_input_stage0: full=[ 0.0857  -0.01007], physical=[ 0.0857  -0.01007]
+solver time:  5.004659
+plant_input_stage0: full=[ 0.0857  -0.00946], physical=[ 0.0857  -0.00946]
+solver time:  4.091734
+plant_input_stage0: full=[0.08566 0.01084], physical=[0.08566 0.01084]
+solver time:  5.577176
+plant_input_stage0: full=[0.08559 0.02279], physical=[0.08559 0.02279]
+solver time:  4.190727
+plant_input_stage0: full=[0.08551 0.03179], physical=[0.08551 0.03179]
+solver time:  4.566365
+plant_input_stage0: full=[0.08541 0.04039], physical=[0.08541 0.04039]
+solver time:  3.24236
+plant_input_stage0: full=[0.08528 0.04864], physical=[0.08528 0.04864]
+solver time:  3.057439
+plant_input_stage0: full=[0.08514 0.05669], physical=[0.08514 0.05669]
+solver time:  3.112572
+plant_input_stage0: full=[0.08497 0.06283], physical=[0.08497 0.06283]
+solver time:  3.117475
+plant_input_stage0: full=[0.08479 0.06591], physical=[0.08479 0.06591]
+solver time:  4.148695
+plant_input_stage0: full=[0.08459 0.06551], physical=[0.08459 0.06551]
+solver time:  3.326462
+plant_input_stage0: full=[0.08438 0.06236], physical=[0.08438 0.06236]
+solver time:  3.273487
+plant_input_stage0: full=[0.08417 0.05568], physical=[0.08417 0.05568]
+solver time:  3.554203
+plant_input_stage0: full=[0.08391 0.04363], physical=[0.08391 0.04363]
+solver time:  3.89645
+plant_input_stage0: full=[0.08364 0.03148], physical=[0.08364 0.03148]
+solver time:  4.745682
+plant_input_stage0: full=[0.0834  0.01961], physical=[0.0834  0.01961]
+solver time:  3.606998
+plant_input_stage0: full=[0.0832  0.00366], physical=[0.0832  0.00366]
+solver time:  3.240172
+plant_input_stage0: full=[ 0.08303 -0.04656], physical=[ 0.08303 -0.04656]
+solver time:  3.586579
+plant_input_stage0: full=[ 0.08313 -0.08218], physical=[ 0.08313 -0.08218]
+solver time:  4.001591
+plant_input_stage0: full=[ 0.08315 -0.03443], physical=[ 0.08315 -0.03443]
+solver time:  3.861319
+plant_input_stage0: full=[0.08302 0.10722], physical=[0.08302 0.10722]
+solver time:  4.845121
+plant_input_stage0: full=[0.0829  0.09723], physical=[0.0829  0.09723]
+solver time:  4.706922
+plant_input_stage0: full=[0.08274 0.09067], physical=[0.08274 0.09067]
+solver time:  6.032734
+plant_input_stage0: full=[0.08249 0.08597], physical=[0.08249 0.08597]
+solver time:  5.001505
+plant_input_stage0: full=[0.10744 0.07005], physical=[0.10744 0.07005]
+solver time:  5.342706
+plant_input_stage0: full=[ 0.1004  -0.12582], physical=[ 0.1004  -0.12582]
+solver time:  5.527083
+plant_input_stage0: full=[0.09382 0.05688], physical=[0.09382 0.05688]
+solver time:  6.105904
+plant_input_stage0: full=[0.0887  0.68811], physical=[0.0887  0.68811]
+solver time:  7.324935
+plant_input_stage0: full=[0.08028 1.     ], physical=[0.08028 1.     ]
+solver time:  6.060055
+plant_input_stage0: full=[0.07981 1.     ], physical=[0.07981 1.     ]
+solver time:  4.925703
+plant_input_stage0: full=[0.07908 0.99999], physical=[0.07908 0.99999]
+solver time:  3.49589
+plant_input_stage0: full=[0.07673 0.25632], physical=[0.07673 0.25632]
+solver time:  3.169098
+plant_input_stage0: full=[0.07528 0.79985], physical=[0.07528 0.79985]
+solver time:  2.916569
+plant_input_stage0: full=[0.07773 0.95674], physical=[0.07773 0.95674]
+solver time:  2.880866
+plant_input_stage0: full=[0.08085 0.25654], physical=[0.08085 0.25654]
+solver time:  2.890227
+plant_input_stage0: full=[ 0.08015 -0.32256], physical=[ 0.08015 -0.32256]
+solver time:  3.237138
+plant_input_stage0: full=[ 0.08452 -0.24279], physical=[ 0.08452 -0.24279]
+solver time:  2.720616
+plant_input_stage0: full=[ 0.08319 -0.15919], physical=[ 0.08319 -0.15919]
+solver time:  2.866955
+plant_input_stage0: full=[ 0.08358 -0.1087 ], physical=[ 0.08358 -0.1087 ]
+solver time:  2.868043
+plant_input_stage0: full=[ 0.08373 -0.07597], physical=[ 0.08373 -0.07597]
+solver time:  3.046202
+plant_input_stage0: full=[ 0.08372 -0.4312 ], physical=[ 0.08372 -0.4312 ]
+solver time:  2.952969
+plant_input_stage0: full=[ 0.08411 -0.42057], physical=[ 0.08411 -0.42057]
+solver time:  2.705811
+plant_input_stage0: full=[ 0.08374 -0.43137], physical=[ 0.08374 -0.43137]
+solver time:  2.880452
+plant_input_stage0: full=[ 0.08331 -0.28253], physical=[ 0.08331 -0.28253]
+solver time:  3.470808
+plant_input_stage0: full=[ 0.08297 -0.68849], physical=[ 0.08297 -0.68849]
+solver time:  3.324203
+plant_input_stage0: full=[ 0.08101 -1.     ], physical=[ 0.08101 -1.     ]
+solver time:  3.899466
+plant_input_stage0: full=[ 0.09498 -1.     ], physical=[ 0.09498 -1.     ]
+solver time:  3.283289
+plant_input_stage0: full=[ 0.09327 -1.     ], physical=[ 0.09327 -1.     ]
+solver time:  3.565434
+plant_input_stage0: full=[ 0.09056 -1.     ], physical=[ 0.09056 -1.     ]
+solver time:  3.704666
+plant_input_stage0: full=[ 0.087 -1.   ], physical=[ 0.087 -1.   ]
+solver time:  2.936319
+plant_input_stage0: full=[ 0.08269 -0.14838], physical=[ 0.08269 -0.14838]
+solver time:  3.883185
+plant_input_stage0: full=[ 0.07775 -0.08378], physical=[ 0.07775 -0.08378]
+solver time:  4.81257
+plant_input_stage0: full=[ 0.07594 -0.05645], physical=[ 0.07594 -0.05645]
+solver time:  4.495585
+plant_input_stage0: full=[ 0.07454 -0.03554], physical=[ 0.07454 -0.03554]
+solver time:  4.397106
+plant_input_stage0: full=[ 0.07307 -0.02002], physical=[ 0.07307 -0.02002]
+solver time:  3.964031
+plant_input_stage0: full=[ 0.07152 -0.00857], physical=[ 0.07152 -0.00857]
+solver time:  2.9622
+plant_input_stage0: full=[ 0.06978 -0.00022], physical=[ 0.06978 -0.00022]
+solver time:  2.552123
+plant_input_stage0: full=[0.06796 0.00472], physical=[0.06796 0.00472]
+solver time:  3.169431
+plant_input_stage0: full=[0.06608 0.00868], physical=[0.06608 0.00868]
+solver time:  2.702052
+plant_input_stage0: full=[ 0.06407 -0.01218], physical=[ 0.06407 -0.01218]
+solver time:  3.214932
+plant_input_stage0: full=[ 0.06202 -0.01442], physical=[ 0.06202 -0.01442]
+solver time:  3.449658
+plant_input_stage0: full=[ 0.05996 -0.01223], physical=[ 0.05996 -0.01223]
+solver time:  2.916835
+plant_input_stage0: full=[ 0.06046 -0.01022], physical=[ 0.06046 -0.01022]
+solver time:  3.303452
+plant_input_stage0: full=[ 0.06745 -0.00853], physical=[ 0.06745 -0.00853]
+solver time:  2.652666
+plant_input_stage0: full=[ 0.07099 -0.00709], physical=[ 0.07099 -0.00709]
+solver time:  3.31918
+plant_input_stage0: full=[0.07272 0.13913], physical=[0.07272 0.13913]
+solver time:  3.145892
+plant_input_stage0: full=[0.09031 0.32509], physical=[0.09031 0.32509]
+solver time:  2.856345
+plant_input_stage0: full=[ 0.09114 -0.24856], physical=[ 0.09114 -0.24856]
+solver time:  3.138791
+plant_input_stage0: full=[ 0.08249 -0.47385], physical=[ 0.08249 -0.47385]
+solver time:  3.234228
+plant_input_stage0: full=[ 0.06136 -1.     ], physical=[ 0.06136 -1.     ]
+solver time:  3.09473
+plant_input_stage0: full=[ 0.04948 -1.     ], physical=[ 0.04948 -1.     ]
+solver time:  4.103039
+plant_input_stage0: full=[ 0.04843 -1.     ], physical=[ 0.04843 -1.     ]
+solver time:  4.704852
+plant_input_stage0: full=[ 0.04787 -1.     ], physical=[ 0.04787 -1.     ]
+solver time:  3.887081
+plant_input_stage0: full=[ 0.04993 -1.     ], physical=[ 0.04993 -1.     ]
+solver time:  3.391242
+plant_input_stage0: full=[ 0.05549 -1.     ], physical=[ 0.05549 -1.     ]
+solver time:  4.360262
+plant_input_stage0: full=[ 0.06062 -1.     ], physical=[ 0.06062 -1.     ]
+solver time:  3.037607
+plant_input_stage0: full=[ 0.06536 -1.     ], physical=[ 0.06536 -1.     ]
+solver time:  2.57155
+plant_input_stage0: full=[ 0.06975 -1.     ], physical=[ 0.06975 -1.     ]
+solver time:  2.748833
+plant_input_stage0: full=[ 0.07379 -1.     ], physical=[ 0.07379 -1.     ]
+solver time:  2.83257
+plant_input_stage0: full=[ 0.07742 -1.     ], physical=[ 0.07742 -1.     ]
+solver time:  2.228207
+plant_input_stage0: full=[ 0.0806 -1.    ], physical=[ 0.0806 -1.    ]
+solver time:  2.878868
+plant_input_stage0: full=[ 0.08324 -1.     ], physical=[ 0.08324 -1.     ]
+solver time:  2.313922
+plant_input_stage0: full=[ 0.11386 -1.     ], physical=[ 0.11386 -1.     ]
+solver time:  2.385987
+plant_input_stage0: full=[ 0.10847 -0.99998], physical=[ 0.10847 -0.99998]
+solver time:  2.718388
+plant_input_stage0: full=[0.09902 0.20175], physical=[0.09902 0.20175]
+solver time:  2.662498
+plant_input_stage0: full=[ 0.09322 -0.38567], physical=[ 0.09322 -0.38567]
+solver time:  2.777165
+plant_input_stage0: full=[0.08145 0.69697], physical=[0.08145 0.69697]
+solver time:  2.319528
+plant_input_stage0: full=[ 0.08621 -0.04608], physical=[ 0.08621 -0.04608]
+solver time:  2.493411
+plant_input_stage0: full=[ 0.08543 -0.27983], physical=[ 0.08543 -0.27983]
+solver time:  2.473882
+plant_input_stage0: full=[ 0.08561 -0.43366], physical=[ 0.08561 -0.43366]
+solver time:  2.839215
+plant_input_stage0: full=[ 0.0857  -0.04002], physical=[ 0.0857  -0.04002]
+solver time:  3.262302
+plant_input_stage0: full=[ 0.08562 -0.01616], physical=[ 0.08562 -0.01616]
+solver time:  2.811562
+plant_input_stage0: full=[ 0.08551 -0.02973], physical=[ 0.08551 -0.02973]
+solver time:  3.315746
+plant_input_stage0: full=[ 0.08538 -0.04062], physical=[ 0.08538 -0.04062]
+solver time:  3.510548
+plant_input_stage0: full=[ 0.08521 -0.05069], physical=[ 0.08521 -0.05069]
+solver time:  3.436031
+plant_input_stage0: full=[ 0.08501 -0.0585 ], physical=[ 0.08501 -0.0585 ]
+solver time:  2.506235
+plant_input_stage0: full=[ 0.08479 -0.06442], physical=[ 0.08479 -0.06442]
+solver time:  2.611629
+plant_input_stage0: full=[ 0.08454 -0.06779], physical=[ 0.08454 -0.06779]
+solver time:  2.912944
+plant_input_stage0: full=[ 0.08427 -0.06777], physical=[ 0.08427 -0.06777]
+solver time:  3.00143
+plant_input_stage0: full=[ 0.08395 -0.0635 ], physical=[ 0.08395 -0.0635 ]
+solver time:  2.777551
+plant_input_stage0: full=[ 0.08363 -0.05534], physical=[ 0.08363 -0.05534]
+solver time:  3.133381
+plant_input_stage0: full=[ 0.08326 -0.04213], physical=[ 0.08326 -0.04213]
+solver time:  2.854356
+plant_input_stage0: full=[ 0.08288 -0.02683], physical=[ 0.08288 -0.02683]
+solver time:  2.575007
+plant_input_stage0: full=[ 0.08249 -0.00399], physical=[ 0.08249 -0.00399]
+solver time:  2.824183
+plant_input_stage0: full=[0.08211 0.0209 ], physical=[0.08211 0.0209 ]
+solver time:  3.417601
+plant_input_stage0: full=[0.08172 0.06184], physical=[0.08172 0.06184]
+solver time:  3.093416
+plant_input_stage0: full=[0.08194 0.03699], physical=[0.08194 0.03699]
+solver time:  2.868325
+plant_input_stage0: full=[0.0823  0.00562], physical=[0.0823  0.00562]
+solver time:  2.359143
+plant_input_stage0: full=[ 0.08231 -0.04377], physical=[ 0.08231 -0.04377]
+solver time:  2.808288
+plant_input_stage0: full=[ 0.08213 -0.0237 ], physical=[ 0.08213 -0.0237 ]
+solver time:  2.808188
+plant_input_stage0: full=[ 0.08219 -0.04119], physical=[ 0.08219 -0.04119]
+solver time:  2.980864
+plant_input_stage0: full=[ 0.08182 -0.00379], physical=[ 0.08182 -0.00379]
+solver time:  3.787799
+plant_input_stage0: full=[0.08142 0.03904], physical=[0.08142 0.03904]
+solver time:  3.564691
+plant_input_stage0: full=[0.10662 0.58217], physical=[0.10662 0.58217]
+solver time:  2.947059
+plant_input_stage0: full=[ 0.09897 -0.41427], physical=[ 0.09897 -0.41427]
+solver time:  3.053168
+plant_input_stage0: full=[ 0.09539 -1.     ], physical=[ 0.09539 -1.     ]
+solver time:  3.455714
+plant_input_stage0: full=[ 0.08048 -1.     ], physical=[ 0.08048 -1.     ]
+solver time:  3.240845
+plant_input_stage0: full=[ 0.07834 -1.     ], physical=[ 0.07834 -1.     ]
+solver time:  3.228442
+plant_input_stage0: full=[ 0.07842 -1.     ], physical=[ 0.07842 -1.     ]
+solver time:  3.072823
+plant_input_stage0: full=[ 0.07771 -1.     ], physical=[ 0.07771 -1.     ]
+solver time:  3.749218
+plant_input_stage0: full=[ 0.07744 -0.91276], physical=[ 0.07744 -0.91276]
+solver time:  3.216834
+plant_input_stage0: full=[ 0.07672 -0.8294 ], physical=[ 0.07672 -0.8294 ]
+solver time:  2.573653
+plant_input_stage0: full=[ 0.07893 -0.89008], physical=[ 0.07893 -0.89008]
+solver time:  2.343455
+plant_input_stage0: full=[ 0.0808  -0.04055], physical=[ 0.0808  -0.04055]
+solver time:  2.397319
+plant_input_stage0: full=[0.08228 0.34713], physical=[0.08228 0.34713]
+solver time:  2.398678
+plant_input_stage0: full=[0.08242 0.28805], physical=[0.08242 0.28805]
+solver time:  2.425965
+plant_input_stage0: full=[0.08333 0.18902], physical=[0.08333 0.18902]
+solver time:  2.411438
+plant_input_stage0: full=[0.08381 0.12887], physical=[0.08381 0.12887]
+solver time:  2.316748
+plant_input_stage0: full=[0.08389 0.09033], physical=[0.08389 0.09033]
+solver time:  2.25034
+plant_input_stage0: full=[0.08412 0.3765 ], physical=[0.08412 0.3765 ]
+solver time:  2.361663
+plant_input_stage0: full=[0.08398 0.37362], physical=[0.08398 0.37362]
+solver time:  2.768477
+plant_input_stage0: full=[0.08394 0.39365], physical=[0.08394 0.39365]
+solver time:  2.781719
+plant_input_stage0: full=[0.08382 0.18181], physical=[0.08382 0.18181]
+solver time:  2.413305
+plant_input_stage0: full=[0.08098 0.78461], physical=[0.08098 0.78461]
+solver time:  2.277552
+plant_input_stage0: full=[0.0763 1.    ], physical=[0.0763 1.    ]
+solver time:  2.342007
+plant_input_stage0: full=[0.09583 1.     ], physical=[0.09583 1.     ]
+solver time:  2.196568
+plant_input_stage0: full=[0.09414 1.     ], physical=[0.09414 1.     ]
+solver time:  2.201859
+plant_input_stage0: full=[0.09144 1.     ], physical=[0.09144 1.     ]
+solver time:  2.369474
+plant_input_stage0: full=[0.08786 1.     ], physical=[0.08786 1.     ]
+solver time:  2.066782
+plant_input_stage0: full=[0.08353 0.262  ], physical=[0.08353 0.262  ]
+solver time:  2.12877
+plant_input_stage0: full=[0.07864 0.08791], physical=[0.07864 0.08791]
+solver time:  2.151964
+plant_input_stage0: full=[0.07734 0.05827], physical=[0.07734 0.05827]
+solver time:  2.139973
+plant_input_stage0: full=[0.07591 0.03623], physical=[0.07591 0.03623]
+solver time:  2.238947
+plant_input_stage0: full=[0.07437 0.01971], physical=[0.07437 0.01971]
+solver time:  2.14223
+plant_input_stage0: full=[0.07273 0.00752], physical=[0.07273 0.00752]
+solver time:  2.318069
+plant_input_stage0: full=[ 0.07094 -0.00109], physical=[ 0.07094 -0.00109]
+solver time:  2.200788
+plant_input_stage0: full=[ 0.06905 -0.00719], physical=[ 0.06905 -0.00719]
+solver time:  2.260556
+plant_input_stage0: full=[ 0.06708 -0.0065 ], physical=[ 0.06708 -0.0065 ]
+solver time:  2.253719
+plant_input_stage0: full=[0.065   0.01921], physical=[0.065   0.01921]
+solver time:  2.642271
+plant_input_stage0: full=[0.06286 0.0168 ], physical=[0.06286 0.0168 ]
+solver time:  2.434973
+plant_input_stage0: full=[0.06078 0.01463], physical=[0.06078 0.01463]
+solver time:  2.285914
+plant_input_stage0: full=[0.05919 0.01193], physical=[0.05919 0.01193]
+solver time:  2.283115
+plant_input_stage0: full=[0.05799 0.01014], physical=[0.05799 0.01014]
+solver time:  2.311457
+plant_input_stage0: full=[0.05689 0.00852], physical=[0.05689 0.00852]
+solver time:  2.373788
+plant_input_stage0: full=[0.05576 0.00711], physical=[0.05576 0.00711]
+solver time:  2.743488
+plant_input_stage0: full=[0.06053 0.00609], physical=[0.06053 0.00609]
+solver time:  2.594056
+plant_input_stage0: full=[0.0583  0.00532], physical=[0.0583  0.00532]
+solver time:  2.880651
+plant_input_stage0: full=[0.05624 0.00486], physical=[0.05624 0.00486]
+solver time:  3.229515
+plant_input_stage0: full=[0.05426 0.00483], physical=[0.05426 0.00483]
+solver time:  3.44025
+plant_input_stage0: full=[ 0.05237 -0.09261], physical=[ 0.05237 -0.09261]
+solver time:  2.933416
+plant_input_stage0: full=[0.05451 0.6469 ], physical=[0.05451 0.6469 ]
+solver time:  3.668746
+plant_input_stage0: full=[0.04284 1.     ], physical=[0.04284 1.     ]
+solver time:  4.26948
+plant_input_stage0: full=[0.04345 1.     ], physical=[0.04345 1.     ]
+solver time:  3.980364
+plant_input_stage0: full=[0.04366 1.     ], physical=[0.04366 1.     ]
+solver time:  5.217451
+plant_input_stage0: full=[0.04375 0.97284], physical=[0.04375 0.97284]
+solver time:  4.046698
+plant_input_stage0: full=[0.04196 0.86345], physical=[0.04196 0.86345]
+solver time:  3.286948
+plant_input_stage0: full=[0.03994 0.88076], physical=[0.03994 0.88076]
+solver time:  4.090537
+plant_input_stage0: full=[0.03802 0.78912], physical=[0.03802 0.78912]
+solver time:  3.796769
+plant_input_stage0: full=[0.03604 0.79319], physical=[0.03604 0.79319]
+solver time:  3.104283
+plant_input_stage0: full=[0.03405 0.70622], physical=[0.03405 0.70622]
+solver time:  2.779681
+plant_input_stage0: full=[0.03207 0.70633], physical=[0.03207 0.70633]
+solver time:  4.143374
+plant_input_stage0: full=[0.03021 0.62718], physical=[0.03021 0.62718]
+solver time:  3.913411
+plant_input_stage0: full=[0.02841 0.62528], physical=[0.02841 0.62528]
+solver time:  2.902418
+plant_input_stage0: full=[0.02671 0.55326], physical=[0.02671 0.55326]
+solver time:  2.813469
+plant_input_stage0: full=[0.02508 0.36854], physical=[0.02508 0.36854]
+solver time:  2.862355
+plant_input_stage0: full=[0.02357 0.00256], physical=[0.02357 0.00256]
+solver time:  5.225631
+plant_input_stage0: full=[0.02214 0.00267], physical=[0.02214 0.00267]
+solver time:  3.247249
+plant_input_stage0: full=[0.02079 0.0024 ], physical=[0.02079 0.0024 ]
+solver time:  3.391722
+plant_input_stage0: full=[0.01953 0.00216], physical=[0.01953 0.00216]
+solver time:  4.155257
+plant_input_stage0: full=[0.01834 0.00197], physical=[0.01834 0.00197]
+solver time:  3.528346
+plant_input_stage0: full=[0.01722 0.00182], physical=[0.01722 0.00182]
+solver time:  2.798813
+plant_input_stage0: full=[0.01617 0.0017 ], physical=[0.01617 0.0017 ]
+solver time:  2.875122
+plant_input_stage0: full=[0.01519 0.0016 ], physical=[0.01519 0.0016 ]
+solver time:  2.672838
+plant_input_stage0: full=[0.01426 0.00153], physical=[0.01426 0.00153]
+solver time:  2.422365
+plant_input_stage0: full=[0.0134  0.00147], physical=[0.0134  0.00147]
+solver time:  2.69023
+plant_input_stage0: full=[0.01258 0.00144], physical=[0.01258 0.00144]
+solver time:  2.703721
+plant_input_stage0: full=[0.01181 0.00141], physical=[0.01181 0.00141]
+solver time:  2.63472
+plant_input_stage0: full=[0.0111  0.00141], physical=[0.0111  0.00141]
+solver time:  3.061289
+plant_input_stage0: full=[0.01042 0.00141], physical=[0.01042 0.00141]
+solver time:  2.453353
+plant_input_stage0: full=[0.00979 0.00142], physical=[0.00979 0.00142]
+solver time:  3.898322
+plant_input_stage0: full=[0.00919 0.00145], physical=[0.00919 0.00145]
+solver time:  2.800878
+plant_input_stage0: full=[0.00863 0.00148], physical=[0.00863 0.00148]
+solver time:  2.389978
+plant_input_stage0: full=[0.00811 0.00152], physical=[0.00811 0.00152]
+solver time:  2.293328
+plant_input_stage0: full=[0.00761 0.00157], physical=[0.00761 0.00157]
+solver time:  2.449091
+plant_input_stage0: full=[0.00715 0.00163], physical=[0.00715 0.00163]
+solver time:  2.494209
+plant_input_stage0: full=[0.00671 0.00169], physical=[0.00671 0.00169]
+solver time:  2.482988
+plant_input_stage0: full=[0.00631 0.00176], physical=[0.00631 0.00176]
+목적지에 도착했습니다! 현재 위치: [1.80973 0.0974 ], 시간: 37.30초
+Using obca optimizer with differential_drive dynamics:
+median:  3.276967
+std:  1.6323481656027063
+min:  1.33378
+max:  12.324188
+Simulation finished.
+Run outcome: status=success, reason=None, final_time=37.30000000000026, distance_to_goal=0.009729232138228773
+Trial history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_gaussian_20260916/safe/obca/seed44/data/trial_history_MPC_OBCA_rectangle_maze_gaussian_20260916_startseed44.csv
+Single test completed.
+RESULT obca 44 success None

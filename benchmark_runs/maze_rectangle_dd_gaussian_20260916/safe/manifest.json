@@ -1,0 +1,48 @@
+{
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "methods": [
+    "dcbf",
+    "obca",
+    "psdf"
+  ],
+  "standard_deviation": [
+    0.02,
+    0.02,
+    0.05
+  ],
+  "units": [
+    "m",
+    "m",
+    "rad"
+  ],
+  "distribution": "safe",
+  "simulation_time": 60.0,
+  "planner": "astar",
+  "source_sha256": {
+    "test_nmpc.py": "f6638788ac3c4ef19d91a2b7245e38315755490d52f9bd03085a63b974e53c24",
+    "sim/simulation_mpc.py": "490b30be79da098a0f088c6a541d90df39f725cabe15d7841f1083d45c934037",
+    "sim/simulation.py": "eda18159e4de5418a91dae1678a2517a1afe75fbe74de796d6d8bab3ef02c48a",
+    "sim/start_perturbation.py": "df2d75ffde9da1594208f2c1474a6ca339faa3d19b47c51df943686fd69be217",
+    "control/dcbf_optimizer.py": "b30d71fcdb3d704b54659747a92758581c822d0631c63a4d50192e0659d6a19b",
+    "control/obca_optimizer.py": "736a8a0b875bf8dc2a55a7fff31f7fcc0262c25f556990743a7da7ca03251626",
+    "control/psdf_optimizer.py": "62ad3a548673b10a4f8e6a917a3fe4c22df502dc93591f95d7a00918882be192",
+    "control/controller.py": "f395e785be281d5107f7a6423c484821940286efcd1b851fffd696f73bc45ca6",
+    "models/dd.py": "9a302cb6eb8854e7fc10a62701d7995faac92c9b3459d68be44b01651f25a401",
+    "models/psdf.py": "46aa5fc3b47a2ed0e08b28156bd08d69d67c46aa11f5f149949a46b91c4dd777",
+    "models/psdf_wrapper.py": "b84867f96b71ba46483e5ec34266c6c9efdabd56ce03d0da3b0472daa8f71a81",
+    "planning/path_generator/search_path_generator.py": "a31269c633749d227e60502e8bde1e117db064d5af28cb57c2736fde41f348f3",
+    "planning/trajectory_generator/constant_speed_generator.py": "809666ee4296118304de0f6332a7633e1299a1021599e40f8a06fe45ddf8b40c",
+    "config/config.yaml": "a64d4806593303a7bf021d80785b72e0bd8903b367c00a85e9a021ca98f6aa38"
+  },
+  "source_commit": "c11a3b24e4d62ac3ba52c603cb88ad88ea12b4d9",
+  "git_status": " D animations/psdf/MPC_psdf_rectangle_maze.mp4\n D animations/psdf/MPC_psdf_rectangle_s_path.mp4\n?? benchmark_runs/maze_rectangle_dd_gaussian_20260916/\n",
+  "workers": 6,
+  "additional_workers": 5,
+  "max_concurrent_workers": 11
+}

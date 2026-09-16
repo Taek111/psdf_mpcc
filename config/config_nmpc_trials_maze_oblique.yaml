@@ -1,0 +1,57 @@
+# 100 trials per environment-method configuration: 2 x 3 x 100 = 600 runs.
+# python test_nmpc.py -c config/config_nmpc_trials_maze_oblique.yaml
+trials: 100
+
+start_perturbation:
+  enabled: true
+  seed: 0
+  position_std: 0.005
+  heading_std_deg: 0.0
+  max_sigma: 3.0
+  min_clearance: 0.01
+  max_attempts: 1000
+
+defaults:
+  simulation_time: 60.0
+  generate_animation: false
+  generate_plots: false
+
+localization_error:
+  enabled: false
+
+test_configs:
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: psdf
+    dynamics_type: differential_drive
+    path_planner: astar
+
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: dcbf
+    dynamics_type: differential_drive
+    path_planner: astar
+
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: obca
+    dynamics_type: differential_drive
+    path_planner: astar
+
+  - maze_type: oblique_maze
+    robot_shape: rectangle
+    optimizer_type: psdf
+    dynamics_type: differential_drive
+    path_planner: astar
+
+  - maze_type: oblique_maze
+    robot_shape: rectangle
+    optimizer_type: dcbf
+    dynamics_type: differential_drive
+    path_planner: astar
+
+  - maze_type: oblique_maze
+    robot_shape: rectangle
+    optimizer_type: obca
+    dynamics_type: differential_drive
+    path_planner: astar

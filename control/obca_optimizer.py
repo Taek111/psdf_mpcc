@@ -1,4 +1,4 @@
-import datetime
+import time
 
 import casadi as ca
 import numpy as np
@@ -222,11 +222,10 @@ class OBCAOptimizer:
             cost += self.costs[cost_name]
         self.opti.minimize(cost)
         option = {"verbose": False, "ipopt.print_level": 0, "print_time": 0}
-        start_timer = datetime.datetime.now()
         self.opti.solver("ipopt", option)
+        start_timer = time.perf_counter()
         opt_sol = self.opti.solve()
-        end_timer = datetime.datetime.now()
-        delta_timer = end_timer - start_timer
-        self.solver_times.append(delta_timer.total_seconds())
-        print("solver time: ", delta_timer.total_seconds())
+        solve_time = time.perf_counter() - start_timer
+        self.solver_times.append(solve_time)
+        print("solver time: ", solve_time)
         return opt_sol

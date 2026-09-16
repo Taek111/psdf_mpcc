@@ -1,0 +1,234 @@
+{
+  "status": "success",
+  "failure_reason": null,
+  "goal_reached": true,
+  "final_time": 37.90000000000027,
+  "distance_to_goal": 0.009497118789356891,
+  "start_perturbation": {
+    "enabled": true,
+    "seed": 42,
+    "position_std": 0.02,
+    "heading_std_deg": 2.8647889756541165,
+    "max_sigma": 3.0,
+    "min_clearance": 0.01,
+    "max_attempts": 1000,
+    "nominal_pose": [
+      0.075,
+      0.7949999999999999,
+      -1.5707963267948966
+    ],
+    "initial_pose": [
+      0.08109434159508863,
+      0.7742003178751901,
+      -1.5332737670045737
+    ],
+    "delta_pose": [
+      0.006094341595088627,
+      -0.020799682124809912,
+      0.03752255979032287
+    ],
+    "nominal_clearance": 0.029999999999999992,
+    "initial_clearance": 0.021123801733685804,
+    "attempts": 1
+  },
+  "current_name": "MPC_OBCA_rectangle_maze_gaussian_20260916_startseed42",
+  "output_root_dir": "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_gaussian_20260916/safe/obca/seed42",
+  "final_pose": [
+    1.8099448109159813,
+    0.09730863885408945,
+    -0.37736597034582037
+  ],
+  "completed_steps": 379,
+  "captured_final_time": 37.90000000000027,
+  "minimum_sampled_clearance": 0.00023958666121807342,
+  "contact_or_collision_samples": 0,
+  "solver_failure_steps": 0,
+  "optimizer_class": "OBCAOptimizer",
+  "parameters": {
+    "horizon": 20,
+    "horizon_dcbf": 20,
+    "mat_Q": [
+      [
+        10.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        10.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "mat_R": [
+      [
+        20.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "mat_Rold": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "mat_dR": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "gamma": 0.8,
+    "pomega": 10.0,
+    "margin_dist": 0.0001,
+    "terminal_weight": 1.0,
+    "vmin": -0.6,
+    "vmax": 0.6,
+    "omegamin": -1.0,
+    "omegamax": 1.0
+  },
+  "global_path": [
+    [
+      0.09375,
+      0.7687499999999999
+    ],
+    [
+      0.09375,
+      0.5812499999999999
+    ],
+    [
+      0.20625,
+      0.54375
+    ],
+    [
+      0.54375,
+      0.61875
+    ],
+    [
+      0.65625,
+      0.65625
+    ],
+    [
+      0.7687499999999999,
+      0.65625
+    ],
+    [
+      0.91875,
+      0.54375
+    ],
+    [
+      1.0687499999999999,
+      0.54375
+    ],
+    [
+      1.21875,
+      0.65625
+    ],
+    [
+      1.51875,
+      0.69375
+    ],
+    [
+      1.66875,
+      0.80625
+    ],
+    [
+      1.8187499999999999,
+      0.80625
+    ],
+    [
+      1.85625,
+      0.69375
+    ],
+    [
+      1.85625,
+      0.43124999999999997
+    ],
+    [
+      1.74375,
+      0.28125
+    ],
+    [
+      1.74375,
+      0.13125
+    ],
+    [
+      1.8187499999999999,
+      0.09375
+    ]
+  ],
+  "goal_pose": [
+    1.7999999999999998,
+    0.09,
+    0.0
+  ],
+  "goal_angle_checked": false,
+  "method": "obca",
+  "seed": 42,
+  "trial": 1,
+  "distribution": "safe",
+  "initial_pose": [
+    0.08109434159508863,
+    0.7742003178751901,
+    -1.5332737670045737
+  ],
+  "wall_seconds": 2173.7559910669997,
+  "cli": [
+    "--single",
+    "--config",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_gaussian_20260916/safe/obca/seed42/config.yaml",
+    "--maze-type",
+    "maze",
+    "--robot-shape",
+    "rectangle",
+    "--dynamics-type",
+    "differential_drive",
+    "--optimizer-type",
+    "obca",
+    "--path-planner",
+    "astar",
+    "--simulation-time",
+    "60",
+    "--no-animation",
+    "--no-plots"
+  ],
+  "python": "3.8.10 (default, Mar 18 2025, 20:04:55) \n[GCC 9.4.0]",
+  "numpy": "1.24.4",
+  "torch": "1.13.1+cpu",
+  "casadi": "3.7.1",
+  "source_sha256": {
+    "test_nmpc.py": "f6638788ac3c4ef19d91a2b7245e38315755490d52f9bd03085a63b974e53c24",
+    "sim/simulation_mpc.py": "490b30be79da098a0f088c6a541d90df39f725cabe15d7841f1083d45c934037",
+    "sim/simulation.py": "eda18159e4de5418a91dae1678a2517a1afe75fbe74de796d6d8bab3ef02c48a",
+    "sim/start_perturbation.py": "df2d75ffde9da1594208f2c1474a6ca339faa3d19b47c51df943686fd69be217",
+    "control/dcbf_optimizer.py": "b30d71fcdb3d704b54659747a92758581c822d0631c63a4d50192e0659d6a19b",
+    "control/obca_optimizer.py": "736a8a0b875bf8dc2a55a7fff31f7fcc0262c25f556990743a7da7ca03251626",
+    "control/psdf_optimizer.py": "62ad3a548673b10a4f8e6a917a3fe4c22df502dc93591f95d7a00918882be192",
+    "control/controller.py": "f395e785be281d5107f7a6423c484821940286efcd1b851fffd696f73bc45ca6",
+    "models/dd.py": "9a302cb6eb8854e7fc10a62701d7995faac92c9b3459d68be44b01651f25a401",
+    "models/psdf.py": "46aa5fc3b47a2ed0e08b28156bd08d69d67c46aa11f5f149949a46b91c4dd777",
+    "models/psdf_wrapper.py": "b84867f96b71ba46483e5ec34266c6c9efdabd56ce03d0da3b0472daa8f71a81",
+    "planning/path_generator/search_path_generator.py": "a31269c633749d227e60502e8bde1e117db064d5af28cb57c2736fde41f348f3",
+    "planning/trajectory_generator/constant_speed_generator.py": "809666ee4296118304de0f6332a7633e1299a1021599e40f8a06fe45ddf8b40c",
+    "config/config.yaml": "a64d4806593303a7bf021d80785b72e0bd8903b367c00a85e9a021ca98f6aa38"
+  },
+  "source_unchanged": true,
+  "navigation_success": true,
+  "collision_free_success": true
+}

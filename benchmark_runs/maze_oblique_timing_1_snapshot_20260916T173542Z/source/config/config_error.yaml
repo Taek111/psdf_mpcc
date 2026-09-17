@@ -1,0 +1,33 @@
+# Localization-error experiment defaults for `test_nmpc_with_error.py`
+#
+# This file is intended to be used with the helper shell script
+# `run_config_error_trials.sh`, which runs:
+# - maze environment
+# - rectangle robot
+# - planners: rmpcc, rmpcc_pv, mpcc, psdf
+# - 2 trials per planner by default
+
+localization_error:
+  enabled: true
+  position_noise_frame: "local"
+  front_lateral_noise_std: [0.01, 0.005]
+  heading_noise_std_deg: 1.0
+  seed: 7
+
+success_criteria:
+  position_tolerance: 0.1
+  angle_tolerance: 0.2
+
+trial_failure_criteria:
+  enabled: true
+  movement_window_sec: 4.0
+  movement_threshold: 0.03
+  max_consecutive_solver_failures: 20
+
+defaults:
+  simulation_time: 60.0
+  generate_animation: false
+  generate_plots: true
+  speed_range: [0.0, 0.30]
+  clearance_range: [-0.08, 0.08]
+  risk_range: [0.0, 0.035]

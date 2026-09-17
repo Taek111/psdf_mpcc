@@ -69,46 +69,49 @@ class Robot:
         self._system.update(self._control_action)
         self._system.logging(self._system_logger)
 
-    def is_goal_reached(self, position_tolerance=0.01, angle_tolerance=0.01):
+    def _get_goal_position(self):
+        if self._global_path is None or len(self._global_path) == 0:
+            return None
+
+        goal_position = self._global_path[-1]
+        planner = getattr(self, "_global_planner", None)
+        if hasattr(planner, "get_path_poses"):
+            poses = planner.get_path_poses()
+            if poses is not None and len(poses) > 0:
+                goal_position = poses[-1]
+        return np.asarray(goal_position)
+
+    def is_goal_reached(self, position_tolerance=0.02, angle_tolerance=None):
         """
         목표 경로의 마지막 지점에 도달했는지 확인합니다.
         
         Args:
-            position_tolerance: 위치 도착 판정 거리 임계값 (미터)
-            angle_tolerance: 각도 도착 판정 임계값 (라디안)
+            position_tolerance: x/y L1 거리 임계값 (미터, 기본 0.02)
+            angle_tolerance: 명시한 경우에만 적용할 각도 임계값 (라디안)
             
         Returns:
             bool: 목적지 도착 여부
         """
-        if self._global_path is None or len(self._global_path) == 0:
+        goal_pos = self._get_goal_position()
+        if goal_pos is None:
             return False
 
-        # 기본적으로 global_path의 마지막 점을 목표로 설정
-        goal_position = self._global_path[-1]
-
-        # global_planner가 전체 pose(자세) 정보를 제공하는 경우, 해당 정보를 사용
-        if hasattr(self._global_planner, 'get_path_poses'):
-            poses = self._global_planner.get_path_poses()
-            if poses is not None and len(poses) > 0:
-                goal_position = poses[-1]
-
         current_pos = self._get_navigation_state()  # [x, y, theta]
-        goal_pos = np.array(goal_position)
         
         # 위치만 비교 (x, y 좌표)
         current_xy = current_pos[:2]
         goal_xy = goal_pos[:2]
 
-        # 유클리디안 거리 계산
-        distance = np.linalg.norm(current_xy - goal_xy)
+        # 위치 오차만 합산: |dx| + |dy|. 각도(rad)는 거리(m)에 합산하지 않음.
+        distance = np.linalg.norm(current_xy - goal_xy, ord=1)
 
-        # 각도 오차(θ)가 제공된 경우에만 계산
-        if len(goal_pos) >= 3 and len(current_pos) >= 3:
+        # 기본 성공 판정은 위치만 사용하며, 명시한 각도 조건은 유지한다.
+        if angle_tolerance is not None and len(goal_pos) >= 3 and len(current_pos) >= 3:
             # 회전 각도 오차를 -pi ~ pi 범위로 정규화
             angle_err = abs(((current_pos[2] - goal_pos[2] + math.pi) % (2 * math.pi)) - math.pi)
             return (distance <= position_tolerance) and (angle_err <= angle_tolerance)
         else:
-            # goal θ가 정의되지 않은 경우 위치만으로 도착 판정
+            # 각도 조건이 없으면 위치만으로 도착 판정
             return distance <= position_tolerance
 
 
@@ -118,21 +121,25 @@ class SingleAgentSimulation:
         robot,
         obstacles,
         goal_position,
-        goal_position_tolerance=0.01,
-        goal_angle_tolerance=0.01,
+        goal_position_tolerance=0.02,
+        goal_angle_tolerance=None,
         failure_checker=None,
     ):
         self._robot = robot
         self._obstacles = obstacles
         self._goal_position = goal_position
         self._goal_position_tolerance = float(goal_position_tolerance)
-        self._goal_angle_tolerance = float(goal_angle_tolerance)
+        self._goal_angle_tolerance = (
+            None if goal_angle_tolerance is None else float(goal_angle_tolerance)
+        )
         self._failure_checker = failure_checker
 
     def _distance_to_goal(self):
         current_pos = self._robot._get_navigation_state()[:2]
-        goal_xy = self._robot._global_path[-1][:2]
-        return float(np.linalg.norm(current_pos - goal_xy))
+        goal_position = self._robot._get_goal_position()
+        if goal_position is None:
+            return float("inf")
+        return float(np.linalg.norm(current_pos - goal_position[:2], ord=1))
 
     def run_navigation(self, navigation_time):
         self._robot.run_global_planner(self._robot._system, self._obstacles, self._goal_position)
@@ -141,9 +148,10 @@ class SingleAgentSimulation:
         print(f"목적지: {self._goal_position[:2]}")
         print(
             "도착 판정 기준: "
-            f"position <= {self._goal_position_tolerance}m, "
-            f"angle <= {self._goal_angle_tolerance}rad"
+            f"position L1 <= {self._goal_position_tolerance}m"
         )
+        if self._goal_angle_tolerance is not None:
+            print(f"추가 각도 판정 기준: angle <= {self._goal_angle_tolerance}rad (목표 자세가 있는 경우)")
         
         while self._robot._system._time < navigation_time:
             self._robot.run_local_planner()
@@ -177,8 +185,7 @@ class SingleAgentSimulation:
         else:
             # while loop이 시간 초과로 종료된 경우
             current_pos = self._robot._get_navigation_state()[:2]
-            goal_xy = self._robot._global_path[-1][:2]
-            distance_to_goal = np.linalg.norm(current_pos - goal_xy)
+            distance_to_goal = self._distance_to_goal()
             print(f"시간 초과로 시뮬레이션 종료. 현재 위치: {current_pos}, 목적지까지 거리: {distance_to_goal:.3f}m")
             return {
                 "status": "timeout",

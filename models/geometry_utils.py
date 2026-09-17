@@ -130,7 +130,10 @@ class PolytopeRegion(ConvexRegion2D):
         return self.mat_A, self.vec_b.reshape(self.vec_b.shape[0], -1)
 
     def get_plot_patch(self):
-        return patches.Polygon(self.points, closed=True, linewidth=1, edgecolor="k", facecolor="r")
+        # Vertex enumeration does not guarantee boundary order.
+        return patches.Polygon(
+            self.get_ccw_vertices(), closed=True, linewidth=1, edgecolor="k", facecolor="r"
+        )
     
     def get_ccw_vertices(self):
         """Returns the vertices of the polytope in counter-clockwise order"""

@@ -14,7 +14,8 @@
 
 ## NMPC 반복 실험 (`test_nmpc.py`)
 - 설정: `config/config_nmpc_trials_maze_oblique.yaml`. `maze`/`oblique_maze` × `psdf`/`dcbf`/`obca`를 조합별 100 trial씩, 총 600회 실행한다. 동역학은 DD(`differential_drive`), footprint는 `rectangle`, planner는 A*이다.
-- Trial당 시뮬레이션 제한은 60초. 시작 x/y에 Gaussian perturbation(표준편차 5 mm, ±3σ 제한, 초기 clearance ≥ 10 mm)을 적용하고 heading은 고정한다. Seed는 0–99이며 같은 환경·trial 번호에서 방법 간 동일한 시작 pose를 사용한다. Localization error와 animation/plot은 끈다.
+- Trial당 시뮬레이션 제한은 60초. 시작 pose에 Gaussian perturbation(x/y 표준편차 각각 20 mm, heading 표준편차 0.05 rad ≈ 2.864789°, ±3σ 제한, 초기 clearance ≥ 10 mm)을 적용한다. Seed는 0–99이며 같은 환경·trial 번호에서 방법 간 동일한 시작 pose를 사용한다. Localization error와 animation/plot은 끈다.
+- `trial_failure_criteria`는 활성화하며 `movement_window_sec=4.0`, `movement_threshold=0.03`, `max_consecutive_solver_failures=20`을 사용한다. PSDF의 acados status가 0이 아니면 공통 checker의 연속 실패 횟수에 반영한다. 성공 시 횟수를 초기화하며 연속 20회 실패하면 해당 trial을 `failure`로 저장하고 다음 실행으로 진행한다. Solver 예외는 별도로 `error` 처리한다.
 - 같은 PC·실행 환경에서 순차 실행한다. 프로젝트 루트에서 아래 명령을 사용하며, 재실행에는 새 `--results-dir`를 지정한다(기존 CSV 덮어쓰기 및 resume 미지원).
 
 ```bash
@@ -30,4 +31,3 @@ python test_nmpc.py -c config/config_nmpc_trials_maze_oblique.yaml --trials 100 
 ## Coding Style & Naming Conventions
 - PEP 8, 4-space indents, type hints where practical.
 - `snake_case` files/functions, `CamelCase` classes, `UPPER_SNAKE_CASE` constants.
-

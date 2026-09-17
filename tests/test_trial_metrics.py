@@ -11,7 +11,8 @@ from unittest.mock import Mock, patch
 import numpy as np
 
 from control.controller import BaseController
-from sim.simulation_mpc import simulation_mpc
+from sim.simulation import Robot, SingleAgentSimulation
+from sim.simulation_mpc import TrialFailureChecker, simulation_mpc
 from sim.trial_metrics import TrialMetricsRecorder, collect_successful_solver_steps
 from test_nmpc import build_parser, run_single_test, run_trial_batch
 
@@ -135,6 +136,65 @@ class TrialMetricsTest(unittest.TestCase):
         self.assertIs(controller.get_last_solver_status_info()["success"], False)
 
 
+class GoalReachedTest(unittest.TestCase):
+    @staticmethod
+    def robot(state, goal=(0.0, 0.0, 0.0)):
+        robot = Robot(SimpleNamespace(get_state=lambda: np.asarray(state)))
+        robot._global_path = [np.asarray(goal)]
+        return robot
+
+    def test_l1_position_threshold_includes_boundary_and_ignores_heading_by_default(self):
+        for state, expected in (
+            ((0.012, -0.008, np.pi), True),  # L1 = 20 mm.
+            ((0.02, 0.0, np.pi), True),
+            ((0.015, 0.01, 0.0), False),  # L2 < 20 mm, L1 > 20 mm.
+            ((0.020001, 0.0, 0.0), False),
+        ):
+            with self.subTest(state=state):
+                self.assertEqual(self.robot(state).is_goal_reached(), expected)
+
+    def test_explicit_angle_tolerance_is_preserved(self):
+        robot = self.robot((0.005, 0.005, np.pi))
+        self.assertTrue(robot.is_goal_reached())
+        self.assertFalse(robot.is_goal_reached(angle_tolerance=0.2))
+
+    def test_logged_distance_uses_same_planner_goal_and_l1_metric(self):
+        robot = self.robot((0.015, 0.01, 0.0), goal=(10.0, 10.0))
+        robot._global_planner = SimpleNamespace(
+            get_path_poses=lambda: [np.zeros(3)],
+        )
+        simulation = SingleAgentSimulation(robot, [], np.zeros(3))
+        self.assertAlmostEqual(simulation._distance_to_goal(), 0.025)
+        self.assertFalse(robot.is_goal_reached())
+        robot._global_path = []
+        self.assertFalse(robot.is_goal_reached())
+
+    def test_success_criteria_defaults_to_20mm_without_angle_condition(self):
+        criteria = simulation_mpc()._build_success_criteria({})
+        self.assertEqual(criteria["position_tolerance"], 0.02)
+        self.assertIsNone(criteria["angle_tolerance"])
+
+
+class TrialFailureCheckerTest(unittest.TestCase):
+    def test_stuck_detection_keeps_boundary_sample_after_repeated_time_steps(self):
+        checker = TrialFailureChecker(4.0, 0.03, 20)
+        system = SimpleNamespace(_time=0.0)
+        robot = SimpleNamespace(
+            _system=system,
+            _get_navigation_state=lambda: np.zeros(3),
+        )
+        simulation = SimpleNamespace(_robot=robot)
+
+        for _ in range(40):
+            system._time += 0.1
+            self.assertIsNone(checker(simulation))
+
+        system._time += 0.1
+        failure = checker(simulation)
+        self.assertIsNotNone(failure)
+        self.assertIn("stuck_for_4.00s", failure["reason"])
+
+
 class TrialBatchTest(unittest.TestCase):
     @staticmethod
     def config():
@@ -201,6 +261,77 @@ class TrialBatchTest(unittest.TestCase):
             summary = read_rows(Path(directory) / "summary.csv")[-1]
             self.assertEqual(summary["completed_trials"], "0")
             self.assertEqual(summary["success_rate"], "")
+
+    def test_psdf_consecutive_failure_limit_resets_on_success_and_batch_continues(self):
+        from control.psdf_optimizer import PSDFOptimizer
+
+        solvers = []
+
+        def fake_test(sim, **kwargs):
+            optimizer = PSDFOptimizer()
+            optimizer.ped_model = None
+            optimizer.N = 1
+            optimizer.setup = Mock()
+            solver = Mock(status=0)
+            # The first trial recovers after 19 failures, then fails 20 times.
+            # The next trial recovers from one failure and reaches the goal.
+            statuses = iter([3] * 19 + [0] + [3] * 20 if not solvers else [3, 0])
+
+            def fake_solve():
+                solver.status = next(statuses)
+                return solver.status
+
+            solver.solve.side_effect = fake_solve
+            solver.get.side_effect = lambda stage, field: np.zeros(3 if field == "x" else 2)
+            optimizer.solver = solver
+            solvers.append(solver)
+
+            system = SimpleNamespace(
+                _dt=0.1, _time=0.0, get_state=lambda: np.zeros(3), logging=Mock(),
+            )
+
+            def update_system(control_input):
+                system._time += system._dt
+
+            system.update = update_system
+            robot = Robot(system)
+            robot.set_controller(BaseController(optimizer, None))
+            robot._global_path = [np.array([1.0, 1.0])]
+            robot._local_trajectory = []
+            robot.run_global_planner = Mock()
+            robot.run_local_planner = Mock()
+            robot.is_goal_reached = Mock(return_value=False)
+            if len(solvers) == 2:
+                robot.is_goal_reached.side_effect = [False, True]
+            sim.robot = robot
+            sim.sim = SingleAgentSimulation(
+                robot, [], np.array([1.0, 1.0, 0.0]),
+                failure_checker=sim._build_trial_failure_checker(kwargs["config"]),
+            )
+            sim.last_run_outcome = sim.sim.run_navigation(kwargs["simulation_time"])
+
+        with tempfile.TemporaryDirectory() as directory:
+            args = build_parser().parse_args(["--trials", "2", "--results-dir", directory])
+            config = self.config()
+            config["test_configs"] = config["test_configs"][:1]
+            config["defaults"]["simulation_time"] = 6.0
+            config["trial_failure_criteria"] = {
+                "enabled": True, "movement_window_sec": 4.0,
+                "movement_threshold": 0.03, "max_consecutive_solver_failures": 20,
+            }
+            with patch.object(simulation_mpc, "mpc_test", fake_test), contextlib.redirect_stdout(io.StringIO()):
+                rows = run_trial_batch(args, config)
+
+            self.assertEqual([row["status"] for row in rows], ["failure", "success"])
+            self.assertEqual([row["success"] for row in rows], [0, 1])
+            self.assertIn("consecutive_solver_failures(20)", rows[0]["failure_reason"])
+            self.assertEqual([row["successful_solver_steps"] for row in rows], [1, 1])
+            self.assertEqual([solver.solve.call_count for solver in solvers], [40, 2])
+            self.assertAlmostEqual(rows[0]["final_time"], 4.0)
+            timings = read_rows(next(Path(directory).glob("computation_times_*.csv")))
+            self.assertEqual(len(timings), 2)
+            self.assertEqual([row["trial_success"] for row in timings], ["0", "1"])
+            self.assertEqual(read_rows(Path(directory) / "summary.csv")[0]["success_rate"], "0.5")
 
     def test_single_config_cli_override_and_disabled_perturbation(self):
         seen = []

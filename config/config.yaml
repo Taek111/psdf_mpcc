@@ -17,24 +17,24 @@
 start_perturbation:
   enabled: false
   seed: null
-  position_std: 0.005       # Independent x/y standard deviation [m]: 5 mm.
-  heading_std_deg: 0.0     # Keep heading fixed; set > 0 to also perturb yaw.
-  max_sigma: 3.0          # Rejection truncation: |dx|, |dy| <= 15 mm by default.
-  min_clearance: 0.01     # Whole footprint to obstacles/map bounds [m].
+  position_std: 0.02       # Independent x/y standard deviation [m]: 20 mm.
+  heading_std_deg: 2.8647889756541165  # Heading standard deviation: 0.05 rad.
+  max_sigma: 3.0          # Rejection truncation: x/y +/-60 mm, heading +/-0.15 rad.
+  min_clearance: 0.001     # Whole footprint to obstacles/map bounds [m].
   max_attempts: 1000      # Fail explicitly if no safe sample can be found.
 
 test_configs:
-  - maze_type: "maze"
+  - maze_type: "oblique_maze"
     robot_shape: "rectangle"
-    optimizer_type: "rmpcc"
+    optimizer_type: "obca"
     dynamics_type: "differential_drive"
     path_planner: "astar"
 
-  - maze_type: "s_path"
-    robot_shape: "rectangle"
-    optimizer_type: "rmpcc"
-    dynamics_type: "differential_drive"
-    path_planner: "astar"
+  # - maze_type: "s_path"
+  #   robot_shape: "rectangle"
+  #   optimizer_type: "rmpcc"
+  #   dynamics_type: "differential_drive"
+  #   path_planner: "astar"
 
   # - maze_type: "s_path"
   #   robot_shape: "rectangle"

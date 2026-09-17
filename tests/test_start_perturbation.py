@@ -122,8 +122,8 @@ class StartPerturbationTest(unittest.TestCase):
                             {"enabled": True, "seed": seed},
                         )
                         self.assertGreaterEqual(info["initial_clearance"], .01)
-                        self.assertTrue(np.all(np.abs(pose[:2] - case["pose"][:2]) <= .015))
-                        self.assertEqual(pose[2], case["pose"][2])
+                        self.assertTrue(np.all(np.abs(pose[:2] - case["pose"][:2]) <= .06))
+                        self.assertLessEqual(abs(info["delta_pose"][2]), .15)
 
     def test_heading_noise_wraps_and_map_boundary_is_checked(self):
         pose, info = sample_start_pose(

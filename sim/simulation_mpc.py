@@ -85,14 +85,21 @@ class TrialFailureChecker:
         current_position = np.asarray(robot._get_navigation_state()[:2], dtype=float)
         self._recent_positions.append((current_time, current_position.copy()))
 
-        while self._recent_positions and (current_time - self._recent_positions[0][0]) > self._movement_window_sec:
+        # Use the same tolerance when trimming and checking window coverage.
+        # Repeated dt additions can otherwise discard the boundary sample.
+        time_tolerance = 1e-9
+        while (
+            self._recent_positions
+            and (current_time - self._recent_positions[0][0])
+            > self._movement_window_sec + time_tolerance
+        ):
             self._recent_positions.pop(0)
 
         if len(self._recent_positions) < 2:
             return None
 
         window_duration = current_time - self._recent_positions[0][0]
-        if window_duration + 1e-9 < self._movement_window_sec:
+        if window_duration + time_tolerance < self._movement_window_sec:
             return None
 
         displacement = float(np.linalg.norm(current_position - self._recent_positions[0][1]))
@@ -284,13 +291,15 @@ class simulation_mpc:
 
     def _build_success_criteria(self, config):
         criteria = self._get_config_block(config, "success_criteria")
-        position_tolerance = float(criteria.get("position_tolerance", 0.01))
-        angle_tolerance = float(criteria.get("angle_tolerance", 0.01))
+        position_tolerance = float(criteria.get("position_tolerance", 0.02))
+        angle_tolerance = criteria.get("angle_tolerance")
+        if angle_tolerance is not None:
+            angle_tolerance = float(angle_tolerance)
 
         if criteria:
             print(
                 "Success criteria configured: "
-                f"position_tolerance={position_tolerance}, "
+                f"position_tolerance_L1={position_tolerance}, "
                 f"angle_tolerance={angle_tolerance}"
             )
 
@@ -1597,7 +1606,7 @@ class simulation_mpc:
             # vehicle_length = 0.15
             # vehicle_width = 0.06
             vehicle_length = 0.15
-            vehicle_width = 0.09 #0.09
+            vehicle_width = 0.07 #0.09
             geometry_regions.add_geometry(
                 DifferentialDriveRectangleGeometry(length=vehicle_length, width=vehicle_width, rear_dist=0.0)
             )
@@ -1875,6 +1884,9 @@ class simulation_mpc:
             from control.dcbf_optimizer import NmpcDbcfOptimizer, NmpcDcbfOptimizerParam
 
             opt_param = NmpcDcbfOptimizerParam()
+            self._apply_param_overrides(
+                opt_param, self._get_config_block(config, "dcbf"), "DCBF",
+            )
             optimizer = NmpcDbcfOptimizer({}, {}, dynamics.forward_dynamics_opt(0.1))
             optimizer_name = optimizer_type
         else:  # Default to casadi

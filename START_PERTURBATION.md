@@ -18,26 +18,27 @@ seed를 생략하면 자동 생성되며, 한 YAML batch의 공통 설정을 사
 
 | 설정 | 기본값 | 의미 |
 | --- | --- | --- |
-| `--start-position-std` | `0.005` | world x/y 각각 독립 Gaussian 표준편차 5 mm |
-| `--start-heading-std-deg` | `0.0` | heading 유지; 필요하면 예: `1.0`으로 yaw도 변동 |
+| `--start-position-std` | `0.02` | world x/y 각각 독립 Gaussian 표준편차 20 mm |
+| `--start-heading-std-deg` | `2.8647889756541165` | heading Gaussian 표준편차 0.05 rad에 해당하는 도 단위 값 |
 | `--start-min-clearance` | `0.01` | 전체 footprint와 장애물·지도 경계 사이 최소 여유 10 mm |
-| YAML `max_sigma` | `3.0` | 각 성분의 ±3σ 밖 표본을 거부; 기본 x/y 각각 최대 ±15 mm |
+| YAML `max_sigma` | `3.0` | 각 성분의 ±3σ 밖 표본을 거부; 기본 x/y 각각 최대 ±60 mm, heading 최대 ±0.15 rad |
 | YAML `max_attempts` | `1000` | 안전 표본을 못 찾으면 오류로 종료 |
 
 실제 plant의 시작 pose에 한 번 적용하며, global planner도 그 상태에서 시작한다.
 localization noise와는 별도의 RNG를 사용한다. 기존 `localization_error.seed`는 바뀌지 않는다.
 Gaussian tail과 안전거리 미달 표본은 다시 뽑는다. 따라서 최종 분포는 범위와 안전거리로
-조건화된 truncated Gaussian이다. 기본 위치 변동의 최대 유클리드 크기는 약 21.2 mm이다.
+조건화된 truncated Gaussian이다. 기본 위치 변동의 최대 유클리드 크기는 약 84.9 mm이다.
+표준편차 `(0.02 m, 0.02 m, 0.05 rad)`는 재추출 전 Gaussian의 값이며,
+안전거리 조건을 통과한 표본의 경험적 표준편차는 달라질 수 있다.
 
-5 mm는 현재 footprint 크기(rectangle 150 × 90 mm, triangle 길이 150 mm,
-pentagon 반지름 50 mm)보다 충분히 작다. `maze`/`oblique_maze` 시작점의
-nominal 여유가 수 cm이므로 cm 단위의 표준편차보다 안전거리 제한에 덜 영향을 받는다.
-표준편차 2.5/5/10 mm를 각각 5개 환경 × 3개 footprint × seed 0–999로
+이전 기본값(x/y 표준편차 5 mm, heading 고정)의 검증 기록은 다음과 같다.
+현재 기본값 20 mm/0.05 rad에 대한 실행 검증 결과는 아니다.
+이전에는 표준편차 2.5/5/10 mm를 각각 5개 환경 × 3개 footprint × seed 0–999로
 검사했다. 5 mm의 15,000개 표본은 모두 10 mm 이상 여유를 유지했고,
 최소 여유는 10.119 mm였다. 각 조합에서 재추출은 3σ tail에 해당하는
 5/1,000건(0.5%)뿐이었다. 10 mm에서는 `maze`의 triangle 재추출이
 122/1,000건(12.2%)으로 늘어 안전거리 제한이 분포에 더 크게 영향을 주었다.
-10 mm 검사는 현재 OBCA `margin_dist=0.01`을 기준으로 한다.
+10 mm 검사는 당시 OBCA `margin_dist=0.01`을 기준으로 했다.
 이 검사는 **초기 기하학적 안전거리**를 확인한다. 전체 MPC horizon의 feasibility나
 모든 trial의 solver 수렴·목적지 도달을 보장하지는 않는다.
 
@@ -50,8 +51,8 @@ nominal 여유가 수 cm이므로 cm 단위의 표준편차보다 안전거리 �
 start_perturbation:
   enabled: true
   seed: 42
-  position_std: 0.005
-  heading_std_deg: 0.0
+  position_std: 0.02
+  heading_std_deg: 2.8647889756541165  # 0.05 rad.
   max_sigma: 3.0
   min_clearance: 0.01
   max_attempts: 1000

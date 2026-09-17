@@ -1,0 +1,26 @@
+# RMPCC rectangle runs with multi-feature debug logging enabled for maze variants.
+
+test_configs:
+  - maze_type: "maze"
+    robot_shape: "rectangle"
+    optimizer_type: "rmpcc"
+    dynamics_type: "differential_drive"
+    path_planner: "astar"
+
+  - maze_type: "oblique_maze"
+    robot_shape: "rectangle"
+    optimizer_type: "rmpcc"
+    dynamics_type: "differential_drive"
+    path_planner: "astar"
+
+defaults:
+  frame_skip: 2
+  simulation_time: 30.0
+  generate_animation: true
+  generate_plots: false
+  speed_range: [0.0, 0.30]
+  clearance_range: [-0.08, 0.08]
+  risk_range: [0.0, 0.035]
+
+rmpcc:
+  debug_mf: true

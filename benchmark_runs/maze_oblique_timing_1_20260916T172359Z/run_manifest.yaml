@@ -1,0 +1,164 @@
+trials_per_configuration: 1
+config:
+  trials: 100
+  start_perturbation:
+    enabled: true
+    seed: 0
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.01
+    max_attempts: 1000
+  trial_failure_criteria:
+    enabled: true
+    movement_window_sec: 4.0
+    movement_threshold: 0.03
+    max_consecutive_solver_failures: 20
+  defaults:
+    simulation_time: 60.0
+    generate_animation: false
+    generate_plots: false
+  localization_error:
+    enabled: false
+  test_configs:
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: psdf
+    dynamics_type: differential_drive
+    path_planner: astar
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: dcbf
+    dynamics_type: differential_drive
+    path_planner: astar
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: obca
+    dynamics_type: differential_drive
+    path_planner: astar
+  - maze_type: oblique_maze
+    robot_shape: rectangle
+    optimizer_type: psdf
+    dynamics_type: differential_drive
+    path_planner: astar
+  - maze_type: oblique_maze
+    robot_shape: rectangle
+    optimizer_type: dcbf
+    dynamics_type: differential_drive
+    path_planner: astar
+  - maze_type: oblique_maze
+    robot_shape: rectangle
+    optimizer_type: obca
+    dynamics_type: differential_drive
+    path_planner: astar
+cli:
+  config: /home/taekwon/projects/psdf_mpcc/config/config_nmpc_trials_maze_oblique.yaml
+  single: false
+  trials: 1
+  results_dir: /home/taekwon/projects/psdf_mpcc/benchmark_runs/maze_oblique_timing_1_20260916T172359Z
+  maze_type: s_path
+  robot_shape: rectangle
+  optimizer_type: casadi
+  dynamics_type: differential_drive
+  path_planner: astar
+  simulation_time: 60.0
+  frame_skip: 5
+  perturb_start: null
+  start_seed: null
+  start_position_std: null
+  start_heading_std_deg: null
+  start_min_clearance: null
+  generate_animation: false
+  generate_plots: false
+  generate_risk_profile: true
+  use_risk_visualization: null
+  safe_stop_batch: false
+  safe_stop_robot_shapes: null
+  safe_stop_maze_types: null
+  safe_stop_optimizer_types: null
+  safe_stop_summary: null
+configurations:
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: psdf
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config01
+  start_perturbation:
+    enabled: true
+    seed: 0
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.01
+    max_attempts: 1000
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: dcbf
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config02
+  start_perturbation:
+    enabled: true
+    seed: 0
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.01
+    max_attempts: 1000
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: obca
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config03
+  start_perturbation:
+    enabled: true
+    seed: 0
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.01
+    max_attempts: 1000
+- maze_type: oblique_maze
+  robot_shape: rectangle
+  optimizer_type: psdf
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config04
+  start_perturbation:
+    enabled: true
+    seed: 0
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.01
+    max_attempts: 1000
+- maze_type: oblique_maze
+  robot_shape: rectangle
+  optimizer_type: dcbf
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config05
+  start_perturbation:
+    enabled: true
+    seed: 0
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.01
+    max_attempts: 1000
+- maze_type: oblique_maze
+  robot_shape: rectangle
+  optimizer_type: obca
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config06
+  start_perturbation:
+    enabled: true
+    seed: 0
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.01
+    max_attempts: 1000

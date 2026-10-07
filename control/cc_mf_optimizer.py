@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 from utils.acados_diagnostics import report_solver_failure
-from utils.rmpcc_diagnostics import RMPCCDiagnosticsMixin
+from utils.cc_mf_diagnostics import CCMFDiagnosticsMixin
 from utils.spline_path import (
     clamp_progress,
     normalize_path_data,
@@ -21,7 +21,7 @@ from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
 from models.geometry_utils import polygon_to_edges
 
 
-class RMPCCOptimizerParam:
+class CCMFOptimizerParam:
     def __init__(self):
         # Horizon and MPCC cost
         self.horizon = 20
@@ -101,7 +101,7 @@ class RMPCCOptimizerParam:
         self.first_interval_substeps = 10
 
 
-class RMPCCOptimizer(RMPCCDiagnosticsMixin):
+class CCMFOptimizer(CCMFDiagnosticsMixin):
     CYCLE_LOG_FIELDS = (
         "time",
         "solve_mode",
@@ -177,11 +177,11 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
         self._solve_count = 0
         self.prints_compact_runtime_summary = True
 
-        self.json_filename = "acados_ocp_rmpcc_mf.json"
+        self.json_filename = "acados_ocp_cc_mf.json"
         self.backup_solver = None
-        self.code_export_directory = "c_generated_code_rmpcc_mf"
-        self.backup_json_filename = "acados_ocp_rmpcc_mf_backup.json"
-        self.backup_code_export_directory = "c_generated_code_rmpcc_mf_backup"
+        self.code_export_directory = "c_generated_code_cc_mf"
+        self.backup_json_filename = "acados_ocp_cc_mf_backup.json"
+        self.backup_code_export_directory = "c_generated_code_cc_mf_backup"
         self._last_solve_mode = "uninitialized"
         self._last_backup_status = None
         self._temp_files = []
@@ -206,7 +206,7 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             return
 
         print(
-            "RMPCC-MF execution summary: "
+            "CC-MF execution summary: "
             f"SQP-WITH FEASIBLE QP={self._backup_feasible_qp_success_count}, "
             f"Safe stop={self._safe_stop_count}, "
             f"Plant-applied control inputs={self._plant_input_apply_count}"
@@ -481,7 +481,7 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
         cost_terminal = qf * (q_c * e_c * e_c + q_l * e_l * e_l + q_s_ref * e_s * e_s)
 
         model = AcadosModel()
-        model.name = "differential_drive_rmpcc_mf"
+        model.name = "differential_drive_cc_mf"
         model.x = x
         model.xdot = xdot
         model.u = u
@@ -1448,7 +1448,7 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
         self.backup_solver = None
         if not param.enable_backup_solver:
             print(
-                "RMPCC-MF backup SQP_WITH_FEASIBLE_QP solver disabled; "
+                "CC-MF backup SQP_WITH_FEASIBLE_QP solver disabled; "
                 "using nominal safe-stop recovery."
             )
             return
@@ -1484,12 +1484,12 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
                 self.update_obstacles(obstacles)
             return
 
-        print("Setting up RMPCC-MF optimizer...")
+        print("Setting up CC-MF optimizer...")
         active_stages = np.flatnonzero(
             self._build_mf_stage_mask(int(param.horizon) + 1)
         ).tolist()
         print(
-            "RMPCC-MF Row M configuration: "
+            "CC-MF Row M configuration: "
             f"enabled={bool(param.use_row_mf)}, "
             f"active only when phi > d_mf_mask={float(param.d_mf_mask):.8g}, "
             f"configured stages={active_stages}"
@@ -1504,7 +1504,7 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
         else:
             self.psdf_wrapper = None
             print(
-                "RMPCC-MF obstacle constraint disabled: "
+                "CC-MF obstacle constraint disabled: "
                 "skipping augmented PSDF initialization."
             )
 
@@ -1533,7 +1533,7 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             self._safe_stop_count += 1
             print(
                 "Applied nominal_safe_controller safe-stop plan after "
-                "infeasible RMPCC-MF solve."
+                "infeasible CC-MF solve."
             )
 
     def _update_predicted_progress(self, solver, status):
@@ -1734,7 +1734,7 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
             input_text = f"u=({stage_zero_input[0]:.3f},{stage_zero_input[1]:.3f})"
 
         summary = (
-            f"[RMPCC {self._solve_count:04d}] {outcome} "
+            f"[CC-MF {self._solve_count:04d}] {outcome} "
             f"solve={solve_time * 1e3:.1f}ms {pose_text} {input_text} "
             f"s={self._current_s0:.3f}"
         )
@@ -1789,13 +1789,13 @@ class RMPCCOptimizer(RMPCCDiagnosticsMixin):
 
     def solve_nlp(self):
         if self.solver is None:
-            raise RuntimeError("RMPCC-MF solver is not initialized. Call setup() first.")
+            raise RuntimeError("CC-MF solver is not initialized. Call setup() first.")
 
         start = time.time()
         self._last_backup_status = None
         self._last_constraint_diagnostics = None
         self._last_failed_constraint_diagnostics = None
-        # Match the working MPCC/RMPCC-PV lifecycle: linearize Row G/M at the
+        # Match the working MPCC/CC-SF lifecycle: linearize Row G/M at the
         # solver's retained warm-start trajectory instead of manually shifting
         # that trajectory before each RTI solve.
         status = self._prepare_and_solve(self.solver)

@@ -21,7 +21,7 @@ from utils.spline_path import (
 )
 
 
-class RMPCCPVOptimizerParam:
+class CCSFOptimizerParam:
     def __init__(self):
         self.horizon = 20
         self.tf = 0.1 * self.horizon
@@ -99,7 +99,7 @@ class RMPCCPVOptimizerParam:
         self.beta_omega = 0.008
         self.risk_cov_jitter = 1e-9
 
-class RMPCCPVOptimizer:
+class CCSFOptimizer:
     def __init__(self, variables=None, costs=None, dynamics_opt=None):
         self.ocp = None
         self.solver = None
@@ -136,11 +136,11 @@ class RMPCCPVOptimizer:
         self._last_risk_tensors = None
         self._last_risk_clearances = None
 
-        self.json_filename = "acados_ocp_rmpcc_pv.json"
+        self.json_filename = "acados_ocp_cc_sf.json"
         self.backup_solver = None
-        self.code_export_directory = "c_generated_code_rmpcc_pv"
-        self.backup_json_filename = "acados_ocp_rmpcc_pv_backup.json"
-        self.backup_code_export_directory = "c_generated_code_rmpcc_pv_backup"
+        self.code_export_directory = "c_generated_code_cc_sf"
+        self.backup_json_filename = "acados_ocp_cc_sf_backup.json"
+        self.backup_code_export_directory = "c_generated_code_cc_sf_backup"
         self._last_solve_mode = "uninitialized"
         self._temp_files = []
         self._reset_runtime_counters()
@@ -162,7 +162,7 @@ class RMPCCPVOptimizer:
             return
 
         print(
-            "RMPCC-PV execution summary: "
+            "CC-SF execution summary: "
             f"SQP-WITH FEASIBLE QP={self._backup_feasible_qp_success_count}, "
             f"Safe stop={self._safe_stop_count}, "
             f"Plant-applied control inputs={self._plant_input_apply_count}"
@@ -403,7 +403,7 @@ class RMPCCPVOptimizer:
         cost_terminal = qf * (q_c * e_c * e_c + q_l * e_l * e_l + q_s_ref * e_s * e_s)
 
         model = AcadosModel()
-        model.name = "differential_drive_rmpcc_pv"
+        model.name = "differential_drive_cc_sf"
         model.x = x
         model.xdot = xdot
         model.u = u
@@ -1255,13 +1255,13 @@ class RMPCCPVOptimizer:
         use_obstacle_constraint = getattr(param, "use_obstacle_constraint", True)
 
         if not self._is_initialized:
-            print("Setting up RMPCC-PV optimizer...")
+            print("Setting up CC-SF optimizer...")
             if use_obstacle_constraint:
                 self.initialize_ped_model(system, obstacles, E_max=100, K_max=20, device="cpu")
             else:
                 self.psdf_wrapper = None
                 self.ped_model = None
-                print("RMPCC-PV obstacle constraint disabled: skipping PSDF model initialization.")
+                print("CC-SF obstacle constraint disabled: skipping PSDF model initialization.")
             self.setup_ocp(param, reference_trajectory)
             if use_obstacle_constraint:
                 self.add_obstacle_avoidance_constraint(param, system, obstacles)
@@ -1295,7 +1295,7 @@ class RMPCCPVOptimizer:
 
     def solve_nlp(self):
         if self.solver is None:
-            raise RuntimeError("RMPCC-PV solver is not initialized. Call setup() first.")
+            raise RuntimeError("CC-SF solver is not initialized. Call setup() first.")
 
         start = time.time()
         status = self._prepare_and_solve(self.solver)
@@ -1317,7 +1317,7 @@ class RMPCCPVOptimizer:
             elif mode == "safe_stop":
                 self._safe_stop_count += 1
             if mode == "safe_stop":
-                print("Applied nominal_safe_controller safe-stop plan after infeasible RMPCC-PV solve.")
+                print("Applied nominal_safe_controller safe-stop plan after infeasible CC-SF solve.")
         if status == 0:
             try:
                 if self.N >= 1:
@@ -1391,7 +1391,7 @@ class RMPCCPVOptimizer:
         self.ped_model = AnalyticPSDFCasADi(
             self.psdf_wrapper,
             device=self.device,
-            name="analytic_rmpcc_pv_psdf",
+            name="analytic_cc_sf_psdf",
         )
         self.update_obstacles(obstacles)
 

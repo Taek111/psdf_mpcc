@@ -1,12 +1,15 @@
 import math
+from pathlib import Path
+import tempfile
 import time
 import unittest
 
 import numpy as np
 
 from run_optimizer_benchmark import (
-    build_rmpcc_scale_config,
+    build_cc_mf_scale_config,
     compute_metrics,
+    load_summary,
     select_best_scale,
 )
 from sim.simulation import Robot
@@ -26,8 +29,47 @@ class _FakeSystem:
 
 
 class OptimizerBenchmarkTest(unittest.TestCase):
+    def test_load_summary_rejects_legacy_names_without_changing_results(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "all_runs.csv"
+            for optimizer_type in ("rmpcc", "rmpcc_pv"):
+                with self.subTest(optimizer_type=optimizer_type):
+                    original = (
+                        "run_id,optimizer_type\n"
+                        f"legacy_run,{optimizer_type}\n"
+                    )
+                    path.write_text(original, encoding="utf-8")
+
+                    with self.assertRaisesRegex(ValueError, "new --output-root"):
+                        load_summary(path)
+
+                    self.assertEqual(path.read_text(encoding="utf-8"), original)
+
+    def test_load_summary_accepts_renamed_controllers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "all_runs.csv"
+            path.write_text(
+                "run_id,optimizer_type\nsf_run,cc_sf\nmf_run,cc_mf\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                load_summary(path),
+                [
+                    {"run_id": "sf_run", "optimizer_type": "cc_sf"},
+                    {"run_id": "mf_run", "optimizer_type": "cc_mf"},
+                ],
+            )
+
+    def test_load_summary_returns_empty_for_absent_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "all_runs.csv"
+
+            self.assertEqual(load_summary(path), [])
+            self.assertFalse(path.exists())
+
     def test_scale_config_matches_existing_default_at_point_three(self):
-        config = build_rmpcc_scale_config(0.3)
+        config = build_cc_mf_scale_config(0.3)
         self.assertAlmostEqual(config["covariance_growth_scale"], 0.3)
         self.assertAlmostEqual(config["alpha_f"], 0.0006)
         self.assertAlmostEqual(config["alpha_v"], 0.00012)
@@ -100,7 +142,7 @@ class OptimizerBenchmarkTest(unittest.TestCase):
 
     def test_selection_is_safety_then_clearance_first(self):
         base = {
-            "optimizer_type": "rmpcc",
+            "optimizer_type": "cc_mf",
             "status": "success",
             "collision": "False",
             "raw_logs_complete": "True",

@@ -8,6 +8,15 @@ import casadi as ca
 import numpy as np
 import torch
 from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
+from control.cc_covariance import (
+    covariance_from_log_cholesky,
+    initial_local_covariance,
+    log_cholesky_from_covariance,
+    propagate_log_cholesky,
+    resolve_robust_horizon,
+    symbolic_dd_step,
+    symbolic_log_cholesky_transition,
+)
 from utils.acados_diagnostics import report_solver_failure
 from utils.cc_mf_diagnostics import CCMFDiagnosticsMixin
 from utils.spline_path import (
@@ -66,6 +75,9 @@ class CCMFOptimizerParam:
         self.augmented_psdf_device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # Risk and covariance
+        # None selects min(10, horizon); set to horizon for full propagation.
+        self.robust_horizon = None
+        self.initial_pose_covariance = None  # Optional world-frame estimator covariance.
         self.sigma_f0 = 0.0002
         self.sigma_l0 = 0.00025
         self.sigma_psi0 = 0.00025
@@ -87,7 +99,7 @@ class CCMFOptimizerParam:
         # Solver and recovery
         self.qp_solver = "PARTIAL_CONDENSING_HPIPM"
         self.hessian_approx = "GAUSS_NEWTON"
-        self.integrator_type = "ERK"
+        self.integrator_type = "DISCRETE"
         self.nlp_solver_type = "SQP_RTI"
         self.qp_solver_iter_max = 50
         self.nlp_solver_max_iter = 50
@@ -143,6 +155,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         self.ocp = None
         self.solver = None
         self.solver_times = []
+        self._cycle_solver_time = 0.0
         self.state = None
         self.reference_path_data = None
         self.N = None
@@ -162,10 +175,12 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         self.path_param_slice = slice(0, 0)
         self.guard_param_slice = slice(0, 0)
         self.mf_param_slice = slice(0, 0)
+        self.covariance_propagation_param_slice = slice(0, 0)
         self._prev_predicted_s = 0.0
         self._current_s0 = 0.0
         self._has_prev_predicted_s = False
         self._constraint_data = None
+        self._current_psdf = None
         self._last_constraint_diagnostics = None
         self._last_failed_constraint_diagnostics = None
         self._constraint_log_rows = []
@@ -192,6 +207,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         self._main_solver_failure_count = 0
         self._backup_solver_failure_count = 0
         self._safe_stop_count = 0
+        self._stage0_guard_stop_count = 0
         self._plant_input_apply_count = 0
 
     def _has_runtime_activity(self):
@@ -237,6 +253,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         self.solver = None
         self.backup_solver = None
         self.solver_times = []
+        self._cycle_solver_time = 0.0
         self.psdf_wrapper = None
         self._is_initialized = False
 
@@ -250,10 +267,12 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         self.path_param_slice = slice(0, 0)
         self.guard_param_slice = slice(0, 0)
         self.mf_param_slice = slice(0, 0)
+        self.covariance_propagation_param_slice = slice(0, 0)
         self._prev_predicted_s = 0.0
         self._current_s0 = 0.0
         self._has_prev_predicted_s = False
         self._constraint_data = None
+        self._current_psdf = None
         self._last_constraint_diagnostics = None
         self._last_failed_constraint_diagnostics = None
         self._constraint_log_rows = []
@@ -274,6 +293,15 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
 
     def set_state(self, state):
         self.state = state
+        self._current_psdf = None
+
+    def get_current_psdf(self):
+        """Current-cycle exact distance, reused by logging without a forward call.
+
+        None means no current evaluation is available or obstacle constraints
+        are disabled; the disabled constraint's 1000 sentinel is not a distance.
+        """
+        return self._current_psdf
 
     def get_progress_info(self):
         """Return MPCC progress-state values useful for runtime logging."""
@@ -289,6 +317,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             "main_solver_failure_count": int(self._main_solver_failure_count),
             "backup_solver_failure_count": int(self._backup_solver_failure_count),
             "safe_stop_count": int(self._safe_stop_count),
+            "stage0_guard_stop_count": int(self._stage0_guard_stop_count),
             "plant_input_apply_count": int(self._plant_input_apply_count),
             "last_solve_mode": str(self._last_solve_mode),
         }
@@ -380,18 +409,19 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
 
     def create_model(self, param):
         dt = float(param.tf) / float(max(param.horizon, 1))
-        nx = 8  # [x, y, theta, s, P_f, P_l, P_psi, P_lpsi]
+        self.robust_horizon = resolve_robust_horizon(param)
+        nx = 8  # [x, y, theta, s, xi_f, xi_l, xi_theta, xi_c]
         nu = 3  # [v, omega, v_s]
         # Stage-varying path parameter:
         # [p_ref_x, p_ref_y, t_ref_x, t_ref_y, s_ref, kappa_ref]
         self.path_param_dim = 6
 
         x = ca.MX.sym("x", nx)
-        xdot = ca.MX.sym("xdot", nx)
         u = ca.MX.sym("u", nu)
         p_ref_t_ref = ca.MX.sym("p_ref_t_ref", self.path_param_dim)
         p_guard = ca.MX.sym("guard_affine", self.guard_param_dim)
         p_mf = ca.MX.sym("mf_affine", self.mf_param_dim)
+        p_covariance_propagation = ca.MX.sym("covariance_propagation")
 
         self.path_param_slice = slice(0, self.path_param_dim)
         self.guard_param_slice = slice(
@@ -402,7 +432,10 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             self.path_param_dim + self.guard_param_dim,
             self.path_param_dim + self.guard_param_dim + self.mf_param_dim,
         )
-        p_all = ca.vertcat(p_ref_t_ref, p_guard, p_mf)
+        self.covariance_propagation_param_slice = slice(
+            self.mf_param_slice.stop, self.mf_param_slice.stop + 1,
+        )
+        p_all = ca.vertcat(p_ref_t_ref, p_guard, p_mf, p_covariance_propagation)
 
         v = u[0]
         omega = u[1]
@@ -424,40 +457,15 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         e_c = dx * t_vec[1] - dy * t_vec[0]
         e_s = x[3] - s_ref
 
-        q_f_noise = ca.fmax(
-            float(param.q_f0) + float(param.alpha_f) * v * v,
-            0.0,
+        xi_next = symbolic_log_cholesky_transition(
+            x[4:8], v, omega, kappa_ref, dt, param,
         )
-        q_l_noise = ca.fmax(
-            float(param.q_l0)
-            + float(param.alpha_v) * v * v
-            + float(param.alpha_kappa) * v * v * ca.fabs(kappa_ref),
-            0.0,
-        )
-        q_psi_noise = ca.fmax(
-            float(param.q_psi0)
-            + float(param.beta_v) * v * v
-            + float(param.beta_kappa) * v * v * ca.fabs(kappa_ref)
-            + float(param.beta_omega) * omega * omega,
-            0.0,
-        )
-
-        p_f = x[4]
-        p_l = x[5]
-        p_psi = x[6]
-        p_lpsi = x[7]
-
-        # Keep the existing continuous-time ERK setup by differentiating the
-        # user-provided one-step covariance recursion: xdot = (x_{k+1} - x_k)/dt.
-        f_expl = ca.vertcat(
-            v * ca.cos(x[2]),
-            v * ca.sin(x[2]),
-            omega,
-            v_s,
-            dt * omega * omega * p_l + q_f_noise,
-            dt * omega * omega * p_f + 2.0 * v * p_lpsi + dt * v * v * p_psi + q_l_noise,
-            q_psi_noise,
-            v * p_psi,
+        # The schedule is fixed data: i < N_R propagates, i >= N_R freezes
+        # the body-frame factor while mean motion and progress continue.
+        discrete_dynamics = ca.vertcat(
+            symbolic_dd_step(x[:3], v, omega, dt),
+            x[3] + dt * v_s,
+            ca.if_else(p_covariance_propagation > 0.5, xi_next, x[4:8]),
         )
 
         q_c = float(param.mat_Qe[0, 0])
@@ -483,11 +491,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         model = AcadosModel()
         model.name = "differential_drive_cc_mf"
         model.x = x
-        model.xdot = xdot
         model.u = u
         model.p = p_all
-        model.f_expl_expr = f_expl
-        model.f_impl_expr = xdot - f_expl
+        model.disc_dyn_expr = discrete_dynamics
         model.cost_expr_ext_cost = cost_stage
         model.cost_expr_ext_cost_e = cost_terminal
         return model
@@ -500,53 +506,52 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             self.param.fd_eps,
         )
 
-    def _build_stage_param(self, stage_path_param, guard_affine, mf_affine):
+    def _build_stage_param(self, stage_path_param, guard_affine, mf_affine, stage_idx=0):
         stage_param = np.zeros(
-            self.path_param_dim + self.guard_param_dim + self.mf_param_dim,
+            self.path_param_dim + self.guard_param_dim + self.mf_param_dim + 1,
             dtype=float,
         )
         stage_param[self.path_param_slice] = stage_path_param
         stage_param[self.guard_param_slice] = guard_affine
         stage_param[self.mf_param_slice] = mf_affine
+        stage_param[self.covariance_propagation_param_slice] = float(
+            stage_idx < resolve_robust_horizon(self.param)
+        )
         return stage_param
 
-    def _project_to_psd(self, Sigma):
-        Sigma_sym = 0.5 * (Sigma + Sigma.T)
-        jitter = max(float(self.param.risk_cov_jitter), 0.0)
-        eigvals, eigvecs = np.linalg.eigh(Sigma_sym)
-        eigvals = np.clip(eigvals, jitter, None)
-        Sigma_psd = eigvecs @ np.diag(eigvals) @ eigvecs.T
-        return 0.5 * (Sigma_psd + Sigma_psd.T)
-
     def _build_initial_local_covariance(self, param):
-        sigma_f0 = float(max(param.sigma_f0, 0.0))
-        sigma_l0 = float(max(param.sigma_l0, 0.0))
-        sigma_psi0 = float(max(param.sigma_psi0, 0.0))
-        return np.diag([sigma_f0 * sigma_f0, sigma_l0 * sigma_l0, sigma_psi0 * sigma_psi0])
+        return initial_local_covariance(param, self.state)
 
     def _build_initial_covariance_state(self, param):
-        Sigma0 = self._build_initial_local_covariance(param)
-        return np.array([Sigma0[0, 0], Sigma0[1, 1], Sigma0[2, 2], Sigma0[1, 2]], dtype=float)
+        return log_cholesky_from_covariance(self._build_initial_local_covariance(param))
 
     def _covariance_state_to_matrix(self, covariance_state):
-        cov_state = np.asarray(covariance_state, dtype=float)
-        squeeze = cov_state.ndim == 1
-        cov_state = np.atleast_2d(cov_state)
-
-        Sigma = np.zeros((cov_state.shape[0], 3, 3), dtype=float)
-        Sigma[:, 0, 0] = cov_state[:, 0]
-        Sigma[:, 1, 1] = cov_state[:, 1]
-        Sigma[:, 2, 2] = cov_state[:, 2]
-        Sigma[:, 1, 2] = cov_state[:, 3]
-        Sigma[:, 2, 1] = cov_state[:, 3]
-        return Sigma[0] if squeeze else Sigma
+        return covariance_from_log_cholesky(covariance_state)
 
     def _matrix_to_covariance_state(self, Sigma):
-        Sigma_np = np.asarray(Sigma, dtype=float)
-        return np.array(
-            [Sigma_np[0, 0], Sigma_np[1, 1], Sigma_np[2, 2], Sigma_np[1, 2]],
-            dtype=float,
-        )
+        return log_cholesky_from_covariance(Sigma)
+
+    def _propagate_covariance_state_batch(self, inputs, stage_s_values):
+        """Regenerate nominal factors from the current estimate, freezing at N_R."""
+        inputs = np.asarray(inputs, dtype=float)
+        if not np.isfinite(inputs).all():
+            raise ValueError("Covariance rollout inputs must be finite.")
+        num_stages = len(stage_s_values)
+        dt = float(self.param.tf) / float(self.param.horizon)
+        robust_horizon = resolve_robust_horizon(self.param)
+        xi = self._build_initial_covariance_state(self.param)
+        trajectory = np.empty((num_stages, 4), dtype=float)
+        for stage in range(num_stages):
+            trajectory[stage] = xi
+            if stage < min(robust_horizon, num_stages - 1, len(inputs)):
+                kappa = (
+                    0.0 if self.reference_path_data is None
+                    else self._build_stage_path_parameter(stage_s_values[stage])[5]
+                )
+                xi = propagate_log_cholesky(
+                    xi, inputs[stage, 0], inputs[stage, 1], kappa, dt, self.param,
+                )
+        return trajectory
 
     def _normalize_epsilon_values(self, num_stages):
         epsilon = np.asarray(
@@ -822,11 +827,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             lbx.append(float(s_lower))
             ubx.append(float(s_upper))
 
-        cov_floor = max(float(param.risk_cov_jitter), 0.0)
-        idxbx.extend([4, 5, 6])
-        lbx.extend([cov_floor, cov_floor, cov_floor])
-        ubx.extend([1e8, 1e8, 1e8])
-
+        # Log-factor coordinates are unconstrained; reconstruction is PD.
         return (
             np.array(idxbx, dtype=np.int64),
             np.array(lbx, dtype=float),
@@ -866,9 +867,10 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         self.N = N
         self.ocp.dims.N = N
         self.ocp.dims.np = (
-            self.path_param_dim + self.guard_param_dim + self.mf_param_dim
+            self.path_param_dim + self.guard_param_dim + self.mf_param_dim + 1
         )
         self.ocp.parameter_values = np.zeros((self.ocp.dims.np,), dtype=float)
+        self.ocp.parameter_values[self.covariance_propagation_param_slice] = 1.0
 
         self.ocp.cost.cost_type = "EXTERNAL"
         self.ocp.cost.cost_type_e = "EXTERNAL"
@@ -919,7 +921,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
 
         self.ocp.solver_options.qp_solver = param.qp_solver
         self.ocp.solver_options.hessian_approx = param.hessian_approx
-        self.ocp.solver_options.integrator_type = param.integrator_type
+        # The covariance map is a discrete recursion, including an exact
+        # identity transition after N_R; ERK would change that recursion.
+        self.ocp.solver_options.integrator_type = "DISCRETE"
         self.ocp.solver_options.nlp_solver_type = param.nlp_solver_type
         self.ocp.solver_options.qp_solver_iter_max = param.qp_solver_iter_max
         self.ocp.solver_options.nlp_solver_max_iter = param.nlp_solver_max_iter
@@ -1072,10 +1076,20 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             )
         except Exception as e:
             print(f"Error in warm start: {e}")
+            initial_guess = np.zeros((self.nx,), dtype=float)
+            if self.state is not None:
+                initial_guess[:3] = self.state._x[:3]
+            initial_guess[3] = self._current_s0
+            initial_guess[4:8] = self._build_initial_covariance_state(param)
             for i in range(self.N):
-                solver.set(i, "x", np.zeros((self.nx,), dtype=float))
+                solver.set(i, "x", initial_guess.copy())
                 solver.set(i, "u", np.zeros((self.nu,), dtype=float))
-            solver.set(self.N, "x", np.zeros((self.nx,), dtype=float))
+            solver.set(self.N, "x", initial_guess.copy())
+
+        states, inputs = self._read_solver_trajectory(solver)
+        states[:, 4:8] = self._propagate_covariance_state_batch(inputs, states[:, 3])
+        for stage in range(self.N + 1):
+            solver.set(stage, "x", states[stage])
 
     def _copy_primal_guess(self, src_solver, dst_solver):
         if src_solver is None or dst_solver is None:
@@ -1113,7 +1127,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             raise ValueError("nominal state and input trajectories must be finite")
         return states, inputs
 
-    def _predict_stage_s_values(self, s0, s_lower, s_upper):
+    def _predict_stage_s_values(self, s0, s_lower, s_upper, solver=None):
+        solver = self.solver if solver is None else solver
         s_values = np.zeros((self.N + 1,), dtype=float)
         s_values[0] = float(np.clip(s0, s_lower, s_upper))
         if self.N <= 0:
@@ -1124,12 +1139,12 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         for i in range(1, self.N + 1):
             s_from_state = np.nan
             try:
-                s_from_state = float(self.solver.get(i, "x")[3])
+                s_from_state = float(solver.get(i, "x")[3])
             except Exception:
                 pass
 
             try:
-                v_s_prev = float(self.solver.get(i - 1, "u")[2])
+                v_s_prev = float(solver.get(i - 1, "u")[2])
             except Exception:
                 v_s_prev = 0.0
             v_s_prev = float(np.clip(v_s_prev, 0.0, effective_v_s_max))
@@ -1168,6 +1183,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
                 self._build_stage_path_parameter(stage_s_values[0]),
                 guard_stage_zero,
                 mf_stage_zero,
+                stage_idx=0,
             ),
         )
         for stage in range(1, self.N + 1):
@@ -1178,6 +1194,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
                     self._build_stage_path_parameter(stage_s_values[stage]),
                     guard_rows[stage],
                     mf_rows[stage],
+                    stage_idx=stage,
                 ),
             )
 
@@ -1189,6 +1206,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         # cycle's risk markers as if they belonged to the current frame.
         self._last_nominal_probability_sum = None
         self._last_boole_risk_visualization_data = None
+        self._current_psdf = None
 
         s_lower, s_upper = self._get_current_s_bounds(self.param)
         if self.state is not None:
@@ -1238,11 +1256,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
 
         try:
             effective_v_s_max = self._get_effective_v_s_max(self.param)
-            cov_floor = max(float(self.param.risk_cov_jitter), 0.0)
             for i in range(1, self.N + 1):
                 xi = solver.get(i, "x")
                 xi[3] = float(np.clip(xi[3], s_lower, s_upper))
-                xi[4:7] = np.maximum(xi[4:7], cov_floor)
                 solver.set(i, "x", xi)
             for i in range(self.N):
                 ui = solver.get(i, "u")
@@ -1259,7 +1275,13 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             self._current_s0,
             s_lower,
             s_upper,
+            solver,
         )
+
+        inputs = np.stack([solver.get(i, "u") for i in range(self.N)], axis=0)
+        x_guess[:, 4:8] = self._propagate_covariance_state_batch(inputs, stage_s_values)
+        for stage in range(self.N + 1):
+            solver.set(stage, "x", x_guess[stage])
 
         constraint_data = self._compute_constraint_affine_data(x_guess)
         nominal_mf_residual = (
@@ -1269,15 +1291,20 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         nominal_probability_sum = constraint_data["epsilon"] - nominal_mf_residual
         nominal_probability_sum[~constraint_data["mf_valid"]] = np.nan
 
-        exact_current_phi, _ = self._compute_exact_psdf(x_guess[0, :3])
-        constraint_data["exact_current_phi"] = float(exact_current_phi)
+        # The batch includes x_guess[0] fixed to the measured current state.
+        # Its phi is the exact PSDF, not the affine guard approximation, even
+        # when Row M is masked. Do not recompute this pose for diagnostics.
+        if self.param.use_obstacle_constraint:
+            self._current_psdf = float(constraint_data["phi"][0])
+        constraint_data["exact_current_phi"] = (
+            self._current_psdf if self._current_psdf is not None else np.nan
+        )
         self._constraint_data = constraint_data
         self._set_constraint_parameters(
             solver,
             stage_s_values,
             constraint_data,
         )
-        status = solver.solve()
         self._last_nominal_probability_sum = nominal_probability_sum.copy()
         self._last_boole_risk_visualization_data = {
             "nominal_poses": x_guess[:, :3].copy(),
@@ -1291,6 +1318,21 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
                 dtype=bool,
             ).copy(),
         }
+        if self.param.use_obstacle_constraint and (
+            not np.isfinite(self._current_psdf)
+            or self._current_psdf < float(self.param.d_col)
+        ):
+            # No control can repair the fixed current state in this solve.
+            # None denotes a skipped solve, never an acados return code.
+            return None
+
+        # Keep benchmark timings limited to acados calls. A recovered cycle
+        # includes both the failed main solve and its backup solve.
+        solve_start = time.perf_counter()
+        try:
+            status = solver.solve()
+        finally:
+            self._cycle_solver_time += time.perf_counter() - solve_start
         return status
 
     def _try_backup_recovery(self):
@@ -1299,6 +1341,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             return None
 
         main_constraint_data = copy.deepcopy(self._constraint_data)
+        main_current_psdf = self._current_psdf
         main_probability_sum = (
             None
             if self._last_nominal_probability_sum is None
@@ -1315,6 +1358,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
 
         def restore_main_diagnostics():
             self._constraint_data = main_constraint_data
+            self._current_psdf = main_current_psdf
             self._last_nominal_probability_sum = main_probability_sum
             self._last_boole_risk_visualization_data = main_visualization_data
 
@@ -1329,7 +1373,11 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
                     solver=self.backup_solver,
                 )
             status = self._prepare_and_solve(self.backup_solver)
-            self._last_backup_status = int(status)
+            self._last_backup_status = int(status) if status is not None else None
+            if status is None:
+                # A current-state safety veto cannot be relaxed by recovery.
+                restore_main_diagnostics()
+                return None
             if status != 0:
                 self._backup_solver_failure_count += 1
             if status == 0:
@@ -1383,18 +1431,23 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             pose = np.asarray(next_pose, dtype=float)
             previous_speed = speed
 
-        states[:, 4:8] = self._build_initial_covariance_state(self.param)
+        states[:, 4:8] = self._propagate_covariance_state_batch(inputs, states[:, 3])
         return states, inputs
 
-    def _apply_safe_stop(self, dynamics, solver_status):
+    def _apply_safe_stop(self, dynamics, solver_status, *, raise_on_failure=False):
         try:
-            self.solver.reset(reset_qp_solver_mem=1)
             states, inputs = self._build_safe_stop_plan(dynamics)
+            if not np.isfinite(states).all() or not np.isfinite(inputs).all():
+                raise ValueError("safe-stop plan must be finite")
+            self.solver.reset(reset_qp_solver_mem=1)
             for stage in range(self.N):
                 self.solver.set(stage, "x", states[stage])
                 self.solver.set(stage, "u", inputs[stage])
             self.solver.set(self.N, "x", states[-1])
         except Exception as error:
+            if raise_on_failure:
+                # A safety veto must never fall through to a retained input.
+                raise RuntimeError("Could not install stage-0 safe-stop plan") from error
             print(f"Warning: infeasible recovery failed: {error}")
         return self.solver, solver_status, "safe_stop"
 
@@ -1529,12 +1582,12 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
     def _record_recovery(self, mode):
         if mode == "backup_feasible_qp":
             self._backup_feasible_qp_success_count += 1
-        elif mode == "safe_stop":
+        elif mode in ("safe_stop", "safe_stop_stage0"):
             self._safe_stop_count += 1
-            print(
-                "Applied nominal_safe_controller safe-stop plan after "
-                "infeasible CC-MF solve."
-            )
+            if mode == "safe_stop_stage0":
+                self._stage0_guard_stop_count += 1
+            if self.param.debug_mf or self.param.debug_infeasibility:
+                print(f"Applied nominal_safe_controller plan: {mode}.")
 
     def _update_predicted_progress(self, solver, status):
         if status != 0:
@@ -1642,12 +1695,20 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             mf_slack = diagnostics.get("mf_lower_slack")
             psdf = diagnostics.get("exact_current_psdf")
         else:
-            mf_slack = self._read_lower_slack_trajectory(solver)[:, 1]
+            mf_slack = (
+                None if mode in ("safe_stop", "safe_stop_stage0")
+                else self._read_lower_slack_trajectory(solver)[:, 1]
+            )
             psdf = (
                 self._constraint_data.get("exact_current_phi")
                 if self._constraint_data is not None
                 else None
             )
+
+        if mode in ("safe_stop", "safe_stop_stage0"):
+            # A constructed braking plan has no optimized MF slack. A reset
+            # solver's zero/stale slack must not be mistaken for a solution.
+            mf_slack = np.full(self.N + 1, np.nan)
 
         main_status = self._last_main_status
         if main_status is None:
@@ -1656,7 +1717,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             {
                 "time": log_time,
                 "solve_mode": str(mode),
-                "solver_status": int(main_status),
+                "solver_status": int(main_status) if main_status is not None else None,
                 "u0": self._json_vector(u0),
                 "s": float(self._prev_predicted_s),
                 "psdf": self._finite_or_none(psdf),
@@ -1673,7 +1734,12 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             return
 
         for stage in range(self.N + 1):
-            p_f, p_l, p_psi, p_lpsi = states[stage, 4:8]
+            try:
+                covariance = self._covariance_state_to_matrix(states[stage, 4:8])
+                p_f, p_l, p_psi = np.diag(covariance)
+                p_lpsi = covariance[1, 2]
+            except ValueError:
+                p_f = p_l = p_psi = p_lpsi = np.nan
             if stage < self.N:
                 v_value = self._finite_or_none(inputs[stage, 0])
                 omega_value = self._finite_or_none(inputs[stage, 1])
@@ -1705,13 +1771,18 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
                 }
             )
 
-    def _finish_solve(self, start_time, mode, status, solver, diagnostics):
+    def _finish_solve(self, mode, status, solver, diagnostics):
         self._last_solve_mode = mode
         self._record_experiment_logs(mode, status, solver, diagnostics)
-        solve_time = time.time() - start_time
+        solve_time = self._cycle_solver_time
         self.solver_times.append(solve_time)
 
-        if mode == "safe_stop":
+        # Detailed console diagnostics are opt-in. CSV uses cached values and
+        # remains available without triggering another PSDF evaluation.
+        if not (self.param.debug_mf or self.param.debug_infeasibility):
+            return
+
+        if mode in ("safe_stop", "safe_stop_stage0"):
             outcome = "SAFE_STOP"
         elif mode == "backup_feasible_qp":
             outcome = "RECOVERED"
@@ -1791,21 +1862,28 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         if self.solver is None:
             raise RuntimeError("CC-MF solver is not initialized. Call setup() first.")
 
-        start = time.time()
+        self._cycle_solver_time = 0.0
         self._last_backup_status = None
         self._last_constraint_diagnostics = None
         self._last_failed_constraint_diagnostics = None
+        self._last_main_status = None
         # Match the working MPCC/CC-SF lifecycle: linearize Row G/M at the
         # solver's retained warm-start trajectory instead of manually shifting
         # that trajectory before each RTI solve.
         status = self._prepare_and_solve(self.solver)
-        self._last_main_status = int(status)
-        if status != 0:
+        self._last_main_status = int(status) if status is not None else None
+        if status is not None and status != 0:
             self._main_solver_failure_count += 1
         active_solver = self.solver
         mode = "sqp_rti"
 
-        if status != 0:
+        if status is None:
+            active_solver, _, _ = self._apply_safe_stop(
+                self._system_dynamics, None, raise_on_failure=True,
+            )
+            mode = "safe_stop_stage0"
+            self._record_recovery(mode)
+        elif status != 0:
             self._report_solver_failure(status)
             use_debug = bool(self.param.debug_infeasibility)
             if use_debug:
@@ -1825,7 +1903,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             active_solver, status, mode = self.recovery_infeasible(status)
             self._record_recovery(mode)
 
-        if mode == "safe_stop":
+        if mode in ("safe_stop", "safe_stop_stage0"):
             # The safe-stop state trajectory is not the nominal trajectory on
             # which the MF sum was evaluated.  Keep the raw experiment log, but
             # suppress the spatial overlay for this cycle to avoid mixing them.
@@ -1835,7 +1913,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
 
         diagnostics = None
         use_debug = bool(self.param.debug_mf)
-        if use_debug:
+        if use_debug and status is not None:
             diagnostics = self.compute_diagnostics(
                 active_solver,
                 status,
@@ -1844,9 +1922,21 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             )
         if diagnostics is not None:
             self._record_constraint_log(diagnostics)
-        self._finish_solve(start, mode, status, active_solver, diagnostics)
+        self._finish_solve(mode, status, active_solver, diagnostics)
         self._solve_count += 1
-        return AcadosSolution(active_solver, self.N)
+        return AcadosSolution(
+            active_solver,
+            self.N,
+            status_info={
+                "return_status": (
+                    "safe_stop_stage0" if status is None
+                    else "success" if status == 0 else "failure"
+                ),
+                "status_code": int(status) if status is not None else None,
+                "success": status == 0,
+                "solver_called": status is not None,
+            },
+        )
 
     def initialize_augmented_psdf(self, system, E_max=100, K_max=20, device="cpu"):
         self.device = device
@@ -1865,9 +1955,10 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
 
 
 class AcadosSolution:
-    def __init__(self, solver, horizon):
+    def __init__(self, solver, horizon, *, status_info=None):
         self.solver = solver
         self.N = horizon
+        self._status_info = dict(status_info) if status_info is not None else None
 
     def value(self, var_expr):
         if var_expr == "x":
@@ -1877,10 +1968,13 @@ class AcadosSolution:
         raise NotImplementedError("Only 'x' and 'u' supported in AcadosSolution.value")
 
     def get_state_trajectory(self):
+        """Return [x, y, theta, s, xi_f, xi_l, xi_theta, xi_c] by stage."""
         return self.value("x")
 
     def get_input_trajectory(self):
         return self.value("u")
 
     def stats(self):
+        if self._status_info is not None:
+            return dict(self._status_info)
         return {"return_status": "success" if self.solver.status == 0 else "failure"}

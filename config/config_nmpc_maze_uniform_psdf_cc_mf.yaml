@@ -1,0 +1,38 @@
+# Nominal navigation check for the 150 mm straight-width maze (option A).
+# Use a fresh --results-dir for every execution.
+trials: 1
+
+defaults:
+  simulation_time: 60.0
+  generate_animation: false
+  generate_plots: false
+  generate_risk_profile: false
+
+start_perturbation:
+  enabled: false
+  seed: 0
+
+localization_error:
+  enabled: false
+
+success_criteria:
+  position_tolerance: 0.02
+  angle_tolerance: null
+
+trial_failure_criteria:
+  enabled: true
+  movement_window_sec: 4.0
+  movement_threshold: 0.03
+  max_consecutive_solver_failures: 20
+
+test_configs:
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: psdf
+    dynamics_type: differential_drive
+    path_planner: astar
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_mf
+    dynamics_type: differential_drive
+    path_planner: astar

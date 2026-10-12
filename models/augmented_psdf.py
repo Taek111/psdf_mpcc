@@ -1,9 +1,10 @@
 """Augmented polygon-set distance field with an analytic pose gradient.
 
 The public forward path returns the hard-SAT signed distance and the analytic
-world-frame gradient of its active branch.  ``forward_mf`` additionally
+world-frame gradient of its active branch.  ``forward_clusters`` preserves
+those outputs for every obstacle.  ``forward_mf`` additionally
 returns the batched affine coefficients for the Boole multi-feature chance
-constraint used by RMPCC.
+constraint used by CC-MF.
 """
 
 from __future__ import annotations
@@ -84,19 +85,27 @@ class PSDF(nn.Module):
         epsilon: Tensor,
         d_min: float,
     ) -> tuple[Tensor, Tensor]:
-        """Compute the MF Jacobian and its nominal nonlinear residual."""
+        """Compute the MF Jacobian in pose and log-Cholesky coordinates."""
 
+        # Invalid feature slots must not contribute NaNs through products such
+        # as zero times an undefined feature gradient or distance.
+        q = torch.where(feature_mask[..., None], q, torch.zeros_like(q))
         q_f, q_l, q_theta = q.unbind(-1)
-        sigma_ff = z_bar[:, 4, None]
-        sigma_ll = z_bar[:, 5, None]
-        sigma_tt = z_bar[:, 6, None]
-        sigma_lt = z_bar[:, 7, None]
+        l_ff = z_bar[:, 4, None].exp()
+        l_ll = z_bar[:, 5, None].exp()
+        l_tt = z_bar[:, 6, None].exp()
+        l_tl = z_bar[:, 7, None]
 
+        # ||L(xi)^T q||^2, evaluated directly from the factor.  The fourth
+        # state is L_theta,l, not the lateral-heading covariance entry.
+        forward_projection = l_ff * q_f
+        lateral_projection = l_ll * q_l
+        heading_projection = l_tt * q_theta
+        coupled_projection = lateral_projection + l_tl * q_theta
         sigma_sq = (
-            q_f.square() * sigma_ff
-            + q_l.square() * sigma_ll
-            + q_theta.square() * sigma_tt
-            + 2.0 * q_l * q_theta * sigma_lt
+            forward_projection.square()
+            + coupled_projection.square()
+            + heading_projection.square()
         )
 
         # Keep detailed value validation on CPU, where scalar inspection does
@@ -115,7 +124,8 @@ class PSDF(nn.Module):
 
         safe_sigma_sq = torch.where(feature_mask, sigma_sq, torch.ones_like(sigma_sq))
         sigma = safe_sigma_sq.sqrt()
-        zeta = (d_min - d) / sigma
+        safe_d = torch.where(feature_mask, d, torch.full_like(d, d_min))
+        zeta = (d_min - safe_d) / sigma
 
         inv_sqrt_2 = 1.0 / math.sqrt(2.0)
         inv_sqrt_2pi = 1.0 / math.sqrt(2.0 * math.pi)
@@ -138,21 +148,26 @@ class PSDF(nn.Module):
             dim=-1,
         )
 
-        covariance_basis = torch.stack(
+        variance_gradient = torch.stack(
             [
-                q_f.square(),
-                q_l.square(),
-                q_theta.square(),
-                2.0 * q_l * q_theta,
+                2.0 * forward_projection.square(),
+                2.0 * lateral_projection * coupled_projection,
+                2.0 * heading_projection.square(),
+                2.0 * q_theta * coupled_projection,
             ],
             dim=-1,
         )
-        covariance_scale = pdf * zeta / (2.0 * safe_sigma_sq)
-        covariance_block = (covariance_scale[..., None] * covariance_basis).sum(1)
+        variance_gradient = torch.where(
+            feature_mask[..., None],
+            variance_gradient,
+            torch.zeros_like(variance_gradient),
+        )
+        uncertainty_scale = pdf * zeta / (2.0 * safe_sigma_sq)
+        uncertainty_block = (uncertainty_scale[..., None] * variance_gradient).sum(1)
 
         A_mf = torch.zeros_like(z_bar)
         A_mf[:, :3] = pose_world
-        A_mf[:, 4:] = covariance_block
+        A_mf[:, 4:] = uncertainty_block
         return A_mf, h_bar
 
     @staticmethod
@@ -169,6 +184,7 @@ class PSDF(nn.Module):
         mask: Tensor,
         poses: Tensor,
         return_features: bool = False,
+        return_clusters: bool = False,
     ):
         """Evaluate the PSDF and its analytic world-frame pose gradient.
 
@@ -184,7 +200,9 @@ class PSDF(nn.Module):
 
         if A.ndim != 3 or A.shape[-1] != 2 or B.shape != A.shape:
             raise ValueError("A and B must have the same shape (K, E, 2)")
-        if A.shape[0] == 0 or A.shape[1] == 0:
+        if (A.shape[0] == 0 and not return_clusters) or (
+            A.shape[0] > 0 and A.shape[1] == 0
+        ):
             raise ValueError("A and B must contain at least one cluster and edge slot")
         if mask.shape != A.shape[:2] or mask.dtype != torch.bool:
             raise ValueError("mask must be bool with shape (K, E)")
@@ -212,6 +230,8 @@ class PSDF(nn.Module):
                 raise ValueError("all floating-point inputs must be finite")
 
         H, K, E = poses.shape[0], A.shape[0], A.shape[1]
+        if return_clusters and (K == 0 or H == 0):
+            return poses.new_empty((H, K)), poses.new_empty((H, K, 3))
         m = self.V.shape[0]
 
         # World-to-body transform, kept identical to the inherited PSDF.
@@ -431,6 +451,19 @@ class PSDF(nn.Module):
             -q_pen,
         )
 
+        if return_clusters:
+            g_cluster = torch.stack(
+                [
+                    cos_theta[:, None] * q_cluster[..., 0]
+                    - sin_theta[:, None] * q_cluster[..., 1],
+                    sin_theta[:, None] * q_cluster[..., 0]
+                    + cos_theta[:, None] * q_cluster[..., 1],
+                    q_cluster[..., 2],
+                ],
+                dim=-1,
+            )
+            return signed_cluster, g_cluster
+
         active_cluster = signed_cluster.argmin(1)
         phi = torch.gather(signed_cluster, 1, active_cluster.unsqueeze(-1)).squeeze(-1)
         q_active = torch.gather(
@@ -470,6 +503,25 @@ class PSDF(nn.Module):
         return self._forward_impl(A, B, mask, poses)
 
     @torch.no_grad()
+    def forward_clusters(
+        self,
+        A: Tensor,
+        B: Tensor,
+        mask: Tensor,
+        poses: Tensor,
+    ) -> tuple[Tensor, Tensor]:
+        """Return each obstacle's signed distance and world-frame gradient.
+
+        Inputs follow :meth:`forward`; outputs have shapes ``(H, K)`` and
+        ``(H, K, 3)`` in the input cluster order.  Edge padding is masked, but
+        each supplied cluster must contain a valid edge.  An empty cluster
+        axis is allowed and returns empty outputs with the same batch size.
+        Distances use the same hard-SAT branches as the scalar forward path.
+        """
+
+        return self._forward_impl(A, B, mask, poses, return_clusters=True)
+
+    @torch.no_grad()
     def forward_mf(
         self,
         A: Tensor,
@@ -482,7 +534,9 @@ class PSDF(nn.Module):
         """Evaluate PSDF outputs and one MF affine row per stage.
 
         ``z_bar`` uses the augmented-state order
-        ``[x, y, theta, s, P_f, P_l, P_psi, P_lpsi]``.  Feature identities,
+        ``[x, y, theta, s, xi_f, xi_l, xi_theta, xi_c]``, with
+        ``xi = [log(L_ff), log(L_ll), log(L_theta,theta), L_theta,l]``.
+        Covariance is reconstructed as ``L @ L.T``.  Feature identities,
         distances, gradients, and masks stay inside this tensor graph; only
         ``A_mf`` and ``c_mf`` need to be transferred to the OCP.
         """

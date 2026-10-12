@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+from models.dd_dynamics import DifferentialDriveDynamics
+
 try:
     from pypoman import compute_polytope_vertices
 
@@ -245,54 +247,6 @@ def polygon_to_edges(polytope_region):
     edgesB = torch.tensor(edgesB, dtype=torch.float32)
     
     return edgesA, edgesB
-
-class DifferentialDriveDynamics:
-    @staticmethod
-    def forward_dynamics(x, u, timestep):
-        """
-        Return updated state in a form of `np.ndnumpy`
-        states : x, y, yaw
-        action : v, w
-        """
-        x_next = np.ndarray(shape=(3,), dtype=float)
-        x_next[0] = x[0] + u[0] * math.cos(x[2]) * timestep
-        x_next[1] = x[1] + u[0] * math.sin(x[2]) * timestep
-        x_next[2] = x[2] + u[1] * timestep
-        return x_next
-
-    @staticmethod
-    def forward_dynamics_opt(timestep):
-        """Return updated state in a form of `ca.SX`
-        states : x, y, yaw
-        action : v, w
-        """
-        x_symbol = ca.SX.sym("x", 3)
-        u_symbol = ca.SX.sym("u", 2)
-        x_symbol_next = x_symbol[0] + u_symbol[0] * ca.cos(x_symbol[2]) * timestep
-        y_symbol_next = x_symbol[1] + u_symbol[0] * ca.sin(x_symbol[2]) * timestep
-        theta_symbol_next = x_symbol[2] + u_symbol[1] * timestep
-        state_symbol_next = ca.vertcat(x_symbol_next, y_symbol_next, theta_symbol_next)
-        return ca.Function("DifferentialDrive_dynamics", [x_symbol, u_symbol], [state_symbol_next])
-    
-    @staticmethod
-    def nominal_safe_controller(x, timestep, v_last, amin, amax):
-        """
-        Return updated state using nominal safe controller in a form of `np.ndnumpy`
-        Make the velocity input that can be stopped in a timestep
-        """
-        u_nom = np.zeros(shape=(2,))
-        a_nom = np.clip(-v_last / timestep, amin, amax)
-        u_nom[0] = v_last + a_nom * timestep
-        return DifferentialDriveDynamics.forward_dynamics(x, u_nom, timestep), u_nom
-
-    @staticmethod
-    def safe_dist(timestep, v_last, amax, dist_margin):
-        """Return a safe distance outside which to ignore obstacles"""
-        # TODO: wrap params
-        safe_ratio = 1.25
-        brake_min_dist = (abs(v_last) + amax * timestep) ** 2 / (2 * amax) + dist_margin
-        return safe_ratio * brake_min_dist + abs(v_last) * timestep + 0.5 * amax * timestep ** 2
-
 
 class DifferentialDriveStates:
     def __init__(self, x, u=np.array([0.0, 0.0])):

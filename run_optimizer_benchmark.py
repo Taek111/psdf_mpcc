@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the nominal maze optimizer benchmark and RMPCC-MF scale sweep."""
+"""Run the nominal maze optimizer benchmark and CC-MF scale sweep."""
 
 import argparse
 import csv
@@ -36,8 +36,8 @@ COVARIANCE_GROWTH_BASE = {
 METHOD_LABELS = {
     "psdf": "PSDF-MPC",
     "mpcc": "PSDF-MPCC",
-    "rmpcc_pv": "PSDF-MPCC-CC-SF",
-    "rmpcc": "PSDF-MPCC-CC-MF",
+    "cc_sf": "PSDF-MPCC-CC-SF",
+    "cc_mf": "PSDF-MPCC-CC-MF",
 }
 
 SUMMARY_FIELDS = (
@@ -80,8 +80,8 @@ def scale_token(scale: float) -> str:
     return f"{float(scale):g}".replace("-", "m").replace(".", "p")
 
 
-def build_rmpcc_scale_config(scale: float) -> Dict[str, float]:
-    """Resolve scale-dependent coefficients without changing RMPCCOptimizerParam."""
+def build_cc_mf_scale_config(scale: float) -> Dict[str, float]:
+    """Resolve scale-dependent coefficients without changing CCMFOptimizerParam."""
     scale = float(scale)
     if not math.isfinite(scale) or scale < 0.0:
         raise ValueError("covariance growth scale must be a finite non-negative value")
@@ -178,7 +178,7 @@ def build_run_config(
         },
     }
     if scale is not None:
-        config["rmpcc"] = build_rmpcc_scale_config(scale)
+        config["cc_mf"] = build_cc_mf_scale_config(scale)
         config["metadata"]["covariance_growth_scale"] = float(scale)
     return config
 
@@ -317,7 +317,19 @@ def _write_csv(path: Path, rows: Sequence[dict], fields: Sequence[str]) -> None:
 
 
 def load_summary(path: Path) -> List[dict]:
-    return _read_csv(path)
+    rows = _read_csv(path)
+    legacy_types = {
+        row.get("optimizer_type")
+        for row in rows
+        if row.get("optimizer_type") in ("rmpcc", "rmpcc_pv")
+    }
+    if legacy_types:
+        raise ValueError(
+            f"{path} contains results under legacy optimizer names "
+            f"({', '.join(sorted(legacy_types))}). Use a new --output-root "
+            "directory for cc_sf/cc_mf runs to preserve the existing results."
+        )
+    return rows
 
 
 def upsert_summary(rows: List[dict], new_row: dict) -> List[dict]:
@@ -334,7 +346,7 @@ def normalize_trial_numbers(rows: Sequence[dict]) -> List[dict]:
     comparison_trials = {
         f"compare_{optimizer_type}": index
         for index, optimizer_type in enumerate(
-            ("psdf", "mpcc", "rmpcc_pv"), start=len(DEFAULT_SCALES) + 1
+            ("psdf", "mpcc", "cc_sf"), start=len(DEFAULT_SCALES) + 1
         )
     }
     trial_numbers = {**scale_trials, **comparison_trials}
@@ -542,7 +554,7 @@ def _float_from_row(row: dict, field: str, default: float) -> float:
 def select_best_scale(rows: Sequence[dict]) -> Optional[dict]:
     candidates = []
     for row in rows:
-        if row.get("optimizer_type") != "rmpcc":
+        if row.get("optimizer_type") != "cc_mf":
             continue
         if row.get("status") != "success" or _parse_bool(row.get("collision")) is True:
             continue
@@ -570,7 +582,7 @@ def select_best_scale(rows: Sequence[dict]) -> Optional[dict]:
 
 def save_derived_outputs(output_root: Path, rows: Sequence[dict]) -> Optional[dict]:
     scale_rows = sorted(
-        (row for row in rows if row.get("optimizer_type") == "rmpcc"),
+        (row for row in rows if row.get("optimizer_type") == "cc_mf"),
         key=lambda row: _float_from_row(row, "covariance_growth_scale", float("inf")),
     )
     _write_csv(output_root / "scale_sweep.csv", scale_rows, SUMMARY_FIELDS)
@@ -578,14 +590,14 @@ def save_derived_outputs(output_root: Path, rows: Sequence[dict]) -> Optional[di
     selected = select_best_scale(scale_rows)
     comparison_rows = [
         row
-        for optimizer_type in ("psdf", "mpcc", "rmpcc_pv")
+        for optimizer_type in ("psdf", "mpcc", "cc_sf")
         for row in rows
         if row.get("optimizer_type") == optimizer_type
     ]
     if selected is not None:
         comparison_rows.append(selected)
     comparison_rows.sort(
-        key=lambda row: ("psdf", "mpcc", "rmpcc_pv", "rmpcc").index(
+        key=lambda row: ("psdf", "mpcc", "cc_sf", "cc_mf").index(
             row["optimizer_type"]
         )
     )
@@ -625,7 +637,7 @@ def write_progress(output_root: Path, rows: Sequence[dict], selected: Optional[d
         "## 준비",
         "",
         "- [x] 벤치마크 실행기와 controller 전체 계산시간 계측 추가",
-        "- [x] scale별 alpha/beta 실행 설정 계산 (`RMPCCOptimizerParam` 미수정)",
+        "- [x] scale별 alpha/beta 실행 설정 계산 (`CCMFOptimizerParam` 미수정)",
         "- [x] 계산시간·deadline·주행시간·clearance·입력 변화·실패 지표 집계",
         "- [x] 짧은 smoke test로 raw 로그와 요약 CSV 생성 확인",
         "",
@@ -654,7 +666,7 @@ def write_progress(output_root: Path, rows: Sequence[dict], selected: Optional[d
         ]
     )
     for trial_number, optimizer_type in enumerate(
-        ("psdf", "mpcc", "rmpcc_pv"), start=len(DEFAULT_SCALES) + 1
+        ("psdf", "mpcc", "cc_sf"), start=len(DEFAULT_SCALES) + 1
     ):
         run_id = f"compare_{optimizer_type}"
         checked = "x" if _row_completed(output_root, rows_by_id, run_id) else " "
@@ -787,7 +799,7 @@ def main() -> None:
                 summary_rows=summary_rows,
                 run_id=f"mf_scale_{scale_token(scale)}",
                 trial_number=trial_number,
-                optimizer_type="rmpcc",
+                optimizer_type="cc_mf",
                 simulation_time=args.simulation_time,
                 resume=args.resume,
                 scale=float(scale),
@@ -795,7 +807,7 @@ def main() -> None:
 
     if args.phase in ("compare", "all"):
         for trial_number, optimizer_type in enumerate(
-            ("psdf", "mpcc", "rmpcc_pv"), start=len(DEFAULT_SCALES) + 1
+            ("psdf", "mpcc", "cc_sf"), start=len(DEFAULT_SCALES) + 1
         ):
             summary_rows = _run_or_resume(
                 output_root=args.output_root,

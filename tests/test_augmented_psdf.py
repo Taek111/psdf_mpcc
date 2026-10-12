@@ -17,6 +17,12 @@ class AugmentedPSDFTest(unittest.TestCase):
             dtype=self.dtype,
         )
 
+    @staticmethod
+    def factor_from_state(z):
+        factor = torch.diag_embed(z[..., 4:7].exp())
+        factor[..., 2, 1] = z[..., 7]
+        return factor
+
     def rectangle_edges(self, left, right, bottom, top):
         points = torch.tensor(
             [[left, bottom], [right, bottom], [right, top], [left, top]],
@@ -166,7 +172,8 @@ class AugmentedPSDFTest(unittest.TestCase):
         wrapper.update_edge_clusters([edges_A], [edges_B])
         z_bar = torch.zeros((3, 8), dtype=self.dtype)
         z_bar[:, 2] = torch.tensor([0.0, 0.1, -0.2], dtype=self.dtype)
-        z_bar[:, 4:7] = 4e-4
+        z_bar[:, 4:7] = np.log(0.02)
+        z_bar[:, 7] = torch.tensor([-0.005, 0.0, 0.005], dtype=self.dtype)
         epsilon = torch.tensor([0.1, 0.2, 0.3], dtype=self.dtype)
 
         phi, gradient, A_mf, c_mf = wrapper.forward_mf(
@@ -188,13 +195,9 @@ class AugmentedPSDFTest(unittest.TestCase):
             z_bar[:, :3],
             return_features=True,
         )
-        q_f, q_l, q_theta = q.unbind(-1)
-        sigma_sq = (
-            q_f.square() * z_bar[:, 4, None]
-            + q_l.square() * z_bar[:, 5, None]
-            + q_theta.square() * z_bar[:, 6, None]
-            + 2.0 * q_l * q_theta * z_bar[:, 7, None]
-        )
+        factor = self.factor_from_state(z_bar)
+        covariance = factor @ factor.transpose(-1, -2)
+        sigma_sq = torch.einsum("hfi,hij,hfj->hf", q, covariance, q)
         sigma = torch.where(feature_mask, sigma_sq, torch.ones_like(sigma_sq)).sqrt()
         zeta = (0.001 - d) / sigma
         cdf = 0.5 * (1.0 + torch.erf(zeta / np.sqrt(2.0)))
@@ -210,7 +213,8 @@ class AugmentedPSDFTest(unittest.TestCase):
         wrapper = AugmentedPSDFWrapper(self.verts, K_max=2, E_max=6)
         wrapper.update_edge_clusters([edges_A], [edges_B])
         z_bar = torch.tensor(
-            [[0.0, 0.0, 0.3, 0.0, 4e-4, 5e-4, 6e-4, 2e-5]],
+            [[0.0, 0.0, 0.3, 0.0, np.log(0.02), np.log(0.025),
+              np.log(0.03), -0.006]],
             dtype=self.dtype,
         )
         epsilon = 0.2
@@ -238,13 +242,8 @@ class AugmentedPSDFTest(unittest.TestCase):
                 ]
             )
             mean = d[0] + (q[0] * delta_body).sum(-1)
-            q_f, q_l, q_theta = q[0].unbind(-1)
-            sigma_sq = (
-                q_f.square() * z[4]
-                + q_l.square() * z[5]
-                + q_theta.square() * z[6]
-                + 2.0 * q_l * q_theta * z[7]
-            )
+            projected_factor = q[0] @ self.factor_from_state(z)
+            sigma_sq = projected_factor.square().sum(-1)
             sigma = torch.where(
                 feature_mask[0],
                 sigma_sq,
@@ -259,7 +258,7 @@ class AugmentedPSDFTest(unittest.TestCase):
             ).sum()
 
         finite_difference = torch.zeros(8, dtype=self.dtype)
-        for dimension in (0, 1, 2, 4, 5, 6, 7):
+        for dimension in range(8):
             step = 1e-6 if dimension < 3 else 1e-7
             z_plus = z_bar[0].clone()
             z_minus = z_bar[0].clone()
@@ -271,10 +270,44 @@ class AugmentedPSDFTest(unittest.TestCase):
 
         torch.testing.assert_close(A_mf[0], finite_difference, atol=3e-6, rtol=2e-5)
 
+        differentiable_state = z_bar[0].clone().requires_grad_(True)
+        expected_gradient, = torch.autograd.grad(
+            fixed_feature_residual(differentiable_state), differentiable_state
+        )
+        torch.testing.assert_close(A_mf[0], expected_gradient, atol=1e-10, rtol=1e-10)
+
+    def test_mf_invalid_padding_is_masked_before_standardization(self):
+        z_bar = torch.tensor(
+            [[0.0, 0.0, 0.2, 0.0, np.log(0.02), np.log(0.03),
+              np.log(0.04), 0.015]],
+            dtype=self.dtype,
+        )
+        distance = torch.tensor([[0.04, float("nan")]], dtype=self.dtype)
+        gradient = torch.tensor(
+            [[[0.6, 0.8, -0.3], [float("nan")] * 3]], dtype=self.dtype
+        )
+        mask = torch.tensor([[True, False]])
+        epsilon = torch.tensor([0.2], dtype=self.dtype)
+        actual_A, actual_h = PSDF._compute_A(
+            distance, gradient, mask, z_bar, epsilon, 0.001
+        )
+        expected_A, expected_h = PSDF._compute_A(
+            distance[:, :1], gradient[:, :1], mask[:, :1], z_bar, epsilon, 0.001
+        )
+        self.assertTrue(torch.isfinite(actual_A).all())
+        torch.testing.assert_close(actual_A, expected_A)
+        torch.testing.assert_close(actual_h, expected_h)
+
+        empty_A, empty_h = PSDF._compute_A(
+            distance, gradient, torch.zeros_like(mask), z_bar, epsilon, 0.001
+        )
+        torch.testing.assert_close(empty_A, torch.zeros_like(z_bar))
+        torch.testing.assert_close(empty_h, epsilon)
+
     def test_mf_empty_obstacle_is_feasible(self):
         wrapper = AugmentedPSDFWrapper(self.verts, K_max=2, E_max=6)
         z_bar = torch.zeros((2, 8), dtype=self.dtype)
-        z_bar[:, 4:7] = 1e-4
+        z_bar[:, 4:7] = np.log(0.01)
         phi, gradient, A_mf, c_mf = wrapper.forward_mf(z_bar, 0.2, 0.001)
         torch.testing.assert_close(phi, torch.full((2,), 1000.0, dtype=self.dtype))
         torch.testing.assert_close(gradient, torch.zeros((2, 3), dtype=self.dtype))

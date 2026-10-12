@@ -57,6 +57,7 @@ class TrialFailureChecker:
         self._max_consecutive_solver_failures = int(max_consecutive_solver_failures)
         self._recent_positions = []
         self._consecutive_solver_failures = 0
+        self._consecutive_failures_include_skipped_solve = False
 
     def __call__(self, simulation):
         robot = simulation._robot
@@ -66,16 +67,24 @@ class TrialFailureChecker:
 
         if solver_success is False:
             self._consecutive_solver_failures += 1
+            if status_info.get("solver_called") is False:
+                self._consecutive_failures_include_skipped_solve = True
         elif solver_success is True:
             self._consecutive_solver_failures = 0
+            self._consecutive_failures_include_skipped_solve = False
 
         if (
             self._max_consecutive_solver_failures > 0
             and self._consecutive_solver_failures >= self._max_consecutive_solver_failures
         ):
             raw_status = status_info.get("raw_status", "unknown")
+            reason_kind = (
+                "consecutive_unsuccessful_control_steps"
+                if self._consecutive_failures_include_skipped_solve
+                else "consecutive_solver_failures"
+            )
             return {
-                "reason": f"consecutive_solver_failures({self._consecutive_solver_failures}): {raw_status}",
+                "reason": f"{reason_kind}({self._consecutive_solver_failures}): {raw_status}",
             }
 
         if self._movement_window_sec <= 0.0 or self._movement_threshold < 0.0:
@@ -149,6 +158,33 @@ class simulation_mpc:
             return {}
 
         return dict(runtime_stats)
+
+    @staticmethod
+    def _get_current_psdf_for_logging(optimizer, current_pose):
+        """Reuse the optimizer's current-step PSDF when it exposes a cache.
+
+        An unavailable cache is recorded as NaN rather than evaluating PSDF
+        again. The optimizer owns cache invalidation and any debug evaluation.
+        Optimizers without this interface retain their existing logging path.
+        """
+        get_current_psdf = getattr(optimizer, "get_current_psdf", None)
+        if callable(get_current_psdf):
+            try:
+                value = float(get_current_psdf())
+            except Exception:
+                return float("nan")
+            return value if np.isfinite(value) else float("nan")
+
+        psdf_wrapper = getattr(optimizer, "psdf_wrapper", None)
+        if psdf_wrapper is None:
+            return float("nan")
+        pose_tensor = torch.tensor(
+            current_pose, dtype=torch.float32, device=optimizer.device,
+        ).unsqueeze(0)
+        with torch.no_grad():
+            psdf_output = psdf_wrapper(pose_tensor)
+            phi_tensor = psdf_output[0] if isinstance(psdf_output, tuple) else psdf_output
+            return phi_tensor.item()
 
     @staticmethod
     def _parse_profile_heatmap_scale(metric_name, scale_value):
@@ -478,7 +514,7 @@ class simulation_mpc:
 
     @staticmethod
     def _resolve_use_risk_visualization(simulation, override=None):
-        """Resolve an explicit override or the RMPCC optimizer parameter."""
+        """Resolve an explicit override or the CC-MF optimizer parameter."""
 
         if override is not None:
             return bool(override)
@@ -962,10 +998,12 @@ class simulation_mpc:
             "dcbf_casadi",
             "obca",
             "minkowski_cbf",
+            "sipoc",
             "psdf",
             "mpcc",
-            "rmpcc_pv",
-            "rmpcc",
+            "cc_sf",
+            "cc_mf",
+            "cc_ecs",
             "dcbf",
             "sqp",
         )
@@ -989,10 +1027,12 @@ class simulation_mpc:
             "acados": "MPC_SQP_",
             "obca": "MPC_OBCA_",
             "minkowski_cbf": "MPC_minkowski_cbf_",
+            "sipoc": "MPC_sipoc_",
             "psdf": "MPC_psdf_",
             "mpcc": "MPC_mpcc_",
-            "rmpcc_pv": "MPC_rmpcc_pv_",
-            "rmpcc": "MPC_rmpcc_",
+            "cc_sf": "MPC_cc_sf_",
+            "cc_mf": "MPC_cc_mf_",
+            "cc_ecs": "MPC_cc_ecs_",
             "dcbf": "MPC_DCBF_",
             "dcbf_casadi": "MPC_DCBF_CASADI_",
             "casadi": "MPC_",
@@ -1498,7 +1538,7 @@ class simulation_mpc:
 
         print(f"Trial history saved to {filepath}")
 
-    def save_rmpcc_constraint_history_to_csv(self, filename):
+    def save_cc_mf_constraint_history_to_csv(self, filename):
         """Save only the values needed to assess Row G/Row M feasibility."""
         controller = getattr(self.robot, "_controller", None)
         optimizer = getattr(controller, "_optimizer", None)
@@ -1516,9 +1556,9 @@ class simulation_mpc:
             writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(rows)
-        print(f"RMPCC constraint history saved to {filepath}")
+        print(f"CC-MF constraint history saved to {filepath}")
 
-    def save_rmpcc_debug_history_to_csv(self):
+    def save_cc_mf_debug_history_to_csv(self):
         """Save the compact tuning records in the current run directory."""
         controller = getattr(self.robot, "_controller", None)
         optimizer = getattr(controller, "_optimizer", None)
@@ -1554,7 +1594,41 @@ class simulation_mpc:
                 )
                 writer.writeheader()
                 writer.writerows(rows)
-            print(f"RMPCC debug history saved to {filepath}")
+            print(f"CC-MF debug history saved to {filepath}")
+
+    def _save_optimizer_log_csv(self, filename, rows_method, fields_method, label):
+        """Export an optimizer-provided log without assuming its row schema."""
+        controller = getattr(self.robot, "_controller", None)
+        optimizer = getattr(controller, "_optimizer", None)
+        if optimizer is None:
+            return
+        if not hasattr(optimizer, rows_method) or not hasattr(optimizer, fields_method):
+            return
+        rows = getattr(optimizer, rows_method)()
+        if not rows:
+            return
+        filepath = os.path.join(self._get_output_dir("data"), f"{filename}.csv")
+        with open(filepath, "w", newline="", encoding="utf-8") as csv_file:
+            writer = csv.DictWriter(
+                csv_file, fieldnames=getattr(optimizer, fields_method)(),
+            )
+            writer.writeheader()
+            writer.writerows(rows)
+        print(f"{label} saved to {filepath}")
+
+    def save_cc_ecs_history_to_csv(self):
+        """Save ECS constraints, covariance, and cycle logs under method names."""
+        for log_name, getter_name in (
+            ("constraints", "constraint"),
+            ("covariance", "covariance"),
+            ("cycle", "cycle"),
+        ):
+            self._save_optimizer_log_csv(
+                f"cc_ecs_{log_name}_{self.current_name}",
+                f"get_{getter_name}_log_rows",
+                f"get_{getter_name}_log_fields",
+                f"CC-ECS {log_name} history",
+            )
 
     def mpc_test(self, maze_type, robot_shape, optimizer_type="casadi", dynamics_type="differential_drive", path_planner="astar", simulation_time=20.0, config=None):
         """
@@ -1564,8 +1638,8 @@ class simulation_mpc:
             maze_type: Type of maze environment ("s_path", "straight_corridor", "maze", "oblique_maze", "parking")
             robot_shape: Shape of robot ("rectangle", "pentagon", "triangle", "lshape")
             optimizer_type: Type of optimizer ("casadi", "acados", "obca",
-                "minkowski_cbf", "psdf", "mpcc", "rmpcc", "rmpcc_pv",
-                "dcbf", "dcbf_casadi")
+                "minkowski_cbf", "psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs",
+                "dcbf", "dcbf_casadi", "sipoc")
             dynamics_type: Type of dynamics ("differential_drive")
             path_planner: Type of path planner.
             simulation_time: Duration of the simulation.
@@ -1720,7 +1794,7 @@ class simulation_mpc:
             self._apply_param_overrides(
                 opt_param, self._get_config_block(config, "obca"), "OBCA",
             )
-            optimizer = OBCAOptimizer({}, {}, dynamics.forward_dynamics_opt(0.1))
+            optimizer = OBCAOptimizer({}, {}, dynamics.forward_dynamics_opt(robot_system._dt))
             optimizer_name = "obca"
         elif optimizer_type == "psdf":
             from control.psdf_optimizer import PSDFOptimizer, PSDFOptimizerParam
@@ -1779,19 +1853,19 @@ class simulation_mpc:
 
             optimizer = MPCCOptimizer()
             optimizer_name = "mpcc"
-        elif optimizer_type == "rmpcc":
-            from control.rmpcc_optimizer import RMPCCOptimizer, RMPCCOptimizerParam
+        elif optimizer_type == "cc_mf":
+            from control.cc_mf_optimizer import CCMFOptimizer, CCMFOptimizerParam
 
-            opt_param = RMPCCOptimizerParam()
+            opt_param = CCMFOptimizerParam()
 
-            if config and 'rmpcc' in config:
-                self._apply_param_overrides(opt_param, config['rmpcc'], "RMPCC")
+            if config and 'cc_mf' in config:
+                self._apply_param_overrides(opt_param, config['cc_mf'], "CC-MF")
 
-            # Keep legacy configs loadable even though RMPCC does not use
+            # Keep legacy configs loadable even though CC-MF does not use
             # local-window detection parameters.
             if config and 'psdf_detection' in config:
                 print(
-                    "RMPCC ignores legacy 'psdf_detection' settings; "
+                    "CC-MF ignores legacy 'psdf_detection' settings; "
                     "detection parameters are unused."
                 )
 
@@ -1816,27 +1890,27 @@ class simulation_mpc:
                 )
             )
 
-            optimizer = RMPCCOptimizer()
-            optimizer_name = "rmpcc"
-        elif optimizer_type == "rmpcc_pv":
-            from control.rmpcc_pv_optimizer import (
-                RMPCCPVOptimizer,
-                RMPCCPVOptimizerParam,
+            optimizer = CCMFOptimizer()
+            optimizer_name = "cc_mf"
+        elif optimizer_type == "cc_sf":
+            from control.cc_sf_optimizer import (
+                CCSFOptimizer,
+                CCSFOptimizerParam,
             )
 
-            opt_param = RMPCCPVOptimizerParam()
-            pv_config = {}
+            opt_param = CCSFOptimizerParam()
+            sf_config = {}
             if config:
-                shared_rmpcc_config = dict(config.get("rmpcc", {}))
-                shared_rmpcc_config.pop("use_risk_visualization", None)
-                pv_config.update(shared_rmpcc_config)
-                pv_config.update(config.get("rmpcc_pv", {}))
-            if pv_config:
-                self._apply_param_overrides(opt_param, pv_config, "RMPCC-PV")
+                shared_cc_mf_config = dict(config.get("cc_mf", {}))
+                shared_cc_mf_config.pop("use_risk_visualization", None)
+                sf_config.update(shared_cc_mf_config)
+                sf_config.update(config.get("cc_sf", {}))
+            if sf_config:
+                self._apply_param_overrides(opt_param, sf_config, "CC-SF")
 
             if config and "psdf_detection" in config:
                 print(
-                    "RMPCC-PV ignores legacy 'psdf_detection' settings; "
+                    "CC-SF ignores legacy 'psdf_detection' settings; "
                     "detection parameters are unused."
                 )
 
@@ -1864,8 +1938,47 @@ class simulation_mpc:
                 )
             )
 
-            optimizer = RMPCCPVOptimizer()
-            optimizer_name = "rmpcc_pv"
+            optimizer = CCSFOptimizer()
+            optimizer_name = "cc_sf"
+        elif optimizer_type == "cc_ecs":
+            from control.cc_ecs_optimizer import CCECSOptimizer, CCECSOptimizerParam
+
+            opt_param = CCECSOptimizerParam()
+            self._apply_param_overrides(
+                opt_param, self._get_config_block(config, "cc_ecs"), "CC-ECS",
+            )
+            if config and "psdf_detection" in config:
+                print(
+                    "CC-ECS ignores legacy 'psdf_detection' settings; "
+                    "all obstacles are constrained."
+                )
+
+            dt = float(opt_param.tf) / float(opt_param.horizon)
+            local_window_length = max(
+                float(opt_param.v_s_max) * float(opt_param.tf) * 1.25,
+                0.8,
+            )
+            self.robot.set_local_planner(
+                SplineReferenceGenerator(
+                    reference_speed=max(0.25, 0.7 * float(opt_param.v_s_max)),
+                    num_horizon=opt_param.horizon,
+                    local_path_timestep=dt,
+                    window_length=local_window_length,
+                    max_segments=opt_param.max_segments,
+                    proj_dist_buffer=0.03,
+                    sample_count=opt_param.horizon,
+                    min_point_distance=1e-4,
+                    spline_bc_type="natural",
+                    projected_s_backtrack_tolerance=getattr(
+                        opt_param,
+                        "planner_projected_s_backtrack_tolerance",
+                        0.15,
+                    ),
+                )
+            )
+
+            optimizer = CCECSOptimizer()
+            optimizer_name = "cc_ecs"
         elif optimizer_type == "minkowski_cbf":
             from control.minkowski_cbf_optimizer import (
                 MinkowskiCBFOptimizer,
@@ -1880,6 +1993,27 @@ class simulation_mpc:
             )
             optimizer = MinkowskiCBFOptimizer()
             optimizer_name = "minkowski_cbf"
+        elif optimizer_type == "sipoc":
+            from control.dilated_polygon_robust_optimizer import (
+                DilatedPolygonRobustController,
+                DilatedPolygonRobustOptimizerParam,
+            )
+
+            opt_param = DilatedPolygonRobustOptimizerParam()
+            self._apply_param_overrides(
+                opt_param,
+                self._get_config_block(config, "sipoc"),
+                "Dilated polygon robust controller",
+            )
+            horizon_dt = float(opt_param.tf) / float(opt_param.horizon)
+            optimizer = DilatedPolygonRobustController(
+                {}, {}, dynamics.forward_dynamics_opt(horizon_dt),
+            )
+            # Supply one reference per prediction node, including the terminal
+            # node, using the existing pose-trajectory local planner.
+            self.robot._local_planner._num_horizon = int(opt_param.horizon) + 1
+            self.robot._local_planner._local_path_timestep = horizon_dt
+            optimizer_name = "sipoc"
         elif optimizer_type in ("dcbf", "dcbf_casadi"):
             from control.dcbf_optimizer import NmpcDbcfOptimizer, NmpcDcbfOptimizerParam
 
@@ -1887,14 +2021,22 @@ class simulation_mpc:
             self._apply_param_overrides(
                 opt_param, self._get_config_block(config, "dcbf"), "DCBF",
             )
-            optimizer = NmpcDbcfOptimizer({}, {}, dynamics.forward_dynamics_opt(0.1))
+            optimizer = NmpcDbcfOptimizer({}, {}, dynamics.forward_dynamics_opt(robot_system._dt))
             optimizer_name = optimizer_type
         else:  # Default to casadi
             from control.nmpc_optimizer import NmpcOptimizer, NmpcOptimizerParam
 
             opt_param = NmpcOptimizerParam()
-            optimizer = NmpcOptimizer({}, {}, dynamics.forward_dynamics_opt(0.1))
+            optimizer = NmpcOptimizer({}, {}, dynamics.forward_dynamics_opt(robot_system._dt))
             optimizer_name = "CasADi"
+
+        if hasattr(opt_param, "tf"):
+            horizon_dt = float(opt_param.tf) / float(opt_param.horizon)
+            if not np.isclose(horizon_dt, robot_system._dt, rtol=1e-12, atol=1e-12):
+                raise ValueError(
+                    f"{optimizer_name}: prediction timestep tf/horizon={horizon_dt} "
+                    f"must match the plant timestep {robot_system._dt}"
+                )
         
         # Ensure optimizer starts with clean state
         if hasattr(optimizer, 'reset'):
@@ -1918,7 +2060,7 @@ class simulation_mpc:
         )
         
         # If using PSDF-family optimizer, set up data logging and obstacle update hooks
-        if optimizer_type in ("psdf", "mpcc", "rmpcc", "rmpcc_pv", "dcbf", "dcbf_casadi"):
+        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs", "dcbf", "dcbf_casadi"):
             # Monkey patch the controller to log pose-SDF data and perform obstacle detection
             original_generate_control = controller.generate_control_input
             
@@ -1955,13 +2097,9 @@ class simulation_mpc:
                 u_opt = original_generate_control(system, global_path, local_trajectory, obstacles)
                 
                 # Collect values for CSV logging.
-                sdf_value = float("nan")
-                if hasattr(optimizer_obj, "psdf_wrapper") and optimizer_obj.psdf_wrapper is not None:
-                    pose_tensor = torch.tensor(current_pose, dtype=torch.float32, device=optimizer_obj.device).unsqueeze(0)
-                    with torch.no_grad():
-                        psdf_output = optimizer_obj.psdf_wrapper(pose_tensor)
-                        phi_tensor = psdf_output[0] if isinstance(psdf_output, tuple) else psdf_output
-                        sdf_value = phi_tensor.item()
+                sdf_value = self._get_current_psdf_for_logging(
+                    optimizer_obj, current_pose,
+                )
 
                 path_s = None
                 predicted_s = None
@@ -1970,9 +2108,8 @@ class simulation_mpc:
                     path_s = progress_info.get("path_s", None)
                     predicted_s = progress_info.get("predicted_s", None)
 
-                solver_status = None
-                if hasattr(optimizer_obj, "solver") and optimizer_obj.solver is not None:
-                    solver_status = int(optimizer_obj.solver.status)
+                # The returned solution may come from a successful backup solver.
+                solver_status = controller.get_last_solver_status_info().get("status_code")
 
                 planner_projected_s_raw = None
                 planner_projected_s = None
@@ -2091,14 +2228,16 @@ class simulation_mpc:
 
         self.save_trial_history_to_csv(f"trial_history_{self.current_name}")
 
-        if optimizer_type == "rmpcc":
-            self.save_rmpcc_constraint_history_to_csv(
-                f"rmpcc_constraints_{self.current_name}"
+        if optimizer_type == "cc_mf":
+            self.save_cc_mf_constraint_history_to_csv(
+                f"cc_mf_constraints_{self.current_name}"
             )
-            self.save_rmpcc_debug_history_to_csv()
+            self.save_cc_mf_debug_history_to_csv()
+        elif optimizer_type == "cc_ecs":
+            self.save_cc_ecs_history_to_csv()
 
         # Save pose-SDF data to CSV for PSDF-family optimizers
-        if optimizer_type in ("psdf", "mpcc", "rmpcc", "rmpcc_pv"):
+        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs"):
             csv_filename = f"pose_sdf_{self.current_name}"
             self.save_pose_sdf_to_csv(csv_filename)
         
@@ -2186,25 +2325,25 @@ class simulation_mpc:
         
 
         elif env_type == "maze":
-            s = 0.15  # scale of environment
+            s = 0.15  # Straight corridor width; square turns retain extra clearance.
             start = np.array([0.5 * s, 5.3 * s, -math.pi / 2.0])
             goal = np.array([12.0 * s, 0.6 * s, 0.0])  # Add theta=0.0 for goal orientation
             bounds = ((0.0 * s, 0.0 * s), (13.0 * s, 6.0 * s))
             cell_size = 0.25 * s
             grid = (bounds, cell_size)
             obstacles = []
-            obstacles.append(RectangleRegion(0.0 * s, 3.0 * s, 0.0 * s, 3.0 * s))
-            obstacles.append(RectangleRegion(1.0 * s, 2.0 * s, 4.0 * s, 6.0 * s))
+            obstacles.append(RectangleRegion(0.0 * s, 4.0 * s, 0.0 * s, 3.0 * s))
+            obstacles.append(RectangleRegion(1.0 * s, 3.0 * s, 4.0 * s, 6.0 * s))
             obstacles.append(RectangleRegion(2.0 * s, 6.0 * s, 5.0 * s, 6.0 * s))
             obstacles.append(RectangleRegion(6.0 * s, 7.0 * s, 4.0 * s, 6.0 * s))
             obstacles.append(RectangleRegion(4.0 * s, 5.0 * s, 0.0 * s, 4.0 * s))
-            obstacles.append(RectangleRegion(5.0 * s, 7.0 * s, 2.0 * s, 3.0 * s))
-            obstacles.append(RectangleRegion(6.0 * s, 9.0 * s, 1.0 * s, 2.0 * s))
+            obstacles.append(RectangleRegion(5.0 * s, 8.0 * s, 2.0 * s, 3.0 * s))
+            obstacles.append(RectangleRegion(5.0 * s, 10.0 * s, 0.0 * s, 2.0 * s))
             obstacles.append(RectangleRegion(8.0 * s, 9.0 * s, 2.0 * s, 4.0 * s))
             obstacles.append(RectangleRegion(9.0 * s, 12.0 * s, 3.0 * s, 4.0 * s))
             obstacles.append(RectangleRegion(11.0 * s, 12.0 * s, 4.0 * s, 5.0 * s))
-            obstacles.append(RectangleRegion(8.0 * s, 10.0 * s, 5.0 * s, 6.0 * s))
-            obstacles.append(RectangleRegion(10.0 * s, 11.0 * s, 0.0 * s, 2.0 * s))
+            obstacles.append(RectangleRegion(7.0 * s, 10.0 * s, 5.0 * s, 6.0 * s))
+            obstacles.append(RectangleRegion(9.0 * s, 11.0 * s, 0.0 * s, 3.0 * s))
             obstacles.append(RectangleRegion(12.0 * s, 13.0 * s, 1.0 * s, 2.0 * s))
             obstacles.append(RectangleRegion(0.0 * s, 13.0 * s, 6.0 * s, 7.0 * s))
             obstacles.append(RectangleRegion(-1.0 * s, 0.0 * s, -1.0 * s, 7.0 * s))

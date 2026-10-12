@@ -1,0 +1,89 @@
+# Dilated-polygon SIPOC adaptation for this repository's differential drive.
+# Padding comparison: this file uses 1 mm; config_nmpc_sipoc_padding_0mm.yaml
+# uses 0 mm with the same remaining settings and reference path.
+# Run one trial in each environment and save the usual trial/timing CSVs:
+# python test_nmpc.py -c config/config_nmpc_sipoc.yaml --results-dir data/sipoc_run_01
+trials: 1
+
+defaults:
+  simulation_time: 60.0
+  generate_animation: false
+  generate_plots: false
+  generate_risk_profile: false
+
+start_perturbation:
+  enabled: false
+  seed: 0
+
+localization_error:
+  enabled: false
+
+success_criteria:
+  position_tolerance: 0.02
+  angle_tolerance: null
+
+trial_failure_criteria:
+  enabled: true
+  movement_window_sec: 4.0
+  movement_threshold: 0.03
+  max_consecutive_solver_failures: 20
+
+sipoc:
+  horizon: 15
+  tf: 1.5
+  mat_Q: [[20.0, 0.0, 0.0], [0.0, 20.0, 0.0], [0.0, 0.0, 0.5]]
+  mat_R: [[5.0, 0.0], [0.0, 0.05]]
+  terminal_weight: 2.0
+  vmin: -0.6
+  vmax: 0.6
+  omegamin: -1.0
+  omegamax: 1.0
+  polygon_dilation_radius: 0.001  # metres: 0.0 = 0 mm, 0.001 = 1 mm
+  d_safe: 0.0
+  robust_scale: 1.0
+  # Illustrative assumed uncertainty, reset at each solve. No noise is injected
+  # into the plant by this block. Matrix scale 1.0 is not a calibrated probability.
+  # P0: initial covariance, reset at each MPC solve; state order [x, y, theta].
+  initial_covariance:
+    - [0.0004, 0.0, 0.0]
+    - [0.0, 0.0004, 0.0]
+    - [0.0, 0.0, 0.0025]
+  # Q_d (W in the propagation equation): discrete process covariance per step.
+  # Entries are covariances, not standard deviations; diagonal units: m^2, m^2, rad^2.
+  process_noise:
+    - [0.000001, 0.0, 0.0]
+    - [0.0, 0.000001, 0.0]
+    - [0.0, 0.0, 0.00001]
+  # To disable uncertainty propagation, REPLACE both matrices above with:
+  # initial_covariance: [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+  # process_noise:      [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+  # Keep robust_scale: 1.0; propagated covariance is then zero at every node.
+  # Use these YAML key names and full 3x3 matrices (not P0/Q_d keys or scalar 0).
+  feedback_gain: [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+  use_soft_constraint: true
+  slack_l1_penalty: 1000.0
+  slack_l2_penalty: 100.0
+  nlp_solver_type: SQP
+  nlp_solver_max_iter: 4
+  levenberg_marquardt: 0.0000001
+  # Stabilize polygon-corner iterates; convergence uses the full proposal residual.
+  outer_step_length: 1.0
+  max_outer_iterations: 100
+  max_constraints: 25
+  activation_distance: 0.5
+  feasibility_tolerance: 0.00001
+  step_tolerance: 0.0001
+  tol: 0.00000001
+
+test_configs:
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: sipoc
+    dynamics_type: differential_drive
+    path_planner: astar
+
+  - maze_type: s_path
+    robot_shape: rectangle
+    optimizer_type: sipoc
+    dynamics_type: differential_drive
+    path_planner: astar

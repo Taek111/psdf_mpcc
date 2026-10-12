@@ -204,6 +204,10 @@ class NmpcOptimizerSqp:
         self.ocp.solver_options.qp_solver = param.qp_solver
         self.ocp.solver_options.hessian_approx = param.hessian_approx
         self.ocp.solver_options.integrator_type = param.integrator_type
+        if param.integrator_type == "ERK":
+            # Classical RK4, matching the plant and the CC discrete pose map.
+            self.ocp.solver_options.sim_method_num_stages = 4
+            self.ocp.solver_options.sim_method_num_steps = 1
         self.ocp.solver_options.nlp_solver_type = param.nlp_solver_type
         
         # Set prediction horizon

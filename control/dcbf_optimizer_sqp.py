@@ -32,14 +32,14 @@ class NmpcDcbfOptimizerSqpParam:
         self.tf = 0.1 * self.horizon  # total time horizon
         self.qp_solver = 'PARTIAL_CONDENSING_HPIPM'  # qp solver to be used
         self.hessian_approx = 'GAUSS_NEWTON'  # Hessian approximation
-        self.integrator_type = 'IRK'  # explicit Runge-Kutta
+        self.integrator_type = 'IRK'  # implicit Runge-Kutta for the algebraic-state model
         self.nlp_solver_type = 'SQP_RTI'  # SQP solver
         self.qp_solver_iter_max = 50  # maximum iterations for QP solver
         self.nlp_solver_max_iter = 20  # maximum iterations for NLP solver
         
         # self.qp_solver = 'FULL_CONDENSING_HPIPM'  # qp solver to be used
         # self.hessian_approx = 'GAUSS_NEWTON'  # Hessian approximation
-        # self.integrator_type = 'IRK'  # explicit Runge-Kutta
+        # self.integrator_type = 'IRK'  # implicit Runge-Kutta
         # self.nlp_solver_type = 'SQP_RTI'  # SQP solver
         # Input constraints
         self.amin, self.amax = -0.5, 0.5

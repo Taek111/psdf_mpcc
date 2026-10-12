@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from control.rmpcc_optimizer import RMPCCOptimizerParam
+from control.cc_mf_optimizer import CCMFOptimizerParam
 from sim.simulation_mpc import simulation_mpc
 from test_nmpc import build_parser
 
@@ -86,7 +86,7 @@ class BooleRiskVisualizationTest(unittest.TestCase):
         self.assertEqual(visual["budget_exceeded"].shape, (0,))
 
     def test_optimizer_param_controls_visualization_without_override(self):
-        opt_param = RMPCCOptimizerParam()
+        opt_param = CCMFOptimizerParam()
         controller = SimpleNamespace(_param=opt_param)
         simulation = SimpleNamespace(
             _robot=SimpleNamespace(_controller=controller)
@@ -107,14 +107,14 @@ class BooleRiskVisualizationTest(unittest.TestCase):
             )
         )
 
-    def test_rmpcc_config_block_can_override_visualization_param(self):
-        opt_param = RMPCCOptimizerParam()
+    def test_cc_mf_config_block_can_override_visualization_param(self):
+        opt_param = CCMFOptimizerParam()
 
         with redirect_stdout(io.StringIO()):
             simulation_mpc._apply_param_overrides(
                 opt_param,
                 {"use_risk_visualization": True},
-                "RMPCC",
+                "CC-MF",
             )
 
         self.assertTrue(opt_param.use_risk_visualization)

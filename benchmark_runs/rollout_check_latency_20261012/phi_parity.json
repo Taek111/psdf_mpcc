@@ -1,0 +1,24 @@
+{
+  "comparisons": [
+    {
+      "device": "cpu",
+      "threads": 1,
+      "max_phi_error_m": 0.0,
+      "poses": 128
+    },
+    {
+      "device": "cpu",
+      "threads": 6,
+      "max_phi_error_m": 0.0,
+      "poses": 128
+    },
+    {
+      "device": "cuda",
+      "threads": 6,
+      "max_phi_error_m": 0.0,
+      "poses": 128
+    }
+  ],
+  "prototype_sha256": "1e553b82921e8acd9051d3d5529b599c4e46663b2f8e963b4ad1e10c93b41a25",
+  "notes": "warm 300 calls/case after 30 warmup; case order shuffled per iteration; synthetic poses; no solver; existing augmented includes gradients, prototype only phi; all 17 obstacles; dt=.1; initial pose included for points>1"
+}

@@ -1,0 +1,69 @@
+{
+  "python": "3.10.13 | packaged by conda-forge | (main, Dec 23 2023, 15:36:39) [GCC 12.3.0]",
+  "executable": "/home/taek111/anaconda3/envs/pp/bin/python",
+  "platform": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.31",
+  "cpu": "Intel(R) Core(TM) i5-10400F CPU @ 2.90GHz",
+  "numpy": "2.2.5",
+  "torch": "2.4.1",
+  "cuda_available": true,
+  "gpu": "NVIDIA GeForce RTX 3060",
+  "default_torch_threads": 6,
+  "thread_environment": {
+    "OMP_NUM_THREADS": null,
+    "MKL_NUM_THREADS": null,
+    "OPENBLAS_NUM_THREADS": null
+  },
+  "source_sha256": {
+    "models/augmented_psdf.py": "a1325eb7e19f0971cbfe96b8878e336b4a26c5ef8f26e8cc4f5d348dbd2ef3f6",
+    "models/augmented_psdf_wrapper.py": "28855f991ae6a2df8b577f859ace455412eb5a3de00d890ac4f477b892081dfd",
+    "models/dd_dynamics.py": "61a372924e135894df133629bb55552df0964149a48533b800da6b6b0a87466f",
+    "control/cc_mf_optimizer.py": "54b8447e0df02227573aefee79d8527b80a60e8be296cef7ff2d3485c650118d",
+    "sim/simulation_mpc.py": "1e4614bce5ca83c0e6228e3c607cd92f310aabf02dd078a1d47b81a01c960736",
+    "models/psdf.py": "46aa5fc3b47a2ed0e08b28156bd08d69d67c46aa11f5f149949a46b91c4dd777"
+  },
+  "footprint_m": {
+    "length": 0.15,
+    "width": 0.12
+  },
+  "obstacles": 17,
+  "dt_s": 0.1,
+  "seed": 0,
+  "points": [
+    1,
+    3,
+    6,
+    11
+  ],
+  "sampling": "1: endpoint only; otherwise initial pose plus evenly spaced partial RK4 points through 0.1 s",
+  "timing": {
+    "repeats": 100,
+    "rounds": 3,
+    "warmup": 25
+  },
+  "original_replay_available": false,
+  "includes": "NumPy/tensor conversions, exact phi+gradient, finite validation, GPU-to-CPU return, boolean threshold",
+  "excludes": "one-time wrapper construction/obstacle upload, MPC solve, fallback construction, logs",
+  "cuda_timing": "synchronize before each timed call; CPU result extraction inside exact adapter synchronizes completion",
+  "representative_phi_m": -0.030468203127384186,
+  "padding_parity": [
+    {
+      "device": "cpu",
+      "poses": 128,
+      "max_phi_error_m": 0.0,
+      "max_gradient_error": 0.0
+    },
+    {
+      "device": "cuda",
+      "edges": 100,
+      "poses": 16,
+      "max_phi_error_m": 1.4901161193847656e-08
+    },
+    {
+      "device": "cuda",
+      "edges": 4,
+      "poses": 16,
+      "max_phi_error_m": 1.4901161193847656e-08
+    }
+  ],
+  "source_unchanged_during_measurement": true
+}

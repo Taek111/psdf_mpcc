@@ -1,0 +1,310 @@
+Trial CSV directory: /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_ecs_maze_rectangle_20261012_nominal_v2
+
+[Trials] maze / cc_ecs trial 1/1, seed=None
+Running single test...
+CC-ECS configured from config: horizon=20, tf=2.0, chance_epsilon=0.2, d_min=0.001, robust_horizon=None, sigma_f0=0.0002, sigma_l0=0.00025, sigma_psi0=0.00025, q_f0=0.0, q_l0=0.0, q_psi0=0.0, alpha_f=0.0, alpha_v=0.0, alpha_kappa=0.0, beta_v=0.0, beta_kappa=0.0, beta_omega=0.0, enable_backup_solver=False
+Resetting cc_ecs optimizer for clean state...
+Trial failure criteria enabled: movement_window_sec=4.0, movement_threshold=0.03, max_consecutive_solver_failures=20
+generating global path with A* + Line of Sight
+시작 위치: [0.075 0.795]
+목적지: [1.8  0.09]
+도착 판정 기준: position L1 <= 0.02m
+/home/taek111/projects/psdf_mpcc/models/geometry_utils.py:246: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at /pytorch/torch/csrc/utils/tensor_new.cpp:254.)
+  edgesA = torch.tensor(edgesA, dtype=torch.float32)
+field AcadosOcpDims.N has been migrated to AcadosOcpOptions.N_horizon. setting AcadosOcpOptions.N_horizon = N. For future comppatibility, please use AcadosOcpOptions.N_horizon directly.
+
+WARNING: Gauss-Newton Hessian approximation with EXTERNAL cost type not well defined!
+got cost_type EXTERNAL for cost_type_0, cost_type, cost_type_e, hessian_approx: 'GAUSS_NEWTON'.
+With this setting, acados will proceed computing the exact Hessian for the cost term and no Hessian contribution from constraints and dynamics.
+If the external cost is a linear least squares cost, this coincides with the Gauss-Newton Hessian.
+Note: There is also the option to use the external cost module with a numerical Hessian approximation (see `ext_cost_num_hess`).
+OR the option to provide a symbolic custom Hessian approximation (see `cost_expr_ext_cost_custom_hess`).
+
+rm -f libacados_ocp_solver_differential_drive_cc_ecs.so
+rm -f differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_0_fun_jac_uxt_zt.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_0_fun.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_fun_jac_uxt_zt.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_fun.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_e_fun_jac_uxt_zt.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_e_fun.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_0_fun.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_0_fun_jac_hess.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_0_fun_jac.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_fun.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_fun_jac_hess.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_fun_jac.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_e_fun.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_e_fun_jac_hess.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_e_fun_jac.o acados_solver_differential_drive_cc_ecs.o
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_0_fun_jac_uxt_zt.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_0_fun_jac_uxt_zt.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_0_fun.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_0_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_fun_jac_uxt_zt.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_fun_jac_uxt_zt.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_fun.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_e_fun_jac_uxt_zt.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_e_fun_jac_uxt_zt.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_e_fun.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_e_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_0_fun.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_0_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_0_fun_jac_hess.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_0_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_0_fun_jac.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_0_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_fun.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_fun_jac_hess.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_fun_jac.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_e_fun.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_e_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_e_fun_jac_hess.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_e_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_e_fun_jac.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_e_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o acados_solver_differential_drive_cc_ecs.o acados_solver_differential_drive_cc_ecs.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_model/differential_drive_cc_ecs_dyn_disc_phi_fun.o differential_drive_cc_ecs_model/differential_drive_cc_ecs_dyn_disc_phi_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_model/differential_drive_cc_ecs_dyn_disc_phi_fun_jac.o differential_drive_cc_ecs_model/differential_drive_cc_ecs_dyn_disc_phi_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_ecs_model/differential_drive_cc_ecs_dyn_disc_phi_fun_jac_hess.o differential_drive_cc_ecs_model/differential_drive_cc_ecs_dyn_disc_phi_fun_jac_hess.c
+cc -shared differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_0_fun_jac_uxt_zt.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_0_fun.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_fun_jac_uxt_zt.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_fun.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_e_fun_jac_uxt_zt.o differential_drive_cc_ecs_constraints/differential_drive_cc_ecs_constr_h_e_fun.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_0_fun.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_0_fun_jac_hess.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_0_fun_jac.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_fun.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_fun_jac_hess.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_fun_jac.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_e_fun.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_e_fun_jac_hess.o differential_drive_cc_ecs_cost/differential_drive_cc_ecs_cost_ext_cost_e_fun_jac.o acados_solver_differential_drive_cc_ecs.o differential_drive_cc_ecs_model/differential_drive_cc_ecs_dyn_disc_phi_fun.o differential_drive_cc_ecs_model/differential_drive_cc_ecs_dyn_disc_phi_fun_jac.o differential_drive_cc_ecs_model/differential_drive_cc_ecs_dyn_disc_phi_fun_jac_hess.o -o libacados_ocp_solver_differential_drive_cc_ecs.so -L/home/taek111/projects/acados/lib -lacados -lhpipm -lblasfeo -lm  \
+-L -l
+acados was compiled without OpenMP.
+[CC-ECS 0001] sqp_rti status=0 solve=3.9ms s=0.013
+[CC-ECS 0002] sqp_rti status=0 solve=1.1ms s=0.024
+[CC-ECS 0003] sqp_rti status=0 solve=1.0ms s=0.027
+[CC-ECS 0004] sqp_rti status=0 solve=1.5ms s=0.040
+[CC-ECS 0005] sqp_rti status=0 solve=1.0ms s=0.055
+[CC-ECS 0006] sqp_rti status=0 solve=1.0ms s=0.056
+[CC-ECS 0007] sqp_rti status=0 solve=1.0ms s=0.071
+[CC-ECS 0008] sqp_rti status=0 solve=1.3ms s=0.073
+[CC-ECS 0009] sqp_rti status=0 solve=1.1ms s=0.088
+[CC-ECS 0010] sqp_rti status=0 solve=1.1ms s=0.105
+[CC-ECS 0011] sqp_rti status=0 solve=1.1ms s=0.108
+[CC-ECS 0012] sqp_rti status=0 solve=1.7ms s=0.125
+[CC-ECS 0013] sqp_rti status=0 solve=1.0ms s=0.144
+[CC-ECS 0014] sqp_rti status=0 solve=1.5ms s=0.164
+[CC-ECS 0015] sqp_rti status=0 solve=1.1ms s=0.169
+[CC-ECS 0016] sqp_rti status=0 solve=1.1ms s=0.195
+[CC-ECS 0017] sqp_rti status=0 solve=1.0ms s=0.212
+[CC-ECS 0018] sqp_rti status=0 solve=1.0ms s=0.236
+[CC-ECS 0019] sqp_rti status=0 solve=1.1ms s=0.246
+[CC-ECS 0020] sqp_rti status=0 solve=1.0ms s=0.255
+[CC-ECS 0021] sqp_rti status=0 solve=0.9ms s=0.266
+[CC-ECS 0022] sqp_rti status=0 solve=0.9ms s=0.281
+[CC-ECS 0023] sqp_rti status=0 solve=1.1ms s=0.296
+[CC-ECS 0024] sqp_rti status=0 solve=1.0ms s=0.313
+[CC-ECS 0025] sqp_rti status=0 solve=1.0ms s=0.323
+[CC-ECS 0026] sqp_rti status=0 solve=1.0ms s=0.339
+[CC-ECS 0027] sqp_rti status=0 solve=1.1ms s=0.353
+[CC-ECS 0028] sqp_rti status=0 solve=1.1ms s=0.368
+[CC-ECS 0029] sqp_rti status=0 solve=1.2ms s=0.384
+[CC-ECS 0030] sqp_rti status=0 solve=1.1ms s=0.399
+[CC-ECS 0031] sqp_rti status=0 solve=1.1ms s=0.415
+[CC-ECS 0032] sqp_rti status=0 solve=1.2ms s=0.431
+[CC-ECS 0033] sqp_rti status=0 solve=1.1ms s=0.434
+[CC-ECS 0034] sqp_rti status=0 solve=1.2ms s=0.450
+[CC-ECS 0035] sqp_rti status=0 solve=1.1ms s=0.468
+[CC-ECS 0036] sqp_rti status=0 solve=1.1ms s=0.487
+[CC-ECS 0037] sqp_rti status=0 solve=1.1ms s=0.491
+[CC-ECS 0038] sqp_rti status=0 solve=1.1ms s=0.509
+[CC-ECS 0039] sqp_rti status=0 solve=1.2ms s=0.529
+[CC-ECS 0040] sqp_rti status=0 solve=1.0ms s=0.535
+[CC-ECS 0041] sqp_rti status=0 solve=1.1ms s=0.555
+[CC-ECS 0042] sqp_rti status=0 solve=1.1ms s=0.568
+[CC-ECS 0043] sqp_rti status=0 solve=1.0ms s=0.584
+[CC-ECS 0044] sqp_rti status=0 solve=1.0ms s=0.608
+[CC-ECS 0045] sqp_rti status=0 solve=1.2ms s=0.619
+[CC-ECS 0046] sqp_rti status=0 solve=1.1ms s=0.632
+[CC-ECS 0047] sqp_rti status=0 solve=1.1ms s=0.647
+[CC-ECS 0048] sqp_rti status=0 solve=1.1ms s=0.662
+[CC-ECS 0049] sqp_rti status=0 solve=1.2ms s=0.677
+[CC-ECS 0050] sqp_rti status=0 solve=1.1ms s=0.694
+[CC-ECS 0051] sqp_rti status=0 solve=1.1ms s=0.705
+[CC-ECS 0052] sqp_rti status=0 solve=1.2ms s=0.720
+[CC-ECS 0053] sqp_rti status=0 solve=1.1ms s=0.734
+[CC-ECS 0054] sqp_rti status=0 solve=1.1ms s=0.747
+[CC-ECS 0055] sqp_rti status=0 solve=1.0ms s=0.760
+[CC-ECS 0056] sqp_rti status=0 solve=1.1ms s=0.773
+[CC-ECS 0057] sqp_rti status=0 solve=1.0ms s=0.784
+[CC-ECS 0058] sqp_rti status=0 solve=1.1ms s=0.804
+[CC-ECS 0059] sqp_rti status=0 solve=1.0ms s=0.817
+[CC-ECS 0060] sqp_rti status=0 solve=1.1ms s=0.831
+[CC-ECS 0061] sqp_rti status=0 solve=1.1ms s=0.844
+[CC-ECS 0062] sqp_rti status=0 solve=1.1ms s=0.856
+[CC-ECS 0063] sqp_rti status=0 solve=1.1ms s=0.869
+[CC-ECS 0064] sqp_rti status=0 solve=1.1ms s=0.882
+[CC-ECS 0065] sqp_rti status=0 solve=1.1ms s=0.894
+[CC-ECS 0066] sqp_rti status=0 solve=1.0ms s=0.907
+[CC-ECS 0067] sqp_rti status=0 solve=1.0ms s=0.919
+[CC-ECS 0068] sqp_rti status=0 solve=1.1ms s=0.938
+[CC-ECS 0069] sqp_rti status=0 solve=1.0ms s=0.956
+[CC-ECS 0070] sqp_rti status=0 solve=1.5ms s=0.969
+[CC-ECS 0071] sqp_rti status=0 solve=1.5ms s=0.984
+[CC-ECS 0072] sqp_rti status=0 solve=1.1ms s=0.999
+[CC-ECS 0073] sqp_rti status=0 solve=1.1ms s=1.015
+[CC-ECS 0074] sqp_rti status=0 solve=1.1ms s=1.027
+[CC-ECS 0075] sqp_rti status=0 solve=1.0ms s=1.042
+[CC-ECS 0076] sqp_rti status=0 solve=1.1ms s=1.056
+[CC-ECS 0077] sqp_rti status=0 solve=1.1ms s=1.070
+[CC-ECS 0078] sqp_rti status=0 solve=1.2ms s=1.083
+[CC-ECS 0079] sqp_rti status=0 solve=1.0ms s=1.095
+[CC-ECS 0080] sqp_rti status=0 solve=1.1ms s=1.107
+[CC-ECS 0081] sqp_rti status=0 solve=1.0ms s=1.119
+[CC-ECS 0082] sqp_rti status=0 solve=1.1ms s=1.131
+[CC-ECS 0083] sqp_rti status=0 solve=1.2ms s=1.144
+[CC-ECS 0084] sqp_rti status=0 solve=1.1ms s=1.164
+[CC-ECS 0085] sqp_rti status=0 solve=1.2ms s=1.177
+[CC-ECS 0086] sqp_rti status=0 solve=1.1ms s=1.190
+[CC-ECS 0087] sqp_rti status=0 solve=1.1ms s=1.203
+[CC-ECS 0088] sqp_rti status=0 solve=1.1ms s=1.215
+[CC-ECS 0089] sqp_rti status=0 solve=1.1ms s=1.227
+[CC-ECS 0090] sqp_rti status=0 solve=1.1ms s=1.239
+[CC-ECS 0091] sqp_rti status=0 solve=1.1ms s=1.255
+[CC-ECS 0092] sqp_rti status=0 solve=1.1ms s=1.274
+[CC-ECS 0093] sqp_rti status=0 solve=1.1ms s=1.278
+[CC-ECS 0094] sqp_rti status=0 solve=1.0ms s=1.294
+[CC-ECS 0095] sqp_rti status=0 solve=1.0ms s=1.310
+[CC-ECS 0096] sqp_rti status=0 solve=1.1ms s=1.323
+[CC-ECS 0097] sqp_rti status=0 solve=1.1ms s=1.337
+[CC-ECS 0098] sqp_rti status=0 solve=1.1ms s=1.349
+[CC-ECS 0099] sqp_rti status=0 solve=1.1ms s=1.366
+[CC-ECS 0100] sqp_rti status=0 solve=1.0ms s=1.383
+[CC-ECS 0101] sqp_rti status=0 solve=1.1ms s=1.399
+[CC-ECS 0102] sqp_rti status=0 solve=0.9ms s=1.415
+[CC-ECS 0103] sqp_rti status=0 solve=1.2ms s=1.431
+[CC-ECS 0104] sqp_rti status=0 solve=1.2ms s=1.447
+[CC-ECS 0105] sqp_rti status=0 solve=1.1ms s=1.463
+[CC-ECS 0106] sqp_rti status=0 solve=1.0ms s=1.481
+[CC-ECS 0107] sqp_rti status=0 solve=1.1ms s=1.498
+[CC-ECS 0108] sqp_rti status=0 solve=1.3ms s=1.513
+[CC-ECS 0109] sqp_rti status=0 solve=3.6ms s=1.529
+[CC-ECS 0110] sqp_rti status=0 solve=1.2ms s=1.544
+[CC-ECS 0111] sqp_rti status=0 solve=1.2ms s=1.560
+[CC-ECS 0112] sqp_rti status=0 solve=1.2ms s=1.575
+[CC-ECS 0113] sqp_rti status=0 solve=1.1ms s=1.590
+[CC-ECS 0114] sqp_rti status=0 solve=1.3ms s=1.605
+[CC-ECS 0115] sqp_rti status=0 solve=1.1ms s=1.620
+[CC-ECS 0116] sqp_rti status=0 solve=1.2ms s=1.635
+[CC-ECS 0117] sqp_rti status=0 solve=1.1ms s=1.650
+[CC-ECS 0118] sqp_rti status=0 solve=1.1ms s=1.660
+[CC-ECS 0119] sqp_rti status=0 solve=1.1ms s=1.680
+[CC-ECS 0120] sqp_rti status=0 solve=0.9ms s=1.686
+[CC-ECS 0121] sqp_rti status=0 solve=1.0ms s=1.707
+[CC-ECS 0122] sqp_rti status=0 solve=1.2ms s=1.724
+[CC-ECS 0123] sqp_rti status=0 solve=1.0ms s=1.739
+[CC-ECS 0124] sqp_rti status=0 solve=1.1ms s=1.752
+[CC-ECS 0125] sqp_rti status=0 solve=1.2ms s=1.771
+[CC-ECS 0126] sqp_rti status=0 solve=1.1ms s=1.789
+[CC-ECS 0127] sqp_rti status=0 solve=1.2ms s=1.802
+[CC-ECS 0128] sqp_rti status=0 solve=1.0ms s=1.815
+[CC-ECS 0129] sqp_rti status=0 solve=1.0ms s=1.828
+[CC-ECS 0130] sqp_rti status=0 solve=1.2ms s=1.842
+[CC-ECS 0131] sqp_rti status=0 solve=1.0ms s=1.859
+[CC-ECS 0132] sqp_rti status=0 solve=1.1ms s=1.876
+[CC-ECS 0133] sqp_rti status=0 solve=1.1ms s=1.884
+[CC-ECS 0134] sqp_rti status=0 solve=1.1ms s=1.899
+[CC-ECS 0135] sqp_rti status=0 solve=1.1ms s=1.915
+[CC-ECS 0136] sqp_rti status=0 solve=1.0ms s=1.927
+[CC-ECS 0137] sqp_rti status=0 solve=1.1ms s=1.941
+[CC-ECS 0138] sqp_rti status=0 solve=1.0ms s=1.955
+[CC-ECS 0139] sqp_rti status=0 solve=1.0ms s=1.971
+[CC-ECS 0140] sqp_rti status=0 solve=1.1ms s=1.985
+[CC-ECS 0141] sqp_rti status=0 solve=1.2ms s=1.999
+[CC-ECS 0142] sqp_rti status=0 solve=1.2ms s=2.014
+[CC-ECS 0143] sqp_rti status=0 solve=1.1ms s=2.030
+[CC-ECS 0144] sqp_rti status=0 solve=1.1ms s=2.046
+[CC-ECS 0145] sqp_rti status=0 solve=1.1ms s=2.063
+[CC-ECS 0146] sqp_rti status=0 solve=1.2ms s=2.076
+[CC-ECS 0147] sqp_rti status=0 solve=1.3ms s=2.101
+[CC-ECS 0148] sqp_rti status=0 solve=1.1ms s=2.108
+[CC-ECS 0149] sqp_rti status=0 solve=1.0ms s=2.129
+[CC-ECS 0150] sqp_rti status=0 solve=1.1ms s=2.137
+[CC-ECS 0151] sqp_rti status=0 solve=1.0ms s=2.149
+[CC-ECS 0152] sqp_rti status=0 solve=1.8ms s=2.164
+[CC-ECS 0153] sqp_rti status=0 solve=1.1ms s=2.180
+[CC-ECS 0154] sqp_rti status=0 solve=1.0ms s=2.189
+[CC-ECS 0155] sqp_rti status=0 solve=1.0ms s=2.204
+[CC-ECS 0156] sqp_rti status=0 solve=1.1ms s=2.220
+[CC-ECS 0157] sqp_rti status=0 solve=1.1ms s=2.234
+[CC-ECS 0158] sqp_rti status=0 solve=1.4ms s=2.250
+[CC-ECS 0159] sqp_rti status=0 solve=1.2ms s=2.266
+[CC-ECS 0160] sqp_rti status=0 solve=1.1ms s=2.282
+[CC-ECS 0161] sqp_rti status=0 solve=1.1ms s=2.298
+[CC-ECS 0162] sqp_rti status=0 solve=1.5ms s=2.300
+[CC-ECS 0163] sqp_rti status=0 solve=1.1ms s=2.315
+[CC-ECS 0164] sqp_rti status=0 solve=1.4ms s=2.333
+[CC-ECS 0165] sqp_rti status=0 solve=1.2ms s=2.351
+[CC-ECS 0166] sqp_rti status=0 solve=1.2ms s=2.354
+[CC-ECS 0167] sqp_rti status=0 solve=1.2ms s=2.372
+[CC-ECS 0168] sqp_rti status=0 solve=1.6ms s=2.392
+[CC-ECS 0169] sqp_rti status=0 solve=1.1ms s=2.396
+[CC-ECS 0170] sqp_rti status=0 solve=1.3ms s=2.415
+[CC-ECS 0171] sqp_rti status=0 solve=1.2ms s=2.432
+[CC-ECS 0172] sqp_rti status=0 solve=1.1ms s=2.449
+[CC-ECS 0173] sqp_rti status=0 solve=1.2ms s=2.466
+[CC-ECS 0174] sqp_rti status=0 solve=1.2ms s=2.483
+[CC-ECS 0175] sqp_rti status=0 solve=1.3ms s=2.500
+[CC-ECS 0176] sqp_rti status=0 solve=1.6ms s=2.515
+[CC-ECS 0177] sqp_rti status=0 solve=1.2ms s=2.532
+[CC-ECS 0178] sqp_rti status=0 solve=1.7ms s=2.553
+[CC-ECS 0179] sqp_rti status=0 solve=1.2ms s=2.563
+[CC-ECS 0180] sqp_rti status=0 solve=1.2ms s=2.574
+[CC-ECS 0181] sqp_rti status=0 solve=1.2ms s=2.595
+[CC-ECS 0182] sqp_rti status=0 solve=1.2ms s=2.605
+[CC-ECS 0183] sqp_rti status=0 solve=1.3ms s=2.617
+[CC-ECS 0184] sqp_rti status=0 solve=1.1ms s=2.630
+[CC-ECS 0185] sqp_rti status=0 solve=1.2ms s=2.642
+[CC-ECS 0186] sqp_rti status=0 solve=1.0ms s=2.654
+[CC-ECS 0187] sqp_rti status=0 solve=1.2ms s=2.665
+[CC-ECS 0188] sqp_rti status=0 solve=1.0ms s=2.677
+[CC-ECS 0189] sqp_rti status=0 solve=1.0ms s=2.689
+[CC-ECS 0190] sqp_rti status=0 solve=1.0ms s=2.695
+[CC-ECS 0191] sqp_rti status=0 solve=1.1ms s=2.706
+[CC-ECS 0192] sqp_rti status=0 solve=1.0ms s=2.712
+[CC-ECS 0193] sqp_rti status=0 solve=0.9ms s=2.724
+[CC-ECS 0194] sqp_rti status=0 solve=1.0ms s=2.730
+[CC-ECS 0195] sqp_rti status=0 solve=1.3ms s=2.741
+[CC-ECS 0196] sqp_rti status=0 solve=0.9ms s=2.747
+[CC-ECS 0197] sqp_rti status=0 solve=0.9ms s=2.753
+[CC-ECS 0198] sqp_rti status=0 solve=1.1ms s=2.765
+[CC-ECS 0199] sqp_rti status=0 solve=1.1ms s=2.771
+[CC-ECS 0200] sqp_rti status=0 solve=1.3ms s=2.776
+[CC-ECS 0201] sqp_rti status=0 solve=1.0ms s=2.785
+[CC-ECS 0202] sqp_rti status=0 solve=1.3ms s=2.790
+[CC-ECS 0203] sqp_rti status=0 solve=1.1ms s=2.800
+[CC-ECS 0204] sqp_rti status=0 solve=1.2ms s=2.806
+[CC-ECS 0205] sqp_rti status=0 solve=1.1ms s=2.811
+[CC-ECS 0206] sqp_rti status=0 solve=1.5ms s=2.817
+[CC-ECS 0207] sqp_rti status=0 solve=1.2ms s=2.823
+[CC-ECS 0208] sqp_rti status=0 solve=1.1ms s=2.829
+[CC-ECS 0209] sqp_rti status=0 solve=1.1ms s=2.835
+[CC-ECS 0210] sqp_rti status=0 solve=1.1ms s=2.840
+[CC-ECS 0211] sqp_rti status=0 solve=2.1ms s=2.844
+[CC-ECS 0212] sqp_rti status=0 solve=1.3ms s=2.847
+[CC-ECS 0213] sqp_rti status=0 solve=1.1ms s=2.850
+[CC-ECS 0214] sqp_rti status=0 solve=1.0ms s=2.852
+[CC-ECS 0215] sqp_rti status=0 solve=1.0ms s=2.854
+[CC-ECS 0216] sqp_rti status=0 solve=0.9ms s=2.858
+[CC-ECS 0217] sqp_rti status=0 solve=1.4ms s=2.861
+[CC-ECS 0218] sqp_rti status=0 solve=1.5ms s=2.863
+[CC-ECS 0219] sqp_rti status=0 solve=1.3ms s=2.865
+[CC-ECS 0220] sqp_rti status=0 solve=1.0ms s=2.867
+[CC-ECS 0221] sqp_rti status=0 solve=1.1ms s=2.869
+[CC-ECS 0222] sqp_rti status=0 solve=1.0ms s=2.871
+[CC-ECS 0223] sqp_rti status=0 solve=1.0ms s=2.873
+[CC-ECS 0224] sqp_rti status=0 solve=1.0ms s=2.875
+[CC-ECS 0225] sqp_rti status=0 solve=1.1ms s=2.875
+[CC-ECS 0226] sqp_rti status=0 solve=0.9ms s=2.877
+[CC-ECS 0227] sqp_rti status=0 solve=1.0ms s=2.879
+[CC-ECS 0228] sqp_rti status=0 solve=1.1ms s=2.882
+[CC-ECS 0229] sqp_rti status=0 solve=1.4ms s=2.882
+[CC-ECS 0230] sqp_rti status=0 solve=1.3ms s=2.884
+[CC-ECS 0231] sqp_rti status=0 solve=1.1ms s=2.884
+[CC-ECS 0232] sqp_rti status=0 solve=1.6ms s=2.886
+[CC-ECS 0233] sqp_rti status=0 solve=1.1ms s=2.888
+[CC-ECS 0234] sqp_rti status=0 solve=1.0ms s=2.888
+[CC-ECS 0235] sqp_rti status=0 solve=1.0ms s=2.890
+[CC-ECS 0236] sqp_rti status=0 solve=1.2ms s=2.890
+[CC-ECS 0237] sqp_rti status=0 solve=1.0ms s=2.892
+[CC-ECS 0238] sqp_rti status=0 solve=1.1ms s=2.892
+[CC-ECS 0239] sqp_rti status=0 solve=1.0ms s=2.892
+[CC-ECS 0240] sqp_rti status=0 solve=1.1ms s=2.894
+[CC-ECS 0241] sqp_rti status=0 solve=1.0ms s=2.894
+[CC-ECS 0242] sqp_rti status=0 solve=1.0ms s=2.894
+[CC-ECS 0243] sqp_rti status=0 solve=1.0ms s=2.896
+목적지에 도착했습니다! 현재 위치: [1.80376 0.0985 ], 시간: 24.30초
+Using cc_ecs optimizer with differential_drive dynamics:
+median:  0.0011061000004701782
+std:  0.0002813346057847185
+min:  0.0008792999979050364
+max:  0.003934198997740168
+Simulation finished.
+Run outcome: status=success, reason=None, final_time=24.300000000000075, distance_to_goal=0.019738962361386198
+Optimizer runtime stats: safe_stop_count=0, backup_feasible_qp_success_count=0, plant_input_apply_count=243, last_solve_mode=sqp_rti
+Trial history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_ecs_maze_rectangle_20261012_nominal_v2/runs/config01/trial_0001/data/trial_history_MPC_cc_ecs_rectangle_maze.csv
+CC-ECS constraints history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_ecs_maze_rectangle_20261012_nominal_v2/runs/config01/trial_0001/data/cc_ecs_constraints_MPC_cc_ecs_rectangle_maze.csv
+CC-ECS covariance history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_ecs_maze_rectangle_20261012_nominal_v2/runs/config01/trial_0001/data/cc_ecs_covariance_MPC_cc_ecs_rectangle_maze.csv
+CC-ECS cycle history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_ecs_maze_rectangle_20261012_nominal_v2/runs/config01/trial_0001/data/cc_ecs_cycle_MPC_cc_ecs_rectangle_maze.csv
+Pose-SDF data saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_ecs_maze_rectangle_20261012_nominal_v2/runs/config01/trial_0001/data/pose_sdf_MPC_cc_ecs_rectangle_maze.csv
+Total data points: 243
+SDF statistics - Min: 0.0019, Max: 0.0400, Mean: 0.0097
+Single test completed.
+CC-ECS execution summary: Recovered=0, Safe stop=0, Plant-applied control inputs=243
+[Trials] Saved: status=success, successful solver steps=243
+Trial outcomes: /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_ecs_maze_rectangle_20261012_nominal_v2/trial_results.csv
+Success rates and solver mean/p95 [s]: /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_ecs_maze_rectangle_20261012_nominal_v2/summary.csv

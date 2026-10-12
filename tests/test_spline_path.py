@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import numpy as np
 
 from control.mpcc_optimizer import MPCCOptimizer
-from control.rmpcc_pv_optimizer import RMPCCPVOptimizer
+from control.cc_sf_optimizer import CCSFOptimizer
 from planning.trajectory_generator.spline_reference_generator import (
     build_cubic_spline_path_data as planner_build_path,
 )
@@ -65,7 +65,7 @@ class SplinePathUtilityTest(unittest.TestCase):
     def test_controller_adapters_keep_default_tangent_options(self):
         for optimizer_type, expected_size in (
             (MPCCOptimizer, 5),
-            (RMPCCPVOptimizer, 6),
+            (CCSFOptimizer, 6),
         ):
             optimizer = optimizer_type()
             optimizer.param = SimpleNamespace()

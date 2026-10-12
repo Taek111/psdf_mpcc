@@ -5,7 +5,7 @@
 # Each test can have the following options:
 # Environment type (options: "s_path", "straight_corridor", "maze", "oblique_maze", "parking")
 # Robot shape (options: "rectangle", "pentagon", "triangle", "lshape")
-# Optimizer type (options: "obca", "psdf", "mpcc", "rmpcc", "rmpcc_pv", "acados", "casadi", "dcbf", "dcbf_casadi")
+# Optimizer type (options: "obca", "psdf", "mpcc", "cc_mf", "cc_sf", "acados", "casadi", "dcbf", "dcbf_casadi")
 # Dynamics model (currently only "differential_drive" is supported)
 # Path planner type (options: "astar", "hybrid_astar")
 
@@ -32,13 +32,13 @@ test_configs:
 
   # - maze_type: "s_path"
   #   robot_shape: "rectangle"
-  #   optimizer_type: "rmpcc"
+  #   optimizer_type: "cc_mf"
   #   dynamics_type: "differential_drive"
   #   path_planner: "astar"
 
   # - maze_type: "s_path"
   #   robot_shape: "rectangle"
-  #   optimizer_type: "rmpcc_pv"
+  #   optimizer_type: "cc_sf"
   #   dynamics_type: "differential_drive"
   #   path_planner: "astar"
 
@@ -56,13 +56,13 @@ test_configs:
 
   # - maze_type: "straight_corridor"
   #   robot_shape: "rectangle"
-  #   optimizer_type: "rmpcc"
+  #   optimizer_type: "cc_mf"
   #   dynamics_type: "differential_drive"
   #   path_planner: "astar"
 
   # - maze_type: "straight_corridor"
   #   robot_shape: "rectangle"
-  #   optimizer_type: "rmpcc_pv"
+  #   optimizer_type: "cc_sf"
   #   dynamics_type: "differential_drive"
   #   path_planner: "astar"
 
@@ -80,13 +80,13 @@ test_configs:
 
   # - maze_type: "maze"
   #   robot_shape: "rectangle"
-  #   optimizer_type: "rmpcc"
+  #   optimizer_type: "cc_mf"
   #   dynamics_type: "differential_drive"
   #   path_planner: "astar"
 
   # - maze_type: "maze"
   #   robot_shape: "rectangle"
-  #   optimizer_type: "rmpcc_pv"
+  #   optimizer_type: "cc_sf"
   #   dynamics_type: "differential_drive"
   #   path_planner: "astar"
 
@@ -104,13 +104,13 @@ test_configs:
 
   # - maze_type: "oblique_maze"
   #   robot_shape: "rectangle"
-  #   optimizer_type: "rmpcc"
+  #   optimizer_type: "cc_mf"
   #   dynamics_type: "differential_drive"
   #   path_planner: "astar"
 
   # - maze_type: "oblique_maze"
   #   robot_shape: "rectangle"
-  #   optimizer_type: "rmpcc_pv"
+  #   optimizer_type: "cc_sf"
   #   dynamics_type: "differential_drive"
   #   path_planner: "astar"
 
@@ -157,8 +157,8 @@ defaults:
 # optimizer_type options:
 #   - "psdf": PSDF-based SQP optimizer (obstacle avoidance)
 #   - "mpcc": MPCC optimizer with PSDF safety constraint
-#   - "rmpcc": MPCC with fixed signed-PSDF guard and stage-masked MF affine rows
-#   - "rmpcc_pv": Risk-aware MPCC optimizer with a projected-variance PSDF margin
+#   - "cc_mf": MPCC with fixed signed-PSDF guard and stage-masked MF affine rows
+#   - "cc_sf": Risk-aware MPCC optimizer with a projected-variance PSDF margin
 #   - "obca": OBCAOptimizer from control/obca_optimizer.py (CasADi/IPOPT)
 #   - "acados": ACADOS SQP-based NMPC
 #   - "casadi": CasADi-based basic NMPC  

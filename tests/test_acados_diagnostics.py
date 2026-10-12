@@ -13,7 +13,7 @@ from utils.acados_diagnostics import (
     read_stage_trajectory,
     report_solver_failure,
 )
-from utils.rmpcc_diagnostics import RMPCCDiagnosticsMixin
+from utils.cc_mf_diagnostics import CCMFDiagnosticsMixin
 
 
 class _FakeAcadosSolver:
@@ -81,11 +81,11 @@ class AcadosDiagnosticsUtilityTest(unittest.TestCase):
         values = read_stage_trajectory(self.solver, "x", range(3))
         np.testing.assert_allclose(values, [[0, 0.5], [1, 1.5], [2, 2.5]])
 
-    def test_rmpcc_diagnostics_extend_common_lifecycle(self):
-        self.assertTrue(issubclass(RMPCCDiagnosticsMixin, AcadosDiagnosticsMixin))
+    def test_cc_mf_diagnostics_extend_common_lifecycle(self):
+        self.assertTrue(issubclass(CCMFDiagnosticsMixin, AcadosDiagnosticsMixin))
         self.assertIn(
             "_collect_solver_diagnostics",
-            RMPCCDiagnosticsMixin.__dict__,
+            CCMFDiagnosticsMixin.__dict__,
         )
 
     def test_collects_available_solver_statistics(self):

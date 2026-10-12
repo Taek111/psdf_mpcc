@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from control.controller import BaseController
-from control.rmpcc_optimizer import RMPCCOptimizer, RMPCCOptimizerParam
+from control.cc_mf_optimizer import CCMFOptimizer, CCMFOptimizerParam
 from sim.logger import ControllerLogger
 
 
@@ -65,7 +65,7 @@ class RiskVisualizationDataPathTest(unittest.TestCase):
         return controller
 
     def test_optimizer_accessor_returns_isolated_copy(self):
-        optimizer = RMPCCOptimizer()
+        optimizer = CCMFOptimizer()
         self.assertIsNone(optimizer.get_last_boole_risk_sum_trajectory())
         self.assertIsNone(optimizer.get_last_boole_risk_visualization_data())
 
@@ -99,11 +99,11 @@ class RiskVisualizationDataPathTest(unittest.TestCase):
         self.assertIsNone(optimizer.get_last_boole_risk_visualization_data())
 
     def test_prepare_caches_source_aligned_visualization_bundle(self):
-        optimizer = RMPCCOptimizer()
+        optimizer = CCMFOptimizer()
         optimizer.N = 2
         optimizer.nx = 8
         optimizer.nu = 3
-        optimizer.param = RMPCCOptimizerParam()
+        optimizer.param = CCMFOptimizerParam()
         optimizer.param.horizon = optimizer.N
         optimizer.state = None
 
@@ -179,8 +179,8 @@ class RiskVisualizationDataPathTest(unittest.TestCase):
         )
 
     def test_failed_prepare_does_not_reuse_previous_cycle_risk(self):
-        optimizer = RMPCCOptimizer()
-        optimizer.param = RMPCCOptimizerParam()
+        optimizer = CCMFOptimizer()
+        optimizer.param = CCMFOptimizerParam()
         optimizer._last_nominal_probability_sum = np.array([0.01, 0.02])
         optimizer._last_boole_risk_visualization_data = {
             "nominal_poses": np.zeros((2, 3)),
@@ -201,7 +201,7 @@ class RiskVisualizationDataPathTest(unittest.TestCase):
         self.assertIsNone(optimizer.get_last_boole_risk_visualization_data())
 
     def test_failed_backup_restores_main_nominal_risk_bundle(self):
-        optimizer = RMPCCOptimizer()
+        optimizer = CCMFOptimizer()
         optimizer.solver = object()
         optimizer.backup_solver = _ResetOnlySolver()
         optimizer._constraint_data = {"source": "main"}
@@ -243,7 +243,7 @@ class RiskVisualizationDataPathTest(unittest.TestCase):
             np.testing.assert_equal(restored_bundle[key], expected)
 
     def test_controller_logger_stores_visualization_bundle_per_cycle(self):
-        optimizer = RMPCCOptimizer()
+        optimizer = CCMFOptimizer()
         expected = np.array([np.nan, 0.015, 0.025])
         expected_visualization_data = {
             "nominal_poses": np.arange(9, dtype=float).reshape(3, 3),

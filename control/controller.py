@@ -29,6 +29,7 @@ class BaseController:
         raw_status = None
         status_code = None
         reported_success = None
+        stats = {}
 
         if exc is not None:
             raw_status = f"{type(exc).__name__}: {exc}"
@@ -40,18 +41,33 @@ class BaseController:
             if isinstance(stats, dict):
                 raw_status = stats.get("return_status", None)
                 reported_success = stats.get("success")
+            else:
+                stats = {}
 
-        solver_obj = None
-        if self._opt_sol is not None and hasattr(self._opt_sol, "solver"):
-            solver_obj = self._opt_sol.solver
-        elif hasattr(self._optimizer, "solver"):
-            solver_obj = self._optimizer.solver
-
-        if solver_obj is not None and hasattr(solver_obj, "status"):
+        if "status_code" in stats:
+            # A solution can snapshot the actual solve result or explicitly
+            # report no solve. In both cases the mutable solver object's
+            # current status may belong to a reset or a previous control step.
             try:
-                status_code = int(solver_obj.status)
-            except Exception:
+                value = stats["status_code"]
+                status_code = None if value is None else int(value)
+            except (TypeError, ValueError, OverflowError):
                 status_code = None
+        elif exc is None:
+            # Preserve the legacy status lookup for optimizers that do not
+            # publish an explicit status snapshot. An exception must not
+            # inherit a status from the previous solution.
+            solver_obj = None
+            if self._opt_sol is not None and hasattr(self._opt_sol, "solver"):
+                solver_obj = self._opt_sol.solver
+            elif hasattr(self._optimizer, "solver"):
+                solver_obj = self._optimizer.solver
+
+            if solver_obj is not None and hasattr(solver_obj, "status"):
+                try:
+                    status_code = int(solver_obj.status)
+                except Exception:
+                    status_code = None
 
         success = self._infer_success(raw_status, status_code)
         if status_code is None and isinstance(reported_success, bool):
@@ -63,6 +79,8 @@ class BaseController:
             "status_code": status_code,
             "success": success,
         }
+        if "solver_called" in stats:
+            self._last_solver_status_info["solver_called"] = stats["solver_called"]
 
     def get_last_solver_status_info(self):
         return dict(self._last_solver_status_info)

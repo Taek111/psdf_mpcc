@@ -184,7 +184,7 @@ class AugmentedPSDFWrapper(nn.Module):
         if z_bar_t.ndim != 2 or z_bar_t.shape[1] != 8:
             raise ValueError(
                 "expected z_bar shape (H, 8) ordered as "
-                "[x, y, theta, s, P_f, P_l, P_psi, P_lpsi]"
+                "[x, y, theta, s, xi_f, xi_l, xi_theta, xi_c]"
             )
         if not torch.isfinite(z_bar_t).all():
             raise ValueError("z_bar values must be finite")
@@ -235,13 +235,37 @@ class AugmentedPSDFWrapper(nn.Module):
         )
 
     @torch.no_grad()
+    def forward_clusters(self, pose: Tensor) -> tuple[Tensor, Tensor]:
+        """Return distances ``(H, K)`` and world gradients ``(H, K, 3)``.
+
+        ``K`` is the active cluster count, not the buffer capacity.  Empty
+        obstacle snapshots return ``(H, 0)`` and ``(H, 0, 3)`` tensors, so
+        callers can explicitly disable unused constraint rows.
+        """
+
+        pose_t = self._normalize_pose(pose)
+        if not torch.isfinite(pose_t).all():
+            raise ValueError("pose values must be finite")
+
+        return self.psdf.forward_clusters(
+            self.A[: self.active_clusters],
+            self.B[: self.active_clusters],
+            self.mask[: self.active_clusters],
+            pose_t,
+        )
+
+    @torch.no_grad()
     def forward_mf(
         self,
         z_bar: Tensor,
         epsilon,
         d_min: float,
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        """Return ``(phi, gradient, A_mf, c_mf)`` for a nominal horizon."""
+        """Return ``(phi, gradient, A_mf, c_mf)`` for a nominal horizon.
+
+        The last four state columns are log-Cholesky coordinates
+        ``[log(L_ff), log(L_ll), log(L_theta,theta), L_theta,l]``.
+        """
 
         z_bar_t = self._normalize_z_bar(z_bar)
         epsilon_t = self._normalize_epsilon(epsilon, z_bar_t)

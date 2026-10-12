@@ -1,0 +1,15 @@
+Recorded output from the completed parity check on 2026-10-12, before scalar timing.
+The same computation is preserved in validate_phi_only.py; saving this record did not rerun it.
+Python: /home/taek111/anaconda3/envs/pp/bin/python
+CPU: torch.set_num_threads(1); dtype: float32; random seed: 0.
+The 145 poses comprise 128 random poses with start and reported intrusion pose inserted,
+plus all 17 obstacle centers. Each comparison used batches of 8 and atol=1e-6, rtol=0.
+
+{'device': 'cpu', 'width_m': 0.11, 'edges': 4, 'poses': 145, 'max_phi_error_m': 0.0}
+{'device': 'cpu', 'width_m': 0.11, 'edges': 100, 'poses': 145, 'max_phi_error_m': 0.0}
+{'device': 'cpu', 'width_m': 0.12, 'edges': 4, 'poses': 145, 'max_phi_error_m': 0.0}
+{'device': 'cpu', 'width_m': 0.12, 'edges': 100, 'poses': 145, 'max_phi_error_m': 0.0}
+{'device': 'cuda', 'width_m': 0.11, 'edges': 4, 'poses': 145, 'max_phi_error_m': 0.0}
+{'device': 'cuda', 'width_m': 0.11, 'edges': 100, 'poses': 145, 'max_phi_error_m': 0.0}
+{'device': 'cuda', 'width_m': 0.12, 'edges': 4, 'poses': 145, 'max_phi_error_m': 0.0}
+{'device': 'cuda', 'width_m': 0.12, 'edges': 100, 'poses': 145, 'max_phi_error_m': 0.0}

@@ -36,10 +36,12 @@ def build_output_name(args: argparse.Namespace, interrupted: bool = False) -> st
         "acados": "MPC_SQP_",
         "obca": "MPC_OBCA_",
         "minkowski_cbf": "MPC_minkowski_cbf_",
+        "sipoc": "MPC_sipoc_",
         "psdf": "MPC_psdf_",
         "mpcc": "MPC_mpcc_",
-        "rmpcc_pv": "MPC_rmpcc_pv_",
-        "rmpcc": "MPC_rmpcc_",
+        "cc_sf": "MPC_cc_sf_",
+        "cc_mf": "MPC_cc_mf_",
+        "cc_ecs": "MPC_cc_ecs_",
         "dcbf": "MPC_DCBF_",
         "dcbf_casadi": "MPC_DCBF_CASADI_",
     }
@@ -259,7 +261,7 @@ def run_safe_stop_batch(args: argparse.Namespace, config: Optional[dict] = None)
     config = apply_start_perturbation_options(config, args)
     robot_shapes = args.safe_stop_robot_shapes or ["rectangle"]
     maze_types = args.safe_stop_maze_types or ["maze"]
-    optimizer_types = args.safe_stop_optimizer_types or ["rmpcc_pv", "rmpcc"]
+    optimizer_types = args.safe_stop_optimizer_types or ["cc_sf", "cc_mf"]
 
     rows = []
     total_runs = len(robot_shapes) * len(maze_types) * len(optimizer_types)
@@ -595,7 +597,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--maze-type", default="s_path", help="Environment type")
     parser.add_argument("--robot-shape", default="rectangle", help="Robot shape")
     parser.add_argument("--optimizer-type", default="casadi",
-                        help="Optimizer type (obca, psdf, dcbf, acados, casadi, ...)")
+                        help="Optimizer type (sipoc, obca, psdf, mpcc, cc_sf, cc_mf, cc_ecs, dcbf, acados, casadi, ...)")
     parser.add_argument("--dynamics-type", default="differential_drive", help="Dynamics type")
     parser.add_argument("--path-planner", default="astar", help="Path planner type")
     parser.add_argument("--simulation-time", type=float, default=60.0, help="Simulation duration [s]")
@@ -642,12 +644,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--risk-visualization",
         dest="use_risk_visualization",
         action="store_true",
-        help="Show active stage-wise Boole risk circles in RMPCC-MF animations",
+        help="Show active stage-wise Boole risk circles in CC-MF animations",
     )
     parser.add_argument(
         "--safe-stop-batch",
         action="store_true",
-        help="Run a safe-stop summary batch; defaults to rectangle x maze for rmpcc_pv and rmpcc",
+        help="Run a safe-stop summary batch; defaults to rectangle x maze for cc_sf and cc_mf",
     )
     parser.add_argument(
         "--safe-stop-robot-shapes",
@@ -665,7 +667,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--safe-stop-optimizer-types",
         nargs="+",
         default=None,
-        help="Optimizer types to use with --safe-stop-batch (default: rmpcc_pv rmpcc)",
+        help="Optimizer types to use with --safe-stop-batch (default: cc_sf cc_mf)",
     )
     parser.add_argument(
         "--safe-stop-summary",

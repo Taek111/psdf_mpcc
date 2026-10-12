@@ -10,7 +10,7 @@ class psdfRiskWrapper(nn.Module):
 
     `forward()` keeps the same scalar signed-distance interface used by
     `RealTimeL4CasADi`, while `forward_with_risk()` exposes `(phi, R)` for the
-    external risk-margin update in RMPCC.
+    external risk-margin update in chance-constrained MPCC.
     """
 
     def __init__(

@@ -115,23 +115,13 @@ class MPCIntegrationTest(unittest.TestCase):
 
     @staticmethod
     def make_erk_ocps():
-        from control.mpcc_optimizer import MPCCOptimizer, MPCCOptimizerParam
-        from control.nmpc_optimizer_sqp import NmpcOptimizerSqp, NmpcOptimizerSqpParam
         from control.psdf_optimizer import PSDFOptimizer, PSDFOptimizerParam
 
-        ocps = []
-        for optimizer_type, param_type in (
-            (PSDFOptimizer, PSDFOptimizerParam),
-            (MPCCOptimizer, MPCCOptimizerParam),
-            (NmpcOptimizerSqp, NmpcOptimizerSqpParam),
-        ):
-            param = param_type()
-            optimizer = optimizer_type()
-            optimizer.set_state(SimpleNamespace(_x=np.zeros(3), _u=np.zeros(2)))
-            reference = None if optimizer_type is MPCCOptimizer else np.zeros((param.horizon + 1, 3))
-            optimizer.setup_ocp(param, reference)
-            ocps.append(optimizer.ocp)
-        return ocps
+        param = PSDFOptimizerParam()
+        optimizer = PSDFOptimizer()
+        optimizer.set_state(SimpleNamespace(_x=np.zeros(3), _u=np.zeros(2)))
+        optimizer.setup_ocp(param, np.zeros((param.horizon + 1, 3)))
+        return [optimizer.ocp]
 
     def test_erk_ocps_explicitly_select_one_classical_rk4_step(self):
         for ocp in self.make_erk_ocps():
@@ -181,7 +171,7 @@ class MPCIntegrationTest(unittest.TestCase):
 
         pose = np.array([0.7, -0.3, 0.8])
         control = np.array([-0.5, 1.0])
-        for method in ("casadi", "obca", "dcbf", "sipoc"):
+        for method in ("obca", "uobca", "dcbf", "sipoc"):
             with self.subTest(method=method):
                 simulation = simulation_mpc()
                 # Inspect the actual wiring before any planning or solver run.

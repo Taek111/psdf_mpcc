@@ -43,8 +43,7 @@ OBCA와 DCBF는 기본적으로 현재 로봇 footprint와 장애물의 거리�
 
 OBCA는 선택한 장애물에 대해 `x[1]`부터 `x[horizon]`까지 duality 거리 하한
 `D >= margin_dist`를 적용한다. DCBF는 기존 exponential DCBF 제약을
-`x[1]`부터 `x[horizon_dcbf]`까지 적용한다. 다음 블록으로 각각 설정할 수 있다
-(`dcbf` 블록은 `dcbf_casadi`에도 적용).
+`x[1]`부터 `x[horizon_dcbf]`까지 적용한다. 다음 블록으로 각각 설정할 수 있다.
 
 ```yaml
 obca:

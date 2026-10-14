@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from control import DEFAULT_OPTIMIZER_TYPE, SUPPORTED_OPTIMIZER_TYPES
 from sim.simulation_mpc import simulation_mpc
 from sim.start_perturbation import resolve_start_perturbation
 from sim.trial_metrics import TrialMetricsRecorder, collect_successful_solver_steps
@@ -32,26 +33,13 @@ def resolve_config_path(config_arg: str) -> str:
 
 
 def build_output_name(args: argparse.Namespace, interrupted: bool = False) -> str:
-    prefix_map = {
-        "acados": "MPC_SQP_",
-        "obca": "MPC_OBCA_",
-        "minkowski_cbf": "MPC_minkowski_cbf_",
-        "sipoc": "MPC_sipoc_",
-        "psdf": "MPC_psdf_",
-        "mpcc": "MPC_mpcc_",
-        "cc_sf": "MPC_cc_sf_",
-        "cc_mf": "MPC_cc_mf_",
-        "cc_ecs": "MPC_cc_ecs_",
-        "dcbf": "MPC_DCBF_",
-        "dcbf_casadi": "MPC_DCBF_CASADI_",
-    }
-    name = prefix_map.get(args.optimizer_type, "MPC_") + f"{args.robot_shape}_{args.maze_type}"
-    output_suffix = getattr(args, "output_suffix", None)
-    if output_suffix:
-        name += f"_{output_suffix}"
-    if interrupted:
-        name += "_interrupted"
-    return name
+    return simulation_mpc.build_output_name(
+        args.robot_shape,
+        args.maze_type,
+        args.optimizer_type,
+        interrupted=interrupted,
+        extra_suffix=getattr(args, "output_suffix", None),
+    )
 
 
 def load_runtime_config(config_arg: str) -> dict:
@@ -486,11 +474,14 @@ def run_trial_batch(args: argparse.Namespace, config: Optional[dict] = None) -> 
     for index, test_config in enumerate(test_configs, 1):
         run_args = argparse.Namespace(**vars(args))
         for key, default in (
-            ("maze_type", "s_path"), ("robot_shape", "pentagon"),
-            ("optimizer_type", "psdf"), ("dynamics_type", "differential_drive"),
+            ("maze_type", "s_path"),
+            ("robot_shape", "pentagon"),
+            ("optimizer_type", DEFAULT_OPTIMIZER_TYPE),
+            ("dynamics_type", "differential_drive"),
             ("path_planner", "astar"),
         ):
             setattr(run_args, key, test_config.get(key, default))
+        simulation_mpc._resolve_optimizer_variant(run_args.optimizer_type)
         if not args.single:
             run_args.simulation_time = test_config.get(
                 "simulation_time", defaults.get("simulation_time", 20.0)
@@ -596,8 +587,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--maze-type", default="s_path", help="Environment type")
     parser.add_argument("--robot-shape", default="rectangle", help="Robot shape")
-    parser.add_argument("--optimizer-type", default="casadi",
-                        help="Optimizer type (sipoc, obca, psdf, mpcc, cc_sf, cc_mf, cc_ecs, dcbf, acados, casadi, ...)")
+    parser.add_argument(
+        "--optimizer-type",
+        choices=SUPPORTED_OPTIMIZER_TYPES,
+        default=DEFAULT_OPTIMIZER_TYPE,
+        help="Controller/optimizer type (default: %(default)s)",
+    )
     parser.add_argument("--dynamics-type", default="differential_drive", help="Dynamics type")
     parser.add_argument("--path-planner", default="astar", help="Path planner type")
     parser.add_argument("--simulation-time", type=float, default=60.0, help="Simulation duration [s]")
@@ -666,6 +661,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--safe-stop-optimizer-types",
         nargs="+",
+        choices=SUPPORTED_OPTIMIZER_TYPES,
         default=None,
         help="Optimizer types to use with --safe-stop-batch (default: cc_sf cc_mf)",
     )

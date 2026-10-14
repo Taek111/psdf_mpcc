@@ -1,10 +1,10 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `control/`: MPC controllers/optimizers (`psdf_optimizer*.py`, `nmpc_optimizer*.py`, `dcbf_optimizer*.py`).
+- `control/`: Controllers/optimizers for `obca`, `psdf`, `cc_mf`, `cc_sf`, `dcbf`, `cc_ecs`, `sipoc`, `uobca`, plus shared helpers. SIPOC uses `dilated_polygon_robust_optimizer.py`.
 - `models/`: Dynamics + geometry (`dd.py`, `geometry_utils.py`, `psdf_wrapper.py`).
 - `planning/`, `sim/`: Planning utilities and simulation loop.
-- `config.yaml`: Scenario configs; outputs go to `animations/`, `figures/`, `data/`.
+- `config/config.yaml`: Scenario configs; outputs go to `animations/`, `figures/`, `data/`.
 - Tests: top-level `test_*.py` scripts.
 
 ## Build, Test, and Development Commands

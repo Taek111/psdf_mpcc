@@ -5,13 +5,13 @@
 # Each test can have the following options:
 # Environment type (options: "s_path", "straight_corridor", "maze", "oblique_maze", "parking")
 # Robot shape (options: "rectangle", "pentagon", "triangle", "lshape")
-# Optimizer type (options: "obca", "psdf", "mpcc", "cc_mf", "cc_sf", "acados", "casadi", "dcbf", "dcbf_casadi")
+# Controller/optimizer type (options: "obca", "psdf", "cc_mf", "cc_sf", "dcbf", "cc_ecs", "sipoc", "uobca")
 # Dynamics model (currently only "differential_drive" is supported)
 # Path planner type (options: "astar", "hybrid_astar")
 
 # True initial-pose randomization (independent of localization/measurement noise).
 # CLI: --perturb-start / --no-perturb-start; explicit CLI values override YAML.
-# Use the same seed for psdf/dcbf/obca, and change it for each trial.
+# Use the same seed across controllers, and change it for each trial.
 # A null seed is generated and recorded; methods within a config batch share it.
 # Individual test_configs entries may override this block (e.g. seed: 1, 2, ...).
 start_perturbation:
@@ -24,9 +24,9 @@ start_perturbation:
   max_attempts: 1000      # Fail explicitly if no safe sample can be found.
 
 test_configs:
-  - maze_type: "oblique_maze"
+  - maze_type: "maze"
     robot_shape: "rectangle"
-    optimizer_type: "obca"
+    optimizer_type: "psdf"
     dynamics_type: "differential_drive"
     path_planner: "astar"
 
@@ -36,95 +36,6 @@ test_configs:
   #   dynamics_type: "differential_drive"
   #   path_planner: "astar"
 
-  # - maze_type: "s_path"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "cc_sf"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "s_path"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "mpcc"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "s_path"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "psdf"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "straight_corridor"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "cc_mf"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "straight_corridor"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "cc_sf"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "straight_corridor"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "mpcc"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "straight_corridor"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "psdf"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "maze"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "cc_mf"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "maze"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "cc_sf"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "maze"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "mpcc"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "maze"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "psdf"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "oblique_maze"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "cc_mf"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "oblique_maze"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "cc_sf"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "oblique_maze"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "mpcc"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
-
-  # - maze_type: "oblique_maze"
-  #   robot_shape: "rectangle"
-  #   optimizer_type: "psdf"
-  #   dynamics_type: "differential_drive"
-  #   path_planner: "astar"
 
 # Default settings
 # Common settings applied to all tests
@@ -155,15 +66,22 @@ defaults:
 #   - "lshape": L-shaped robot
 #
 # optimizer_type options:
-#   - "psdf": PSDF-based SQP optimizer (obstacle avoidance)
-#   - "mpcc": MPCC optimizer with PSDF safety constraint
-#   - "cc_mf": MPCC with fixed signed-PSDF guard and stage-masked MF affine rows
-#   - "cc_sf": Risk-aware MPCC optimizer with a projected-variance PSDF margin
 #   - "obca": OBCAOptimizer from control/obca_optimizer.py (CasADi/IPOPT)
-#   - "acados": ACADOS SQP-based NMPC
-#   - "casadi": CasADi-based basic NMPC  
+#   - "psdf": PSDF-based MPC with obstacle detection (acados SQP-RTI)
+#   - "cc_mf": Chance-constrained MPCC with signed-PSDF guard and MF affine rows (acados SQP-RTI)
+#   - "cc_sf": Chance-constrained MPCC with projected-variance PSDF margin (acados SQP-RTI)
 #   - "dcbf": DCBF optimizer from control/dcbf_optimizer.py (CasADi/IPOPT)
-#   - "dcbf_casadi": Alias for the same CasADi/IPOPT DCBF optimizer
+#   - "cc_ecs": Chance-constrained MPCC with ellipsoidal confidence sets (acados SQP-RTI)
+#   - "sipoc": Dilated-polygon robust controller from control/dilated_polygon_robust_optimizer.py (acados SQP)
+#   - "uobca": Uncertainty-aware OBCA from control/uobca_optimizer.py (CasADi/IPOPT; rectangle only)
+#
+# Optional U-OBCA settings (fixed world-frame covariance of [x, y, heading]):
+# uobca:
+#   alpha: 0.01
+#   wasserstein_radius: 0.01
+#   pose_covariance: [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+# pose_covariance accepts a 3x3 matrix or one per predicted stage (horizon x 3 x 3).
+# The default covariance is zero, which recovers deterministic OBCA.
 #
 # dynamics_type options:
 #   - "differential_drive": Differential drive robot model (currently the only option)

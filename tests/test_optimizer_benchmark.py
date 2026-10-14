@@ -29,10 +29,13 @@ class _FakeSystem:
 
 
 class OptimizerBenchmarkTest(unittest.TestCase):
-    def test_load_summary_rejects_legacy_names_without_changing_results(self):
+    def test_load_summary_rejects_removed_names_without_changing_results(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "all_runs.csv"
-            for optimizer_type in ("rmpcc", "rmpcc_pv"):
+            for optimizer_type in (
+                "rmpcc", "rmpcc_pv", "mpcc", "acados", "casadi",
+                "dcbf_casadi", "minkowski_cbf",
+            ):
                 with self.subTest(optimizer_type=optimizer_type):
                     original = (
                         "run_id,optimizer_type\n"

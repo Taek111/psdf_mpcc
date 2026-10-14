@@ -168,7 +168,7 @@ class StartPerturbationTest(unittest.TestCase):
             "defaults": {"generate_animation": False, "generate_plots": False},
             "test_configs": [
                 {"optimizer_type": "psdf"}, {"optimizer_type": "dcbf"},
-                {"optimizer_type": "acados", "start_perturbation": {"seed": 12}},
+                {"optimizer_type": "uobca", "start_perturbation": {"seed": 12}},
             ],
         }
         with patch.object(simulation_mpc, "mpc_test", fake_run), contextlib.redirect_stdout(io.StringIO()):
@@ -190,7 +190,7 @@ class StartPerturbationTest(unittest.TestCase):
 
         # Optimizer reset/cleanup touches code-generation files in the cwd.
         with tempfile.TemporaryDirectory() as output_dir, working_directory(output_dir):
-            for method in ("psdf", "dcbf", "acados", "obca"):
+            for method in ("psdf", "dcbf", "uobca", "obca"):
                 args = build_parser().parse_args([
                     "--single", "--maze-type", "maze", "--optimizer-type", method,
                     "--perturb-start", "--start-seed", "42", "--no-animation", "--no-plots",

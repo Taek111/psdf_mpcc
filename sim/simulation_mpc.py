@@ -23,6 +23,7 @@ import statistics as st
 import numpy as np
 import torch
 
+from control import DEFAULT_OPTIMIZER_TYPE, SUPPORTED_OPTIMIZER_TYPES
 from control.controller import BaseController
 
 from models.geometry_utils import PolytopeRegion, RectangleRegion
@@ -994,20 +995,7 @@ class simulation_mpc:
             return method_name.lower()
 
         normalized_name = animation_name.lower()
-        known_methods = (
-            "dcbf_casadi",
-            "obca",
-            "minkowski_cbf",
-            "sipoc",
-            "psdf",
-            "mpcc",
-            "cc_sf",
-            "cc_mf",
-            "cc_ecs",
-            "dcbf",
-            "sqp",
-        )
-        for known_method in known_methods:
+        for known_method in SUPPORTED_OPTIMIZER_TYPES:
             if f"mpc_{known_method}_" in normalized_name:
                 return known_method
 
@@ -1024,18 +1012,14 @@ class simulation_mpc:
     @staticmethod
     def build_output_name(robot_shape, maze_type, optimizer_type, interrupted=False, extra_suffix=None):
         prefix_map = {
-            "acados": "MPC_SQP_",
             "obca": "MPC_OBCA_",
-            "minkowski_cbf": "MPC_minkowski_cbf_",
+            "uobca": "MPC_UOBCA_",
             "sipoc": "MPC_sipoc_",
             "psdf": "MPC_psdf_",
-            "mpcc": "MPC_mpcc_",
             "cc_sf": "MPC_cc_sf_",
             "cc_mf": "MPC_cc_mf_",
             "cc_ecs": "MPC_cc_ecs_",
             "dcbf": "MPC_DCBF_",
-            "dcbf_casadi": "MPC_DCBF_CASADI_",
-            "casadi": "MPC_",
         }
         name = prefix_map.get(optimizer_type, "MPC_") + f"{robot_shape}_{maze_type}"
         if extra_suffix:
@@ -1072,6 +1056,11 @@ class simulation_mpc:
 
     @staticmethod
     def _resolve_optimizer_variant(optimizer_type):
+        if optimizer_type not in SUPPORTED_OPTIMIZER_TYPES:
+            raise ValueError(
+                f"Unsupported optimizer_type {optimizer_type!r}. "
+                f"Choose one of: {', '.join(SUPPORTED_OPTIMIZER_TYPES)}"
+            )
         return optimizer_type
 
     def animate_world(
@@ -1630,16 +1619,24 @@ class simulation_mpc:
                 f"CC-ECS {log_name} history",
             )
 
-    def mpc_test(self, maze_type, robot_shape, optimizer_type="casadi", dynamics_type="differential_drive", path_planner="astar", simulation_time=20.0, config=None):
+    def mpc_test(
+        self,
+        maze_type,
+        robot_shape,
+        optimizer_type=DEFAULT_OPTIMIZER_TYPE,
+        dynamics_type="differential_drive",
+        path_planner="astar",
+        simulation_time=20.0,
+        config=None,
+    ):
         """
         Run MPC test with specified optimizer and dynamics.
         
         Args:
             maze_type: Type of maze environment ("s_path", "straight_corridor", "maze", "oblique_maze", "parking")
             robot_shape: Shape of robot ("rectangle", "pentagon", "triangle", "lshape")
-            optimizer_type: Type of optimizer ("casadi", "acados", "obca",
-                "minkowski_cbf", "psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs",
-                "dcbf", "dcbf_casadi", "sipoc")
+            optimizer_type: Type of optimizer ("obca", "psdf", "cc_mf",
+                "cc_sf", "dcbf", "cc_ecs", "sipoc", "uobca")
             dynamics_type: Type of dynamics ("differential_drive")
             path_planner: Type of path planner.
             simulation_time: Duration of the simulation.
@@ -1781,13 +1778,7 @@ class simulation_mpc:
         self.robot.set_local_planner(ConstantSpeedTrajectoryGenerator())
         
         # Set up optimizer and controller based on optimizer_type
-        if optimizer_type == "acados":
-            from control.nmpc_optimizer_sqp import NmpcOptimizerSqp, NmpcOptimizerSqpParam
-
-            opt_param = NmpcOptimizerSqpParam()
-            optimizer = NmpcOptimizerSqp()
-            optimizer_name = "acados"
-        elif optimizer_type == "obca":
+        if optimizer_type == "obca":
             from control.obca_optimizer import OBCAOptimizer, OBCAOptimizerParam
 
             opt_param = OBCAOptimizerParam()
@@ -1796,6 +1787,19 @@ class simulation_mpc:
             )
             optimizer = OBCAOptimizer({}, {}, dynamics.forward_dynamics_opt(robot_system._dt))
             optimizer_name = "obca"
+        elif optimizer_type == "uobca":
+            from control.uobca_optimizer import UOBCAOptimizer, UOBCAOptimizerParam
+
+            opt_param = UOBCAOptimizerParam()
+            uobca_config = dict(self._get_config_block(config, "uobca"))
+            pose_covariance = uobca_config.pop("pose_covariance", None)
+            self._apply_param_overrides(opt_param, uobca_config, "U-OBCA")
+            optimizer = UOBCAOptimizer(
+                {}, {}, dynamics.forward_dynamics_opt(robot_system._dt),
+            )
+            if pose_covariance is not None:
+                optimizer.set_pose_covariance(pose_covariance)
+            optimizer_name = "uobca"
         elif optimizer_type == "psdf":
             from control.psdf_optimizer import PSDFOptimizer, PSDFOptimizerParam
 
@@ -1814,45 +1818,6 @@ class simulation_mpc:
             
             optimizer = PSDFOptimizer()
             optimizer_name = "psdf"
-        elif optimizer_type == "mpcc":
-            from control.mpcc_optimizer import MPCCOptimizer, MPCCOptimizerParam
-
-            opt_param = MPCCOptimizerParam()
-
-            # Reuse psdf_detection config block for MPCC's PSDF update settings.
-            if config and 'psdf_detection' in config:
-                psdf_config = config['psdf_detection']
-                opt_param.detection_window_width = psdf_config.get('window_width', opt_param.detection_window_width)
-                opt_param.detection_window_height = psdf_config.get('window_height', opt_param.detection_window_height)
-                opt_param.detection_safety_margin = psdf_config.get('safety_margin', opt_param.detection_safety_margin)
-                opt_param.detection_frequency = psdf_config.get('detection_frequency', opt_param.detection_frequency)
-                print(f"MPCC detection configured from config: "
-                      f"window={opt_param.detection_window_width}x{opt_param.detection_window_height}m, "
-                      f"margin={opt_param.detection_safety_margin}m, freq={opt_param.detection_frequency}Hz")
-
-            dt = float(opt_param.tf) / float(opt_param.horizon)
-            local_window_length = max(float(opt_param.v_s_max) * float(opt_param.tf) * 1.25, 0.8)
-            self.robot.set_local_planner(
-                SplineReferenceGenerator(
-                    reference_speed=max(0.25, 0.7 * float(opt_param.v_s_max)),
-                    num_horizon=opt_param.horizon,
-                    local_path_timestep=dt,
-                    window_length=local_window_length,
-                    max_segments=opt_param.max_segments,
-                    proj_dist_buffer=0.03,
-                    sample_count=opt_param.horizon,
-                    min_point_distance=1e-4,
-                    spline_bc_type="natural",
-                    projected_s_backtrack_tolerance=getattr(
-                        opt_param,
-                        "planner_projected_s_backtrack_tolerance",
-                        0.15,
-                    ),
-                )
-            )
-
-            optimizer = MPCCOptimizer()
-            optimizer_name = "mpcc"
         elif optimizer_type == "cc_mf":
             from control.cc_mf_optimizer import CCMFOptimizer, CCMFOptimizerParam
 
@@ -1979,20 +1944,6 @@ class simulation_mpc:
 
             optimizer = CCECSOptimizer()
             optimizer_name = "cc_ecs"
-        elif optimizer_type == "minkowski_cbf":
-            from control.minkowski_cbf_optimizer import (
-                MinkowskiCBFOptimizer,
-                MinkowskiCBFOptimizerParam,
-            )
-
-            opt_param = MinkowskiCBFOptimizerParam()
-            self._apply_param_overrides(
-                opt_param,
-                self._get_config_block(config, "minkowski_cbf"),
-                "Minkowski CBF",
-            )
-            optimizer = MinkowskiCBFOptimizer()
-            optimizer_name = "minkowski_cbf"
         elif optimizer_type == "sipoc":
             from control.dilated_polygon_robust_optimizer import (
                 DilatedPolygonRobustController,
@@ -2014,7 +1965,7 @@ class simulation_mpc:
             self.robot._local_planner._num_horizon = int(opt_param.horizon) + 1
             self.robot._local_planner._local_path_timestep = horizon_dt
             optimizer_name = "sipoc"
-        elif optimizer_type in ("dcbf", "dcbf_casadi"):
+        elif optimizer_type == "dcbf":
             from control.dcbf_optimizer import NmpcDbcfOptimizer, NmpcDcbfOptimizerParam
 
             opt_param = NmpcDcbfOptimizerParam()
@@ -2023,12 +1974,6 @@ class simulation_mpc:
             )
             optimizer = NmpcDbcfOptimizer({}, {}, dynamics.forward_dynamics_opt(robot_system._dt))
             optimizer_name = optimizer_type
-        else:  # Default to casadi
-            from control.nmpc_optimizer import NmpcOptimizer, NmpcOptimizerParam
-
-            opt_param = NmpcOptimizerParam()
-            optimizer = NmpcOptimizer({}, {}, dynamics.forward_dynamics_opt(robot_system._dt))
-            optimizer_name = "CasADi"
 
         if hasattr(opt_param, "tf"):
             horizon_dt = float(opt_param.tf) / float(opt_param.horizon)
@@ -2060,7 +2005,7 @@ class simulation_mpc:
         )
         
         # If using PSDF-family optimizer, set up data logging and obstacle update hooks
-        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs", "dcbf", "dcbf_casadi"):
+        if optimizer_type in ("psdf", "cc_mf", "cc_sf", "cc_ecs", "dcbf"):
             # Monkey patch the controller to log pose-SDF data and perform obstacle detection
             original_generate_control = controller.generate_control_input
             
@@ -2237,7 +2182,7 @@ class simulation_mpc:
             self.save_cc_ecs_history_to_csv()
 
         # Save pose-SDF data to CSV for PSDF-family optimizers
-        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs"):
+        if optimizer_type in ("psdf", "cc_mf", "cc_sf", "cc_ecs"):
             csv_filename = f"pose_sdf_{self.current_name}"
             self.save_pose_sdf_to_csv(csv_filename)
         
@@ -2334,11 +2279,12 @@ class simulation_mpc:
             obstacles = []
             obstacles.append(RectangleRegion(0.0 * s, 4.0 * s, 0.0 * s, 3.0 * s))
             obstacles.append(RectangleRegion(1.0 * s, 3.0 * s, 4.0 * s, 6.0 * s))
-            obstacles.append(RectangleRegion(2.0 * s, 6.0 * s, 5.0 * s, 6.0 * s))
+            # Adjacent rectangles share edges without overlapping interiors.
+            obstacles.append(RectangleRegion(3.0 * s, 6.0 * s, 5.0 * s, 6.0 * s))
             obstacles.append(RectangleRegion(6.0 * s, 7.0 * s, 4.0 * s, 6.0 * s))
             obstacles.append(RectangleRegion(4.0 * s, 5.0 * s, 0.0 * s, 4.0 * s))
             obstacles.append(RectangleRegion(5.0 * s, 8.0 * s, 2.0 * s, 3.0 * s))
-            obstacles.append(RectangleRegion(5.0 * s, 10.0 * s, 0.0 * s, 2.0 * s))
+            obstacles.append(RectangleRegion(5.0 * s, 9.0 * s, 0.0 * s, 2.0 * s))
             obstacles.append(RectangleRegion(8.0 * s, 9.0 * s, 2.0 * s, 4.0 * s))
             obstacles.append(RectangleRegion(9.0 * s, 12.0 * s, 3.0 * s, 4.0 * s))
             obstacles.append(RectangleRegion(11.0 * s, 12.0 * s, 4.0 * s, 5.0 * s))
@@ -2426,7 +2372,7 @@ class simulation_mpc:
                 {
                     'maze_type': 's_path',
                     'robot_shape': 'pentagon',
-                    'optimizer_type': 'psdf',
+                    'optimizer_type': DEFAULT_OPTIMIZER_TYPE,
                     'dynamics_type': 'differential_drive'
                 }
             ],
@@ -2462,7 +2408,7 @@ class simulation_mpc:
         for i, test_config in enumerate(test_configs, 1):
             maze_type = test_config.get('maze_type', 's_path')
             robot_shape = test_config.get('robot_shape', 'pentagon')
-            optimizer_type = test_config.get('optimizer_type', 'psdf')
+            optimizer_type = test_config.get('optimizer_type', DEFAULT_OPTIMIZER_TYPE)
             dynamics_type = test_config.get('dynamics_type', 'differential_drive')
             path_planner = test_config.get('path_planner', 'astar')
             

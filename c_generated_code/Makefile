@@ -73,8 +73,8 @@ OBJ+= $(OCP_OBJ)
 EXTERNAL_DIR=
 EXTERNAL_LIB=
 
-INCLUDE_PATH = /home/taekwon/projects/acados/include
-LIB_PATH = /home/taekwon/projects/acados/lib
+INCLUDE_PATH = /home/taek111/projects/acados/include
+LIB_PATH = /home/taek111/projects/acados/lib
 
 # preprocessor flags for make's implicit rules
 CPPFLAGS+= -I$(INCLUDE_PATH)
@@ -134,7 +134,7 @@ ocp_cython_c: ocp_shared_lib
 	-o acados_ocp_solver_pyx.c \
 	-I $(INCLUDE_PATH)/../interfaces/acados_template/acados_template \
 	$(INCLUDE_PATH)/../interfaces/acados_template/acados_template/acados_ocp_solver_pyx.pyx \
-	-I /home/taekwon/projects/psdf_mpcc/c_generated_code \
+	-I /home/taek111/projects/psdf_mpcc/c_generated_code \
 
 ocp_cython_o: ocp_cython_c
 	$(CC) $(ACADOS_FLAGS) -c -O2 \
@@ -143,8 +143,8 @@ ocp_cython_o: ocp_cython_c
 	-I $(INCLUDE_PATH)/blasfeo/include/ \
 	-I $(INCLUDE_PATH)/hpipm/include/ \
 	-I $(INCLUDE_PATH) \
-	-I /home/taekwon/projects/psdf_mpcc/.venv/lib/python3.10/site-packages/numpy/core/include \
-	-I /usr/include/python3.10 \
+	-I /home/taek111/anaconda3/envs/pp/lib/python3.10/site-packages/numpy/_core/include \
+	-I /home/taek111/anaconda3/envs/pp/include/python3.10 \
 	acados_ocp_solver_pyx.c \
 
 ocp_cython: ocp_cython_o
@@ -162,7 +162,7 @@ sim_cython_c: sim_shared_lib
 	-o acados_sim_solver_pyx.c \
 	-I $(INCLUDE_PATH)/../interfaces/acados_template/acados_template \
 	$(INCLUDE_PATH)/../interfaces/acados_template/acados_template/acados_sim_solver_pyx.pyx \
-	-I /home/taekwon/projects/psdf_mpcc/c_generated_code \
+	-I /home/taek111/projects/psdf_mpcc/c_generated_code \
 
 sim_cython_o: sim_cython_c
 	$(CC) $(ACADOS_FLAGS) -c -O2 \
@@ -171,8 +171,8 @@ sim_cython_o: sim_cython_c
 	-I $(INCLUDE_PATH)/blasfeo/include/ \
 	-I $(INCLUDE_PATH)/hpipm/include/ \
 	-I $(INCLUDE_PATH) \
-	-I /home/taekwon/projects/psdf_mpcc/.venv/lib/python3.10/site-packages/numpy/core/include \
-	-I /usr/include/python3.10 \
+	-I /home/taek111/anaconda3/envs/pp/lib/python3.10/site-packages/numpy/_core/include \
+	-I /home/taek111/anaconda3/envs/pp/include/python3.10 \
 	acados_sim_solver_pyx.c \
 
 sim_cython: sim_cython_o

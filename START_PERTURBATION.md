@@ -10,7 +10,7 @@ python test_nmpc.py --single --maze-type maze --robot-shape rectangle --optimize
 ```
 
 `--optimizer-type obca`는 `control/obca_optimizer.py`의 `OBCAOptimizer`를 사용한다.
-기존 `acados` 옵션은 별도의 SQP NMPC 구현이다.
+지원하는 controller 옵션은 `obca`, `psdf`, `cc_mf`, `cc_sf`, `dcbf`, `cc_ecs`, `sipoc`, `uobca`이다.
 같은 환경·footprint·설정에서는 세 방법에 **동일한 seed**를 사용하면 실제 시작 pose도 동일하다.
 다음 trial에서는 seed를 43, 44, …로 바꾼다. `--robot-shape triangle` 또는 `pentagon`도 같은 방식이다.
 seed를 생략하면 자동 생성되며, 한 YAML batch의 공통 설정을 사용하는 방법들은 생성된 seed를 공유한다.
@@ -67,7 +67,7 @@ footprint 또는 설정을 바꾸면 안전거리 재추출 여부가 달라질 
 비교 시 JSON의 `initial_pose`도 확인한다.
 
 회귀 테스트는 `python -m unittest discover -s tests -p test_start_perturbation.py`로 실행한다.
-초기 기능 추가 당시 solver 확인에서는 `maze`, seed 8, 0.3초 조건에서 PSDF/acados 모두
+초기 기능 추가 당시 solver 확인에서는 `maze`, seed 8, 0.3초 조건에서 PSDF와 현재 제거된 `acados` 옵션 모두
 세 footprint의 3개 제어 step을 정상 완료했다. DCBF는 rectangle/triangle에서
 첫 solve 후 기존 거리계산의 CasADi `Psd constraints not implemented yet` 오류가 발생했고,
 pentagon 실행과 perturbation을 끈 rectangle 대조 실행은 120초 제한에 도달했다.

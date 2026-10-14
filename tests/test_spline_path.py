@@ -3,7 +3,6 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from control.mpcc_optimizer import MPCCOptimizer
 from control.cc_sf_optimizer import CCSFOptimizer
 from planning.trajectory_generator.spline_reference_generator import (
     build_cubic_spline_path_data as planner_build_path,
@@ -52,7 +51,7 @@ class SplinePathUtilityTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             normalize_path_data({"cx": np.zeros((2, 3)), "cy": np.zeros((2, 3)), "S": [0, 1, 2]})
 
-    def test_path_frame_supports_both_mpcc_layouts(self):
+    def test_path_frame_supports_optional_curvature(self):
         progress = float(self.path["s_breaks"][1])
         frame_5 = stage_parameter(self.path, progress, include_curvature=False)
         frame_6 = stage_parameter(self.path, progress, include_curvature=True)
@@ -63,17 +62,10 @@ class SplinePathUtilityTest(unittest.TestCase):
         self.assertGreater(np.linalg.norm(tangent(self.path, progress)), 0.99)
 
     def test_controller_adapters_keep_default_tangent_options(self):
-        for optimizer_type, expected_size in (
-            (MPCCOptimizer, 5),
-            (CCSFOptimizer, 6),
-        ):
-            optimizer = optimizer_type()
-            optimizer.param = SimpleNamespace()
-            optimizer.reference_path_data = None
-            self.assertEqual(
-                optimizer._build_stage_path_parameter(0.2).shape,
-                (expected_size,),
-            )
+        optimizer = CCSFOptimizer()
+        optimizer.param = SimpleNamespace()
+        optimizer.reference_path_data = None
+        self.assertEqual(optimizer._build_stage_path_parameter(0.2).shape, (6,))
 
     def test_progress_helpers_clamp_project_and_slice(self):
         maximum = float(self.path["s_breaks"][-1])

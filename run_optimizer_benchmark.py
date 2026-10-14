@@ -16,12 +16,14 @@ from typing import Dict, Iterable, List, Optional, Sequence
 import numpy as np
 import yaml
 
+from control import SUPPORTED_OPTIMIZER_TYPES
 from sim.simulation_mpc import simulation_mpc
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "benchmark_runs" / "maze_rectangle_nominal"
 DEFAULT_SCALES = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+COMPARISON_OPTIMIZER_TYPES = ("psdf", "cc_sf")
 DEADLINE_SECONDS = 0.1
 
 COVARIANCE_GROWTH_BASE = {
@@ -35,7 +37,6 @@ COVARIANCE_GROWTH_BASE = {
 
 METHOD_LABELS = {
     "psdf": "PSDF-MPC",
-    "mpcc": "PSDF-MPCC",
     "cc_sf": "PSDF-MPCC-CC-SF",
     "cc_mf": "PSDF-MPCC-CC-MF",
 }
@@ -318,16 +319,16 @@ def _write_csv(path: Path, rows: Sequence[dict], fields: Sequence[str]) -> None:
 
 def load_summary(path: Path) -> List[dict]:
     rows = _read_csv(path)
-    legacy_types = {
-        row.get("optimizer_type")
+    unsupported_types = {
+        row.get("optimizer_type") or "<missing>"
         for row in rows
-        if row.get("optimizer_type") in ("rmpcc", "rmpcc_pv")
+        if row.get("optimizer_type") not in SUPPORTED_OPTIMIZER_TYPES
     }
-    if legacy_types:
+    if unsupported_types:
         raise ValueError(
-            f"{path} contains results under legacy optimizer names "
-            f"({', '.join(sorted(legacy_types))}). Use a new --output-root "
-            "directory for cc_sf/cc_mf runs to preserve the existing results."
+            f"{path} contains results under unsupported optimizer names "
+            f"({', '.join(sorted(unsupported_types))}). Use a new --output-root "
+            "directory to preserve the existing results."
         )
     return rows
 
@@ -346,7 +347,7 @@ def normalize_trial_numbers(rows: Sequence[dict]) -> List[dict]:
     comparison_trials = {
         f"compare_{optimizer_type}": index
         for index, optimizer_type in enumerate(
-            ("psdf", "mpcc", "cc_sf"), start=len(DEFAULT_SCALES) + 1
+            COMPARISON_OPTIMIZER_TYPES, start=len(DEFAULT_SCALES) + 1
         )
     }
     trial_numbers = {**scale_trials, **comparison_trials}
@@ -590,14 +591,14 @@ def save_derived_outputs(output_root: Path, rows: Sequence[dict]) -> Optional[di
     selected = select_best_scale(scale_rows)
     comparison_rows = [
         row
-        for optimizer_type in ("psdf", "mpcc", "cc_sf")
+        for optimizer_type in COMPARISON_OPTIMIZER_TYPES
         for row in rows
         if row.get("optimizer_type") == optimizer_type
     ]
     if selected is not None:
         comparison_rows.append(selected)
     comparison_rows.sort(
-        key=lambda row: ("psdf", "mpcc", "cc_sf", "cc_mf").index(
+        key=lambda row: (*COMPARISON_OPTIMIZER_TYPES, "cc_mf").index(
             row["optimizer_type"]
         )
     )
@@ -666,7 +667,7 @@ def write_progress(output_root: Path, rows: Sequence[dict], selected: Optional[d
         ]
     )
     for trial_number, optimizer_type in enumerate(
-        ("psdf", "mpcc", "cc_sf"), start=len(DEFAULT_SCALES) + 1
+        COMPARISON_OPTIMIZER_TYPES, start=len(DEFAULT_SCALES) + 1
     ):
         run_id = f"compare_{optimizer_type}"
         checked = "x" if _row_completed(output_root, rows_by_id, run_id) else " "
@@ -678,7 +679,8 @@ def write_progress(output_root: Path, rows: Sequence[dict], selected: Optional[d
         )
 
     comparison_path = output_root / "optimizer_comparison.csv"
-    comparison_complete = len(_read_csv(comparison_path)) == 4
+    comparison_count = len(COMPARISON_OPTIMIZER_TYPES) + 1
+    comparison_complete = len(_read_csv(comparison_path)) == comparison_count
     report_dir = output_root / "report"
     report_complete = (
         (report_dir / "artifact.json").exists()
@@ -689,7 +691,7 @@ def write_progress(output_root: Path, rows: Sequence[dict], selected: Optional[d
     lines.extend(
         [
             f"- [{'x' if selected is not None else ' '}] 선정된 MF sweep 결과 재사용",
-            f"- [{'x' if comparison_complete else ' '}] 4개 optimizer 비교표 생성",
+            f"- [{'x' if comparison_complete else ' '}] {comparison_count}개 optimizer 비교표 생성",
             f"- [{'x' if report_complete else ' '}] 최적 scale 결론과 결과 요약 보고서 작성",
             "",
             "완료 표시는 raw trial/clearance 로그와 run summary가 모두 존재할 때만 갱신됩니다.",
@@ -807,7 +809,7 @@ def main() -> None:
 
     if args.phase in ("compare", "all"):
         for trial_number, optimizer_type in enumerate(
-            ("psdf", "mpcc", "cc_sf"), start=len(DEFAULT_SCALES) + 1
+            COMPARISON_OPTIMIZER_TYPES, start=len(DEFAULT_SCALES) + 1
         ):
             summary_rows = _run_or_resume(
                 output_root=args.output_root,

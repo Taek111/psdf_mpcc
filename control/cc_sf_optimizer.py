@@ -10,6 +10,7 @@ from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 from control.analytic_psdf_casadi import AnalyticPSDFCasADi
 from control.cc_covariance import (
     covariance_from_log_cholesky,
+    initialize_cc_noise_params,
     initial_local_covariance,
     log_cholesky_from_covariance,
     propagate_log_cholesky,
@@ -17,68 +18,23 @@ from control.cc_covariance import (
     symbolic_dd_step,
     symbolic_log_cholesky_transition,
 )
-from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
-from models.geometry_utils import polygon_to_edges
-from utils.acados_diagnostics import report_solver_failure
-from utils.spline_path import (
-    clamp_progress,
-    normalize_path_data,
-    progress_bounds,
-    project_progress,
-    stage_parameter,
+from control.mpcc_optimizer import (
+    MPCCOptimizer,
+    initialize_mpcc_solver_params,
+    initialize_mpcc_tracking_params,
 )
+from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
+from utils.acados_diagnostics import report_solver_failure
 
 
 class CCSFOptimizerParam:
     def __init__(self):
-        self.horizon = 20
-        self.tf = 0.1 * self.horizon
+        initialize_mpcc_tracking_params(self)
+        initialize_mpcc_solver_params(self, integrator_type="DISCRETE")
         # None selects min(10, horizon); set horizon for full propagation.
         self.robust_horizon = None
         # Optional estimator covariance in world coordinates; otherwise use sigma_*0.
         self.initial_pose_covariance = None
-
-        # MPCC cost weights
-        self.mat_Qe = np.diag([1.0, 10.0])   # [contour, lag] # 1.0 10.0
-        self.mat_Re = np.diag([1.0, 0.01])    # [v, omega]    # 0.2, 0.01 
-        self.q_s = 1.0
-        self.terminal_weight = 5.0 # default 10, 50 
-        # Desired unconstrained progress speed. The quadratic progress penalty is
-        # chosen so q_s / (2 * r_v_s) == v_s_target.
-        self.v_s_target = 0.8
-        self.q_s_ref = 2.0
-
-        # MPCC path/progress parameters
-        self.v_s_max = 2.0
-        # Keep the progress-state rate aligned with the physical speed limit by default.
-        self.enforce_v_s_not_faster_than_vmax = True
-        self.path_gate_epsilon = 0.05
-        self.tangent_reg_delta = 1e-6
-        self.reference_weight_reg = 1e-8
-        self.fd_eps = 1e-3
-        self.max_segments = 20
-        self.line_search_window = 0.5
-        self.line_search_samples = 41
-        self.s_upper_guard = 100.0
-        self.use_s_state_bounds = True
-        # Allow limited progress backtracking near corners so the nominal can
-        # switch active faces instead of staying pinned to the pre-turn tangent.
-        self.s_backtrack_tolerance = 0.3
-        
-        # Solver options
-        self.qp_solver = "PARTIAL_CONDENSING_HPIPM"
-        # EXTERNAL cost in this MPCC formulation is more reliable with an exact Hessian.
-        self.hessian_approx = "GAUSS_NEWTON"
-        self.integrator_type = "DISCRETE"
-        self.nlp_solver_type = "SQP_RTI"
-        self.qp_solver_iter_max = 50
-        self.nlp_solver_max_iter = 50
-        self.tol = 1e-4
-
-
-        # Physical input bounds
-        self.vmin, self.vmax = -0.7, 0.7
-        self.omegamin, self.omegamax = -1.2, 1.2
 
         # Safety constraints (PSDF style)
         self.d_min = 0.001
@@ -89,9 +45,6 @@ class CCSFOptimizerParam:
         self.chance_gamma = float(NormalDist().inv_cdf(1.0 - self.chance_epsilon))
         self.risk_margin_floor = 0.0
         self.risk_margin_cap = 2.0
-        # Zero-based inclusive stage window for activating the risk margin.
-        self.risk_margin_active_start_step = 0
-        self.risk_margin_active_end_step = None
         self.debug_risk = True
         self.debug_print_nominal_risk_heads = False
         self.debug_print_nominal_risk_head_only_active = True
@@ -103,15 +56,13 @@ class CCSFOptimizerParam:
         self.q_f0 = 0 #1e-5
         self.q_l0 = 0 #2.5e-5
         self.q_psi0 = 0 #2.5e-5
-        self.alpha_f = 0.002
-        self.alpha_v = 0.0004
-        self.alpha_kappa = 0.01
-        self.beta_v = 0.02
-        self.beta_kappa = 0.008
-        self.beta_omega = 0.008
+        initialize_cc_noise_params(self)
         self.risk_cov_jitter = 1e-9
 
-class CCSFOptimizer:
+
+class CCSFOptimizer(MPCCOptimizer):
+    _path_includes_curvature = True
+
     def __init__(self, variables=None, costs=None, dynamics_opt=None):
         self.ocp = None
         self.solver = None
@@ -229,23 +180,6 @@ class CCSFOptimizer:
         self._last_risk_clearances = None
         self._last_solve_mode = "uninitialized"
 
-    def __del__(self):
-        self.cleanup()
-
-    def reset(self):
-        self.cleanup()
-
-    def set_state(self, state):
-        self.state = state
-
-    def get_progress_info(self):
-        """Return MPCC progress-state values useful for runtime logging."""
-        return {
-            "path_s": float(self._current_s0),
-            "predicted_s": float(self._prev_predicted_s),
-            "has_predicted_s": bool(self._has_prev_predicted_s),
-        }
-
     def get_runtime_stats(self):
         return {
             "backup_feasible_qp_success_count": int(self._backup_feasible_qp_success_count),
@@ -287,23 +221,12 @@ class CCSFOptimizer:
         if num_stages == 0:
             return np.zeros((0,), dtype=bool)
 
-        return self._build_risk_margin_scale_batch(num_stages, self.param) > 0.0
+        return np.full(
+            num_stages, self._risk_margin_enabled(self.param), dtype=bool
+        )
 
     def record_plant_input_applied(self):
         self._plant_input_apply_count += 1
-
-    def _get_effective_v_s_max(self, param):
-        v_s_max = float(getattr(param, "v_s_max", 0.0))
-        if getattr(param, "enforce_v_s_not_faster_than_vmax", True):
-            return min(v_s_max, max(0.0, float(getattr(param, "vmax", 0.0))))
-        return v_s_max
-
-    def _get_progress_speed_penalty(self, param):
-        v_s_target = max(float(getattr(param, "v_s_target", 0.6)), 1e-6)
-        q_s = max(float(getattr(param, "q_s", 0.0)), 0.0)
-        # For r_v_s * v_s^2 - q_s * v_s, the unconstrained minimizer is
-        # q_s / (2 * r_v_s), so choose the quadratic penalty from v_s_target.
-        return 0.5 * q_s / v_s_target
 
     def create_model(self, param, p_psdf_sym=None):
         dt = float(param.tf) / float(max(param.horizon, 1))
@@ -348,21 +271,7 @@ class CCSFOptimizer:
         omega = u[1]
         v_s = u[2]
 
-        p_ref = p_ref_t_ref[0:2]
-        t_raw = p_ref_t_ref[2:4]
-        s_ref = p_ref_t_ref[4]
         kappa_ref = p_ref_t_ref[5]
-        t_vec = t_raw / (ca.norm_2(t_raw) + float(param.tangent_reg_delta))
-        p_ref_lin = p_ref + (x[3] - s_ref) * t_vec
-
-        dx = x[0] - p_ref_lin[0]
-        dy = x[1] - p_ref_lin[1]
-        # Match existing MPCC sign convention:
-        # e_l = -dot(position_error, tangent)
-        # e_c = dot(position_error, right-normal)
-        e_l = -(dx * t_vec[0] + dy * t_vec[1])
-        e_c = dx * t_vec[1] - dy * t_vec[0]
-        e_s = x[3] - s_ref
 
         xi_next = symbolic_log_cholesky_transition(
             x[4:8], v, omega, kappa_ref, dt, param
@@ -373,25 +282,9 @@ class CCSFOptimizer:
             ca.if_else(p_covariance_propagation[0] > 0.5, xi_next, x[4:8]),
         )
 
-        q_c = float(param.mat_Qe[0, 0])
-        q_l = float(param.mat_Qe[1, 1])
-        r_v = float(param.mat_Re[0, 0])
-        r_w = float(param.mat_Re[1, 1])
-        q_s = float(param.q_s)
-        r_vs = self._get_progress_speed_penalty(param)
-        q_s_ref = float(getattr(param, "q_s_ref", 0.0))
-        qf = float(param.terminal_weight)
-
-        cost_stage = (
-            q_c * e_c * e_c
-            + q_l * e_l * e_l
-            + q_s_ref * e_s * e_s
-            + r_v * u[0] * u[0]
-            + r_w * u[1] * u[1]
-            + r_vs * u[2] * u[2]
-            - q_s * u[2]
+        cost_stage, cost_terminal = self._build_mpcc_cost(
+            param, x, u, p_ref_t_ref
         )
-        cost_terminal = qf * (q_c * e_c * e_c + q_l * e_l * e_l + q_s_ref * e_s * e_s)
 
         model = AcadosModel()
         model.name = "differential_drive_cc_sf"
@@ -402,14 +295,6 @@ class CCSFOptimizer:
         model.cost_expr_ext_cost = cost_stage
         model.cost_expr_ext_cost_e = cost_terminal
         return model
-
-    def _build_stage_path_parameter(self, s_value):
-        return stage_parameter(
-            self.reference_path_data,
-            s_value,
-            getattr(self.param, "tangent_reg_delta", 1e-6),
-            getattr(self.param, "fd_eps", 1e-3),
-        )
 
     def _build_stage_param(
         self, stage_path_param, risk_terms, risk_margin_scale, psdf_stage=None, stage_idx=0
@@ -539,25 +424,14 @@ class CCSFOptimizer:
         cap = float(getattr(param, "risk_margin_cap", np.inf))
         return np.clip(gamma * np.sqrt(np.maximum(risk_var, 0.0)), floor, cap)
 
-    def _is_risk_margin_active_stage(self, stage_idx, param):
-        stage_idx = int(stage_idx)
-        start_step = max(int(getattr(param, "risk_margin_active_start_step", 0)), 0)
-        end_step = getattr(param, "risk_margin_active_end_step", None)
-
-        if stage_idx < start_step:
-            return False
-        if end_step is None:
-            return True
-
-        end_step = int(end_step)
-        if end_step < start_step:
-            return False
-        return stage_idx <= end_step
-
     def _build_risk_margin_scale_batch(self, num_stages, param):
-        return np.array(
-            [1.0 if self._is_risk_margin_active_stage(i, param) else 0.0 for i in range(num_stages)],
-            dtype=float,
+        # SF has no stage window. Keep the parameter slot for ECS beta values.
+        return np.ones((num_stages,), dtype=float)
+
+    def _risk_margin_enabled(self, param):
+        return bool(
+            getattr(param, "use_obstacle_constraint", True)
+            and getattr(param, "use_risk_margin", True)
         )
 
     def _log_stage_risk_margins(self, risk_margin_batch, param):
@@ -569,8 +443,11 @@ class CCSFOptimizer:
             print("risk_margin_stages(active): []")
             return
 
-        scale_batch = self._build_risk_margin_scale_batch(margin_batch.size, param)
-        stage_indices = np.flatnonzero(scale_batch > 0.0)
+        stage_indices = (
+            np.arange(margin_batch.size)
+            if self._risk_margin_enabled(param)
+            else np.zeros((0,), dtype=int)
+        )
 
         if stage_indices.size == 0:
             print("risk_margin_stages(active): []")
@@ -591,10 +468,13 @@ class CCSFOptimizer:
         if risk_tensor_batch.ndim == 2:
             risk_tensor_batch = risk_tensor_batch[None, :, :]
 
-        scale_batch = self._build_risk_margin_scale_batch(risk_tensor_batch.shape[0], param)
         only_active = bool(getattr(param, "debug_print_nominal_risk_head_only_active", True))
         if only_active:
-            stage_indices = np.flatnonzero(scale_batch > 0.0)
+            stage_indices = (
+                np.arange(risk_tensor_batch.shape[0])
+                if self._risk_margin_enabled(param)
+                else np.zeros((0,), dtype=int)
+            )
         else:
             stage_indices = np.arange(risk_tensor_batch.shape[0])
 
@@ -699,55 +579,6 @@ class CCSFOptimizer:
         margin_batch *= self._build_risk_margin_scale_batch(num_stages, self.param)
         return margin_batch
 
-    def _predict_stage_s_values(self, s0, s_lower, s_upper, solver=None):
-        solver = self.solver if solver is None else solver
-        s_values = np.zeros((self.N + 1,), dtype=float)
-        s_values[0] = float(np.clip(s0, s_lower, s_upper))
-        if self.N <= 0:
-            return s_values
-
-        dt = float(self.param.tf) / float(max(self.N, 1))
-        effective_v_s_max = self._get_effective_v_s_max(self.param)
-        for i in range(1, self.N + 1):
-            s_from_state = np.nan
-            try:
-                s_from_state = float(solver.get(i, "x")[3])
-            except Exception:
-                pass
-
-            try:
-                v_s_prev = float(solver.get(i - 1, "u")[2])
-            except Exception:
-                v_s_prev = 0.0
-            v_s_prev = float(np.clip(v_s_prev, 0.0, effective_v_s_max))
-            s_from_input = s_values[i - 1] + dt * v_s_prev
-
-            if np.isfinite(s_from_state):
-                s_next = 0.5 * s_from_state + 0.5 * s_from_input
-            else:
-                s_next = s_from_input
-
-            s_next = float(np.clip(s_next, s_lower, s_upper))
-            s_values[i] = max(s_values[i - 1], s_next)
-
-        return s_values
-
-    def _clamp_s(self, s_value):
-        return clamp_progress(self.reference_path_data, s_value)
-
-    def _project_s_with_line_search(self, position_xy, param):
-        previous_s = self._prev_predicted_s if self._has_prev_predicted_s else None
-        return project_progress(
-            self.reference_path_data,
-            position_xy,
-            previous_s,
-            param.line_search_window,
-            param.line_search_samples,
-        )
-
-    def _get_current_s_bounds(self, param):
-        return progress_bounds(self.reference_path_data, param.s_upper_guard)
-
     def _get_augmented_state_bounds(self, param, s_lower, s_upper):
         idxbx = []
         lbx = []
@@ -764,26 +595,6 @@ class CCSFOptimizer:
             np.array(ubx, dtype=float),
         )
 
-    def update_reference_path_params(self, reference_path_data, state):
-        if reference_path_data is not None:
-            self.reference_path_data = normalize_path_data(reference_path_data)
-        if self.reference_path_data is None:
-            return None
-
-        position_xy = np.asarray(state._x[:2], dtype=float)
-        self._current_s0 = self._project_s_with_line_search(position_xy, self.param)
-        self._current_s0 = self._clamp_s(self._current_s0)
-        if self._has_prev_predicted_s:
-            backtrack_tol = max(float(getattr(self.param, "s_backtrack_tolerance", 0.03)), 0.0)
-            s_floor = self._clamp_s(self._prev_predicted_s - backtrack_tol)
-            self._current_s0 = max(self._current_s0, s_floor)
-        return self._current_s0
-
-    def set_reference_trajectory(self, reference_path_data):
-        if reference_path_data is None:
-            return
-        self.reference_path_data = normalize_path_data(reference_path_data)
-
     def setup_ocp(self, param, reference_path_data):
         self.ocp = AcadosOcp()
         p_psdf_sym = None
@@ -793,33 +604,10 @@ class CCSFOptimizer:
             _ = self.ped_model(_pose_seed)
             p_psdf_sym = self.ped_model.get_sym_params()
         model = self.create_model(param, p_psdf_sym=p_psdf_sym)
-        self.ocp.model = model
-
-        nx = model.x.size()[0]
-        nu = model.u.size()[0]
-        N = param.horizon
-        self.nx = nx
-        self.nu = nu
-        self.N = N
-        self.ocp.dims.N = N
-        self.ocp.dims.np = (
-            self.path_param_dim
-            + self.risk_tensor_param_dim
-            + self.risk_margin_scale_param_dim
-            + self.psdf_param_dim
-            + 1
-        )
-        self.ocp.parameter_values = np.zeros((self.ocp.dims.np,), dtype=float)
+        self._configure_ocp_dimensions_and_cost(param, model)
         resolve_robust_horizon(param)
         self.ocp.parameter_values[self.covariance_propagation_param_slice] = 1.0
-
-        self.ocp.cost.cost_type = "EXTERNAL"
-        self.ocp.cost.cost_type_e = "EXTERNAL"
-
-        effective_v_s_max = self._get_effective_v_s_max(param)
-        self.ocp.constraints.lbu = np.array([param.vmin, param.omegamin, 0.0], dtype=float)
-        self.ocp.constraints.ubu = np.array([param.vmax, param.omegamax, effective_v_s_max], dtype=float)
-        self.ocp.constraints.idxbu = np.array([0, 1, 2], dtype=np.int64)
+        self._set_input_bounds(param)
 
         x0_phys = np.zeros((3,), dtype=float) if self.state is None else np.asarray(self.state._x, dtype=float)
         self._current_s0 = self._project_s_with_line_search(x0_phys[:2], param)
@@ -832,7 +620,7 @@ class CCSFOptimizer:
         )
 
         # Stage-0 equality on full augmented state.
-        self.ocp.constraints.idxbx_0 = np.arange(nx, dtype=np.int64)
+        self.ocp.constraints.idxbx_0 = np.arange(self.nx, dtype=np.int64)
         self.ocp.constraints.lbx_0 = x0_full.copy()
         self.ocp.constraints.ubx_0 = x0_full.copy()
 
@@ -844,18 +632,8 @@ class CCSFOptimizer:
         self.ocp.constraints.lbx_e = lbx.copy()
         self.ocp.constraints.ubx_e = ubx.copy()
 
-        self.ocp.solver_options.qp_solver = param.qp_solver
-        self.ocp.solver_options.hessian_approx = param.hessian_approx
         # The augmented covariance map is a one-step discrete recursion.
-        self.ocp.solver_options.integrator_type = "DISCRETE"
-        self.ocp.solver_options.nlp_solver_type = param.nlp_solver_type
-        self.ocp.solver_options.qp_solver_iter_max = param.qp_solver_iter_max
-        self.ocp.solver_options.nlp_solver_max_iter = param.nlp_solver_max_iter
-        self.ocp.solver_options.tol = param.tol
-
-        self.ocp.solver_options.qp_solver_warm_start = True
-        self.ocp.solver_options.nlp_solver_warm_start_first_qp = True
-        self.ocp.solver_options.tf = param.tf
+        self._configure_solver_options(param, integrator_type="DISCRETE")
 
         hpipm_mode = getattr(param, "hpipm_mode", None)
         if hpipm_mode is not None:
@@ -1207,30 +985,6 @@ class CCSFOptimizer:
             self._last_solve_mode = "safe_stop"
             return self.solver, fast_status, "safe_stop"
 
-    def update_obstacles(self, obstacles_geo):
-        if self.psdf_wrapper is None:
-            return
-        if obstacles_geo is None:
-            self.psdf_wrapper.clear_clusters()
-            return
-
-        all_clusters_A = []
-        all_clusters_B = []
-        for obs_geo in obstacles_geo:
-            edgesA, edgesB = polygon_to_edges(obs_geo)
-            all_clusters_A.append(edgesA)
-            all_clusters_B.append(edgesB)
-
-        if len(all_clusters_A) == 0:
-            self.psdf_wrapper.clear_clusters()
-        elif len(all_clusters_A) <= self.psdf_wrapper.K_max:
-            self.psdf_wrapper.update_edge_clusters(all_clusters_A, all_clusters_B)
-        else:
-            self.psdf_wrapper.update_edge_clusters(
-                all_clusters_A[:self.psdf_wrapper.K_max],
-                all_clusters_B[:self.psdf_wrapper.K_max],
-            )
-
     def setup(self, param, system, reference_trajectory, obstacles):
         self.param = param
         self.set_state(system._state)
@@ -1242,7 +996,7 @@ class CCSFOptimizer:
         if not self._is_initialized:
             print("Setting up CC-SF optimizer...")
             if use_obstacle_constraint:
-                self.initialize_ped_model(system, obstacles, E_max=100, K_max=20, device="cpu")
+                self.initialize_ped_model(system, obstacles, E_max=100, K_max=20, device="cuda")
             else:
                 self.psdf_wrapper = None
                 self.ped_model = None
@@ -1359,7 +1113,8 @@ class CCSFOptimizer:
 
         return AcadosSolution(active_solver, self.N, self.variables)
 
-    def initialize_ped_model(self, system, obstacles, E_max=100, K_max=20, device="cpu"):
+    def initialize_ped_model(self, system, obstacles, E_max=100, K_max=20, device="cuda"):
+        device = self._require_cuda_device(device)
         self.device = device
         if not hasattr(system, "_geometry"):
             raise ValueError("System must have _geometry attribute")

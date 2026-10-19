@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 import casadi as ca
 import numpy as np
+import torch
 from scipy.stats import chi2
 
 from control.cc_covariance import (
@@ -67,7 +68,6 @@ class CCECSTest(unittest.TestCase):
         self.param = CCECSOptimizerParam()
         self.param.horizon = 3
         self.param.tf = 0.3
-        self.param.augmented_psdf_device = "cpu"
         self.optimizer = CCECSOptimizer()
         self.addCleanup(self.optimizer.cleanup)
         self.optimizer.param = self.param
@@ -278,6 +278,7 @@ class CCECSTest(unittest.TestCase):
         self.assertEqual(len(self.optimizer.get_covariance_log_rows()), 4)
         self.assertIsNone(self.optimizer.get_cycle_log_rows()[0]["minimum_fixed_row_residual"])
 
+    @unittest.skipUnless(torch.cuda.is_available(), "PSDF initialization requires CUDA")
     def test_initial_update_capacity_overflow_and_invalid_geometry(self):
         # Simulator invokes this before setup(), when self.param may not exist.
         fresh = CCECSOptimizer()
@@ -288,7 +289,7 @@ class CCECSTest(unittest.TestCase):
         system = SimpleNamespace(_geometry=SimpleNamespace(_geometries=[
             SimpleNamespace(_region=RectangleRegion(-0.05, 0.05, -0.03, 0.03)),
         ]))
-        fresh.initialize_ped_model(system, [obstacle], device="cpu")
+        fresh.initialize_ped_model(system, [obstacle], device="cuda")
         self.assertEqual(fresh.obstacle_capacity, 1)
         self.assertEqual(fresh.psdf_wrapper.E_max, 4)
         with self.assertRaisesRegex(ValueError, "capacity"):

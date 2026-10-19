@@ -171,15 +171,6 @@ class CCMFMultiFeatureTest(unittest.TestCase):
         pv_param = CCSFOptimizerParam()
         pv_param.horizon = self.param.horizon
         pv_param.tf = self.param.tf
-        for key in (
-            "alpha_f",
-            "alpha_v",
-            "alpha_kappa",
-            "beta_v",
-            "beta_kappa",
-            "beta_omega",
-        ):
-            setattr(pv_param, key, getattr(self.param, key))
         pv_optimizer = CCSFOptimizer()
 
         mf_model = self.optimizer.create_model(self.param)

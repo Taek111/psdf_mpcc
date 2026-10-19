@@ -1,3 +1,9 @@
+"""Shared MPCC tracking helpers and deterministic PSDF optimizer.
+
+CC optimizers inherit tracking/cost helpers while owning their Log-Cholesky
+models, safety constraints, solve/recovery lifecycle, and generated resources.
+"""
+
 import os
 import time
 
@@ -19,52 +25,48 @@ from utils.spline_path import (
 )
 
 
+def initialize_mpcc_tracking_params(param):
+    """Set only shared tracking defaults, preserving method-specific fields."""
+    param.horizon = 20
+    param.tf = 0.1 * param.horizon
+    param.mat_Qe = np.diag([1.0, 10.0])  # [contour, lag]
+    param.mat_Re = np.diag([1.0, 0.01])  # [v, omega]
+    param.q_s = 1.0
+    param.terminal_weight = 5.0
+    param.v_s_target = 0.8
+    param.q_s_ref = 2.0
+
+    param.v_s_max = 2.0
+    param.enforce_v_s_not_faster_than_vmax = True
+    param.path_gate_epsilon = 0.05
+    param.tangent_reg_delta = 1e-6
+    param.reference_weight_reg = 1e-8
+    param.fd_eps = 1e-3
+    param.max_segments = 20
+    param.line_search_window = 0.5
+    param.line_search_samples = 41
+    param.s_upper_guard = 100.0
+    param.use_s_state_bounds = True
+    param.s_backtrack_tolerance = 0.3
+    param.vmin, param.vmax = -0.7, 0.7
+    param.omegamin, param.omegamax = -1.2, 1.2
+
+
+def initialize_mpcc_solver_params(param, integrator_type):
+    """Set shared solver defaults without importing safety or device options."""
+    param.qp_solver = "PARTIAL_CONDENSING_HPIPM"
+    param.hessian_approx = "GAUSS_NEWTON"
+    param.integrator_type = integrator_type
+    param.nlp_solver_type = "SQP_RTI"
+    param.qp_solver_iter_max = 50
+    param.nlp_solver_max_iter = 50
+    param.tol = 1e-4
+
+
 class MPCCOptimizerParam:
     def __init__(self):
-        self.horizon = 20
-        self.tf = 0.1 * self.horizon
-
-        # MPCC cost weights
-        self.mat_Qe = np.diag([1.0, 10.0])   # [contour, lag] # 1.0 10.0
-        self.mat_Re = np.diag([1.0, 0.01])    # [v, omega]    # 0.2, 0.01 
-        self.q_s = 1.0
-        self.terminal_weight = 5.0 # default 10, 50 
-        # Desired unconstrained progress speed. The quadratic progress penalty is
-        # chosen so q_s / (2 * r_v_s) == v_s_target.
-        self.v_s_target = 0.8
-        self.q_s_ref = 2.0
-
-        # MPCC path/progress parameters
-        self.v_s_max = 2.0
-        # Keep the progress-state rate aligned with the physical speed limit by default.
-        self.enforce_v_s_not_faster_than_vmax = True
-        self.path_gate_epsilon = 0.05
-        self.tangent_reg_delta = 1e-6
-        self.reference_weight_reg = 1e-8
-        self.fd_eps = 1e-3
-        self.max_segments = 20
-        self.line_search_window = 0.5
-        self.line_search_samples = 41
-        self.s_upper_guard = 100.0
-        self.use_s_state_bounds = True
-        # Allow limited progress backtracking near corners so the nominal can
-        # switch active faces instead of staying pinned to the pre-turn tangent.
-        self.s_backtrack_tolerance = 0.3
-        
-        # Solver options
-        self.qp_solver = "PARTIAL_CONDENSING_HPIPM"
-        # EXTERNAL cost in this MPCC formulation is more reliable with an exact Hessian.
-        self.hessian_approx = "GAUSS_NEWTON"
-        self.integrator_type = "ERK"
-        self.nlp_solver_type = "SQP_RTI"
-        self.qp_solver_iter_max = 50
-        self.nlp_solver_max_iter = 50
-        self.tol = 1e-4
-
-
-        # Physical input bounds
-        self.vmin, self.vmax = -0.7, 0.7
-        self.omegamin, self.omegamax = -1.2, 1.2
+        initialize_mpcc_tracking_params(self)
+        initialize_mpcc_solver_params(self, integrator_type="ERK")
 
         # Safety constraints (PSDF style)
         self.d_min = 0.001
@@ -80,6 +82,8 @@ class MPCCOptimizerParam:
 
 
 class MPCCOptimizer:
+    _path_includes_curvature = False
+
     def __init__(self, variables=None, costs=None, dynamics_opt=None):
         self.ocp = None
         self.solver = None
@@ -109,7 +113,9 @@ class MPCCOptimizer:
         # Local window obstacle detector placeholder (kept for compatibility)
         self.obstacle_detector = None
 
-        self.json_filename = "acados_ocp.json"
+        self.json_filename = "acados_ocp_mpcc.json"
+        self.code_export_directory = "c_generated_code_mpcc"
+        self._owned_codegen_directories = set()
         self._temp_files = []
 
     def cleanup(self):
@@ -117,11 +123,10 @@ class MPCCOptimizer:
             for file_path in self._temp_files:
                 if os.path.exists(file_path):
                     os.remove(file_path)
-            if os.path.exists(self.json_filename):
-                os.remove(self.json_filename)
-            if os.path.exists("c_generated_code") and os.path.isdir("c_generated_code"):
-                import shutil
-                shutil.rmtree("c_generated_code", ignore_errors=True)
+            for directory in self._owned_codegen_directories:
+                if os.path.isdir(directory):
+                    import shutil
+                    shutil.rmtree(directory, ignore_errors=True)
         except Exception as e:
             print(f"Warning: Error during cleanup: {e}")
 
@@ -131,6 +136,8 @@ class MPCCOptimizer:
         self.psdf_wrapper = None
         self.ped_model = None
         self._is_initialized = False
+        self._temp_files = []
+        self._owned_codegen_directories = set()
 
         self.reference_path_data = None
         self.path_param_dim = None
@@ -172,6 +179,57 @@ class MPCCOptimizer:
         # q_s / (2 * r_v_s), so choose the quadratic penalty from v_s_target.
         return 0.5 * q_s / v_s_target
 
+    def _get_progress_reference_weight(self, param):
+        return float(getattr(param, "q_s_ref", 0.0))
+
+    @staticmethod
+    def _require_cuda_device(device="cuda"):
+        """Validate PSDF tensor placement without moving the acados solver."""
+        selected_device = torch.device(device)
+        if selected_device.type != "cuda":
+            raise ValueError("MPCC PSDF evaluation requires a CUDA device.")
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                "MPCC PSDF evaluation requires CUDA, but CUDA is unavailable; "
+                "CPU fallback is disabled."
+            )
+        return str(selected_device)
+
+    def _build_mpcc_cost(self, param, x, u, path_p):
+        """Build tracking costs independently of safety/state augmentation."""
+        p_ref = path_p[0:2]
+        t_raw = path_p[2:4]
+        s_ref = path_p[4]
+        t_vec = t_raw / (ca.norm_2(t_raw) + float(param.tangent_reg_delta))
+        p_ref_lin = p_ref + (x[3] - s_ref) * t_vec
+
+        dx = x[0] - p_ref_lin[0]
+        dy = x[1] - p_ref_lin[1]
+        e_l = -(dx * t_vec[0] + dy * t_vec[1])
+        e_c = dx * t_vec[1] - dy * t_vec[0]
+        e_s = x[3] - s_ref
+
+        q_c = float(param.mat_Qe[0, 0])
+        q_l = float(param.mat_Qe[1, 1])
+        r_v = float(param.mat_Re[0, 0])
+        r_w = float(param.mat_Re[1, 1])
+        q_s = float(param.q_s)
+        r_vs = self._get_progress_speed_penalty(param)
+        q_s_ref = self._get_progress_reference_weight(param)
+        qf = float(param.terminal_weight)
+
+        cost_stage = (
+            q_c * e_c * e_c
+            + q_l * e_l * e_l
+            + q_s_ref * e_s * e_s
+            + r_v * u[0] * u[0]
+            + r_w * u[1] * u[1]
+            + r_vs * u[2] * u[2]
+            - q_s * u[2]
+        )
+        cost_terminal = qf * (q_c * e_c * e_c + q_l * e_l * e_l + q_s_ref * e_s * e_s)
+        return cost_stage, cost_terminal
+
     def create_model(self, param, p_psdf_sym=None):
         nx = 4  # [x, y, theta, s]
         nu = 3  # [v, omega, v_s]
@@ -199,40 +257,7 @@ class MPCCOptimizer:
             u[2],
         )
 
-        p_ref = p_ref_t_ref[0:2]
-        t_raw = p_ref_t_ref[2:4]
-        s_ref = p_ref_t_ref[4]
-        t_vec = t_raw / (ca.norm_2(t_raw) + float(param.tangent_reg_delta))
-        p_ref_lin = p_ref + (x[3] - s_ref) * t_vec
-
-        dx = x[0] - p_ref_lin[0]
-        dy = x[1] - p_ref_lin[1]
-        # Match existing MPCC sign convention:
-        # e_l = -dot(position_error, tangent)
-        # e_c = dot(position_error, right-normal)
-        e_l = -(dx * t_vec[0] + dy * t_vec[1])
-        e_c = dx * t_vec[1] - dy * t_vec[0]
-        e_s = x[3] - s_ref
-
-        q_c = float(param.mat_Qe[0, 0])
-        q_l = float(param.mat_Qe[1, 1])
-        r_v = float(param.mat_Re[0, 0])
-        r_w = float(param.mat_Re[1, 1])
-        q_s = float(param.q_s)
-        r_vs = self._get_progress_speed_penalty(param)
-        q_s_ref = float(getattr(param, "q_s_ref", 0.0))
-        qf = float(param.terminal_weight)
-
-        cost_stage = (
-            q_c * e_c * e_c
-            + q_l * e_l * e_l
-            + q_s_ref * e_s * e_s
-            + r_v * u[0] * u[0]
-            + r_w * u[1] * u[1]
-            + r_vs * u[2] * u[2]
-            - q_s * u[2]
-        )
-        cost_terminal = qf * (q_c * e_c * e_c + q_l * e_l * e_l + q_s_ref * e_s * e_s)
+        cost_stage, cost_terminal = self._build_mpcc_cost(param, x, u, p_ref_t_ref)
 
         model = AcadosModel()
         model.name = "differential_drive_mpcc"
@@ -252,10 +277,11 @@ class MPCCOptimizer:
             s_value,
             getattr(self.param, "tangent_reg_delta", 1e-6),
             getattr(self.param, "fd_eps", 1e-3),
-            include_curvature=False,
+            include_curvature=self._path_includes_curvature,
         )
 
-    def _predict_stage_s_values(self, s0, s_lower, s_upper):
+    def _predict_stage_s_values(self, s0, s_lower, s_upper, solver=None):
+        solver = self.solver if solver is None else solver
         s_values = np.zeros((self.N + 1,), dtype=float)
         s_values[0] = float(np.clip(s0, s_lower, s_upper))
         if self.N <= 0:
@@ -266,12 +292,12 @@ class MPCCOptimizer:
         for i in range(1, self.N + 1):
             s_from_state = np.nan
             try:
-                s_from_state = float(self.solver.get(i, "x")[3])
+                s_from_state = float(solver.get(i, "x")[3])
             except Exception:
                 pass
 
             try:
-                v_s_prev = float(self.solver.get(i - 1, "u")[2])
+                v_s_prev = float(solver.get(i - 1, "u")[2])
             except Exception:
                 v_s_prev = 0.0
             v_s_prev = float(np.clip(v_s_prev, 0.0, effective_v_s_max))
@@ -323,6 +349,41 @@ class MPCCOptimizer:
             return
         self.reference_path_data = normalize_path_data(reference_path_data)
 
+    def _configure_ocp_dimensions_and_cost(self, param, model):
+        """Configure model-sized plumbing; subclasses own the parameter layout."""
+        self.ocp.model = model
+        self.nx = int(model.x.numel())
+        self.nu = int(model.u.numel())
+        self.N = param.horizon
+        self.ocp.dims.N = self.N
+        self.ocp.dims.np = int(model.p.numel())
+        self.ocp.parameter_values = np.zeros((self.ocp.dims.np,), dtype=float)
+        self.ocp.cost.cost_type = "EXTERNAL"
+        self.ocp.cost.cost_type_e = "EXTERNAL"
+
+    def _set_input_bounds(self, param):
+        effective_v_s_max = self._get_effective_v_s_max(param)
+        self.ocp.constraints.lbu = np.array([param.vmin, param.omegamin, 0.0], dtype=float)
+        self.ocp.constraints.ubu = np.array([param.vmax, param.omegamax, effective_v_s_max], dtype=float)
+        self.ocp.constraints.idxbu = np.array([0, 1, 2], dtype=np.int64)
+
+    def _configure_solver_options(self, param, integrator_type=None):
+        """Share solver options while allowing discrete CC maps to stay discrete."""
+        integrator_type = param.integrator_type if integrator_type is None else integrator_type
+        self.ocp.solver_options.qp_solver = param.qp_solver
+        self.ocp.solver_options.hessian_approx = param.hessian_approx
+        self.ocp.solver_options.integrator_type = integrator_type
+        if integrator_type == "ERK":
+            self.ocp.solver_options.sim_method_num_stages = 4
+            self.ocp.solver_options.sim_method_num_steps = 1
+        self.ocp.solver_options.nlp_solver_type = param.nlp_solver_type
+        self.ocp.solver_options.qp_solver_iter_max = param.qp_solver_iter_max
+        self.ocp.solver_options.nlp_solver_max_iter = param.nlp_solver_max_iter
+        self.ocp.solver_options.tol = param.tol
+        self.ocp.solver_options.qp_solver_warm_start = True
+        self.ocp.solver_options.nlp_solver_warm_start_first_qp = True
+        self.ocp.solver_options.tf = param.tf
+
     def setup_ocp(self, param, reference_path_data):
         self.ocp = AcadosOcp()
         p_psdf_sym = None
@@ -332,25 +393,8 @@ class MPCCOptimizer:
             _ = self.ped_model(_pose_seed)
             p_psdf_sym = self.ped_model.get_sym_params()
         model = self.create_model(param, p_psdf_sym=p_psdf_sym)
-        self.ocp.model = model
-
-        nx = model.x.size()[0]
-        nu = model.u.size()[0]
-        N = param.horizon
-        self.nx = nx
-        self.nu = nu
-        self.N = N
-        self.ocp.dims.N = N
-        self.ocp.dims.np = self.path_param_dim + self.psdf_param_dim
-        self.ocp.parameter_values = np.zeros((self.ocp.dims.np,), dtype=float)
-
-        self.ocp.cost.cost_type = "EXTERNAL"
-        self.ocp.cost.cost_type_e = "EXTERNAL"
-
-        effective_v_s_max = self._get_effective_v_s_max(param)
-        self.ocp.constraints.lbu = np.array([param.vmin, param.omegamin, 0.0], dtype=float)
-        self.ocp.constraints.ubu = np.array([param.vmax, param.omegamax, effective_v_s_max], dtype=float)
-        self.ocp.constraints.idxbu = np.array([0, 1, 2], dtype=np.int64)
+        self._configure_ocp_dimensions_and_cost(param, model)
+        self._set_input_bounds(param)
 
         x0_phys = np.zeros((3,), dtype=float) if self.state is None else np.asarray(self.state._x, dtype=float)
         self._current_s0 = self._project_s_with_line_search(x0_phys[:2], param)
@@ -374,21 +418,7 @@ class MPCCOptimizer:
         else:
             self.ocp.constraints.x0 = x0_full
 
-        self.ocp.solver_options.qp_solver = param.qp_solver
-        self.ocp.solver_options.hessian_approx = param.hessian_approx
-        self.ocp.solver_options.integrator_type = param.integrator_type
-        if param.integrator_type == "ERK":
-            # Classical RK4, matching the plant and the CC discrete pose map.
-            self.ocp.solver_options.sim_method_num_stages = 4
-            self.ocp.solver_options.sim_method_num_steps = 1
-        self.ocp.solver_options.nlp_solver_type = param.nlp_solver_type
-        self.ocp.solver_options.qp_solver_iter_max = param.qp_solver_iter_max
-        self.ocp.solver_options.nlp_solver_max_iter = param.nlp_solver_max_iter
-        self.ocp.solver_options.tol = param.tol
-
-        self.ocp.solver_options.qp_solver_warm_start = True
-        self.ocp.solver_options.nlp_solver_warm_start_first_qp = True
-        self.ocp.solver_options.tf = param.tf
+        self._configure_solver_options(param)
 
         if reference_path_data is not None:
             self.set_reference_trajectory(reference_path_data)
@@ -404,8 +434,11 @@ class MPCCOptimizer:
 
         self.variables["x"] = "x"
         self.variables["u"] = "u"
+        self.ocp.code_export_directory = self.code_export_directory
+        self._owned_codegen_directories.add(self.code_export_directory)
+        if self.json_filename not in self._temp_files:
+            self._temp_files.append(self.json_filename)
         self.solver = AcadosOcpSolver(self.ocp, json_file=self.json_filename)
-        self._temp_files.append(self.json_filename)
 
     def add_obstacle_avoidance_constraint(self, param, system, obstacles_geo):
         if not getattr(param, "use_obstacle_constraint", True):
@@ -510,7 +543,7 @@ class MPCCOptimizer:
         if not self._is_initialized:
             print("Setting up MPCC optimizer...")
             if use_obstacle_constraint:
-                self.initialize_ped_model(system, obstacles, E_max=100, K_max=20, device="cpu")
+                self.initialize_ped_model(system, obstacles, E_max=100, K_max=20, device="cuda")
             else:
                 self.psdf_wrapper = None
                 self.ped_model = None
@@ -624,8 +657,8 @@ class MPCCOptimizer:
 
         return AcadosSolution(self.solver, self.N, self.variables)
 
-    def initialize_ped_model(self, system, obstacles, E_max=100, K_max=20, device="cpu"):
-        self.device = device
+    def initialize_ped_model(self, system, obstacles, E_max=100, K_max=20, device="cuda"):
+        self.device = device = self._require_cuda_device(device)
         if not hasattr(system, "_geometry"):
             raise ValueError("System must have _geometry attribute")
 

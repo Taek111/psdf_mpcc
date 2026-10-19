@@ -1,27 +1,32 @@
-# MPCC 복원 및 CC-MF / CC-SF 상속 계획
+# MPCC 복원 및 CC-MF / CC-SF 상속 계획·구현 기록
 
 작성일: 2026-10-17 (Asia/Seoul)
 
 수정일: 2026-10-19 (Asia/Seoul)
 
-분석 기준: `70ffe5b106fe8f743150ac7a2435b63fbf64bfee`의 구현. 현재 코드에 대한 설명과 아래의 변경 후 목표를 구분한다.
+분석 기준: `70ffe5b106fe8f743150ac7a2435b63fbf64bfee`의 CC 구현. 원본 복원과 계획 수정은 `f39a500`, `06bb7e7`에 저장했다. 아래 기존 구현 분석의 행 번호는 이 기준 소스의 위치이며, 리팩터링 후 위치와 다를 수 있다. 1.2절에 현재 구현 상태와 검증 한계를 기록한다.
 
 ## 1. 이번 작업의 결과와 변경 범위
 
-`control/mpcc_optimizer.py`의 과거 버전을 찾았으며, 마지막으로 존재했던 버전을 **원문 그대로 복원**했다. 현재 잘 동작하는 CC-MF / CC-SF의 실행 코드는 수정하지 않았다. 이 문서는 이후 상속 리팩터링을 위한 설계와 검증 계획이다.
+`control/mpcc_optimizer.py`의 마지막 과거 버전을 먼저 **원문 그대로 복원**한 뒤, 이 문서의 계획에 따라 공통 부모로 리팩터링했다. 현재 `CCMFOptimizer`와 `CCSFOptimizer`는 `MPCCOptimizer`를 상속한다. 이 문서는 설계 근거, 구현 결과와 아직 실행하지 않은 검증 계획을 함께 보관한다.
 
 **사용자 요구에 따라 현재 CC-MF / CC-SF의 Log-Cholesky Parameterization을 그대로 유지한다.** 공분산 행렬 원소를 직접 최적화 상태로 사용하는 방식으로 바꾸지 않는다. 과거 MPCC에서는 공통 부모와 override 구조를 만드는 데 필요한 부분만 참고한다. 과거의 4차원 모델, ERK 설정, warm start, solve 절차로 현재 CC 구현을 되돌리지 않는다.
 
 이번 변경 파일:
 
-- `control/mpcc_optimizer.py`: 과거 원본 복원. 현재 factory/CLI에 `mpcc`를 다시 등록하지 않았다.
-- `MPCC_OVERRIDE_PLAN.md`: 구현 분석, 설정 방식, 상속 경계, 단계별 작업 및 검증 계획.
+- `control/mpcc_optimizer.py`: 공통 MPCC 비용·경로·진행도·OCP helper와 CUDA 검증. 현재 factory/CLI에 `mpcc`를 다시 등록하지 않았다.
+- `control/cc_mf_optimizer.py`, `control/cc_sf_optimizer.py`: MPCC 상속, 공통 helper 사용, 방법별 모델·제약·복구 유지.
+- `control/cc_covariance.py`: MF/SF 공통 noise 기본값 초기화 함수 추가. 기존 변환·전파 함수는 유지.
+- `control/cc_ecs_optimizer.py`: 기존 SF 상속 및 ECS 수식 유지, PSDF 초기화 CUDA 정책 반영.
+- `run_cc_mf_debug_experiments.py`: 실험 설정의 device도 CUDA로 고정. 실험은 실행하지 않음.
+- `tests/test_mpcc_inheritance.py`, `tests/test_cc_mf.py`, `tests/test_cc_sf.py`, `tests/test_cc_ecs.py`: 새 상속 구조·의도된 설정 변경에 대한 회귀 사례 추가 및 갱신.
+- `MPCC_OVERRIDE_PLAN.md`: 구현 분석, 설정 방식, 상속 경계, 구현 기록 및 검증 계획.
 
-이번에 수행한 확인은 Git 이력 조회, 소스·AST 정적 비교, 복원 파일의 원본 바이트 비교다. 저장소 지침에 따라 테스트·시뮬레이션·benchmark 및 optimizer import/solver 생성은 실행하지 않았다. 따라서 복원본의 현 환경 실행 성공이나 리팩터링 후 수치 동등성을 검증했다고 주장하지 않는다.
+원본 복원 단계에서는 Git 이력과 파일 바이트 일치를 확인했다. 리팩터링 단계에서는 소스·AST 정적 비교와 구문 검사를 수행했다. 저장소 지침에 따라 테스트·시뮬레이션·benchmark 및 optimizer import/solver 생성은 실행하지 않았다. 따라서 리팩터링 후 실행 성공이나 수치 동등성은 아직 검증되지 않았다.
 
 ### 1.1 2026-10-19 확정 변경 사항
 
-이번 문서 수정은 아래 세 항목을 후속 구현의 목표로 반영한다. 실행 코드에는 아직 적용하지 않았다.
+아래 세 항목을 확정한 뒤 실행 코드에 반영했다.
 
 | 항목 | 변경 후 목표 |
 |---|---|
@@ -32,6 +37,24 @@
 
 이 세 항목은 기존의 동작·설정 보존 원칙에 대한 명시적 변경이다. Log-Cholesky 표현과 전파식의 형태, 나머지 제약·복구·시간·로그 계약은 유지한다. SF의 계수 변경과 CUDA 전환 후 결과가 과거 설정과 완전히 같아야 한다고 요구하지 않는다. MF의 별도 `mf_active_*` 설정과 geometry mask는 이번 제거 대상이 아니다.
 
+### 1.2 구현 상태와 정적 확인
+
+| 영역 | 구현 결과 |
+|---|---|
+| 상속 | `CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer)`, `CCSFOptimizer(MPCCOptimizer)`, `CCECSOptimizer(CCSFOptimizer)` |
+| 공통 설정 | `initialize_mpcc_tracking_params()`, `initialize_mpcc_solver_params()`를 각 Param에서 호출. Param 클래스와 safety 필드 집합은 별도로 유지 |
+| 공통 계수 | `cc_covariance.initialize_cc_noise_params()`에서 MF 기준 실제 계수 6개를 한 번만 정의. ECS는 기존처럼 0으로 재설정 |
+| 공통 계산 | `_build_mpcc_cost()`, 경로/진행도 helper, `_configure_ocp_dimensions_and_cost()`, `_set_input_bounds()`, `_configure_solver_options()` |
+| CC 모델 | 각 자식의 `create_model()` 유지. `nx=8`, `nu=3`, Log-Cholesky discrete map, curvature·parameter slices·propagation flag 유지 |
+| override | MF cache 무효화와 직접 속성 접근 adapter, 각 자식의 안전 제약·main/backup·safe stop·solution·진단·cleanup 유지 |
+| SF margin | 구간 속성과 판정 함수 제거. scale slot은 전 구간 1이며 전역 switch 적용. ECS의 연속 beta slot은 별도로 유지 |
+| CUDA | 공통 `_require_cuda_device()`로 CPU 설정과 CUDA 미가용을 명시적으로 거부. 장애물 계산을 끈 경우 PSDF 초기화를 생략하는 기존 경로 유지 |
+| 생성 자원 | MPCC는 `acados_ocp_mpcc.json`, `c_generated_code_mpcc`로 분리하고 생성 시 등록한 경로만 정리. MF/SF/ECS의 기존 자원 수명주기는 각 자식에서 유지 |
+
+정적 비교에서 `cc_covariance.py`의 기존 함수 12개는 AST가 동일하다. MF/SF의 `add_obstacle_avoidance_constraint`, `_prepare_and_solve`, `solve_nlp`, `cleanup`, `create_solver`와 각 `AcadosSolution`도 리팩터링 전과 AST가 동일하다. 비용식을 제외한 모델 구성은 AST가 동일하며, 추출한 비용식도 변수명 대응과 기존 `q_s_ref` 접근 adapter를 제외하면 AST가 동일하다. Python 3.12에서 `control/`과 `tests/`의 41개 Python 파일 및 변경한 실험 스크립트를 import 없이 AST로 파싱했다.
+
+새 회귀 사례는 상속 관계, 기본값과 배열 독립성, stage/terminal 비용 및 미분, curvature, backup 진행도, CUDA 오류 경계, MPCC 자원 소유권을 다룬다. 기존 SF 테스트는 전 구간 margin과 global off를 확인하도록 갱신했고 MF/SF 동역학 비교는 공통 기본 계수를 사용하도록 했다. **테스트 코드는 준비했지만 실행하지 않았다.** 9절의 수치·solver·CUDA 실행 검증은 사용자의 별도 실행 요청 후 진행한다.
+
 ## 2. 복원 출처
 
 | 항목 | 확인 결과 |
@@ -41,19 +64,19 @@
 | 복원 원본 / 마지막 수정 | `b642916ea91160b58ba19c3f8f28ae887f3f1b78`, 2026-10-12, `add cc-ecs` |
 | 삭제 커밋 | `70ffe5b106fe8f743150ac7a2435b63fbf64bfee`, 2026-10-14, `update 1014` |
 | 원래 경로 / 복원 경로 | `control/mpcc_optimizer.py` |
-| Git blob | `1ae6fee465f7fabd6c84cfbcb26b483cfd8d2d5e` |
-| SHA-256 | `f4e037e7e81757b46f69b29075ff59cbb42dd8d2f00accc11cf84115f22fc62e` |
-| 파일 크기 | 27,493 bytes, 672 lines |
+| 복원 원본 Git blob | `1ae6fee465f7fabd6c84cfbcb26b483cfd8d2d5e` |
+| 복원 원본 SHA-256 | `f4e037e7e81757b46f69b29075ff59cbb42dd8d2f00accc11cf84115f22fc62e` |
+| 복원 원본 파일 크기 | 27,493 bytes, 672 lines |
 
 재확인 명령:
 
 ```bash
 git log --all --name-status -- control/mpcc_optimizer.py
 git show b642916ea91160b58ba19c3f8f28ae887f3f1b78:control/mpcc_optimizer.py
-git hash-object control/mpcc_optimizer.py
+git rev-parse b642916ea91160b58ba19c3f8f28ae887f3f1b78:control/mpcc_optimizer.py
 ```
 
-복원 파일은 과거 구현의 출처가 명확한 참고 원본이다. 후속 작업에서 부모 클래스용으로 수정하더라도 위 커밋에서 원본을 다시 조회할 수 있다. 기존 `psdf` MPC와 CC-MF / CC-SF 선택 경로에는 연결하지 않았다.
+현재 파일은 공통 부모로 수정되었으므로 위 원본 hash와 일치하지 않는다. 과거 원본은 위 커밋에서 다시 조회할 수 있다. 기존 `psdf` MPC의 선택 경로는 유지하며, CC-MF / CC-SF는 각 방법을 선택하면 이 부모의 공통 helper를 사용한다.
 
 ## 3. 반드시 보존할 Log-Cholesky 표현
 
@@ -213,7 +236,7 @@ SF 병합에서는 `cc_mf.use_risk_visualization`만 먼저 제거한다. SF가 
 
 ### 6.2 변경 후 공통 기본값
 
-별도 표시한 변경 항목 외에는 현재 값을 유지한다. alpha/beta와 device는 이번 수정의 목표값이다.
+별도 표시한 변경 항목 외에는 기존 값을 유지한다. alpha/beta와 device는 현재 구현에 반영한 값이다.
 
 | 그룹 | 기본값 |
 |---|---|
@@ -253,7 +276,7 @@ planner는 추가로 `num_horizon=N`, `local_path_timestep=tf/N`, `sample_count=
 | diagnostics | `debug_mf=False`, `debug_infeasibility=False`, `use_risk_visualization=True` | `debug_risk=True`, nominal heads 출력=False, only_active=True |
 | 기타 | `constraint_debug_tolerance=1e-6`, `first_interval_substeps=10` | `use_projected_variance_margin=True` 호환 필드 |
 
-기존 값의 근거: [control/cc_mf_optimizer.py](control/cc_mf_optimizer.py) 33–113행, [control/cc_sf_optimizer.py](control/cc_sf_optimizer.py) 32–112행. 삭제할 SF 구간 옵션, 공통 alpha/beta 및 CUDA 전환은 1.1절의 변경 후 목표를 따른다.
+기존 값의 근거: 분석 기준 소스의 [control/cc_mf_optimizer.py](control/cc_mf_optimizer.py) 33–113행, [control/cc_sf_optimizer.py](control/cc_sf_optimizer.py) 32–112행. SF 구간 옵션 삭제, 공통 alpha/beta 및 CUDA 전환은 1.1절과 같이 반영했다.
 
 MF의 여섯 실제 계수를 공통 초기화 함수에 한 번만 정의하여 두 CC Param에 적용한다. 위 값에는 MF의 `covariance_growth_scale=0.6` 효과가 이미 반영되어 있으므로 다시 `0.6`을 곱하지 않는다. MF의 실제 기본값은 유지하고 SF가 그 값에 맞춰진다. 기존 명시적 계수 override 경로는 유지하되 비교 실험에서는 두 방법에 동일한 설정을 전달한다.
 
@@ -263,7 +286,7 @@ MF의 여섯 실제 계수를 공통 초기화 함수에 한 번만 정의하여
 
 1. `horizon`만 바꿔도 `tf`는 자동 갱신되지 않는다. simulation은 `tf/N`과 plant timestep이 다르면 실패시킨다(1978–1983행).
 2. `d_mf_mask=self.d_col`은 생성 시 값 복사다. `d_col`만 override해도 mask threshold는 따라 바뀌지 않는다.
-3. `covariance_growth_scale`만 override해도 MF alpha/beta는 재계산되지 않는다. scale과 계수의 관계는 생성 시에만 반영된다. `run_optimizer_benchmark.py` 84–97행과 `run_cc_mf_debug_experiments.py` 139–149행은 별도로 6개 계수까지 계산하는 경로다.
+3. `covariance_growth_scale`만 override해도 MF alpha/beta는 재계산되지 않는다. 공통 initializer의 계수에는 기본 scale `.6`이 이미 반영되어 있고 이 속성은 호환 필드로 남는다. `run_optimizer_benchmark.py` 84–97행과 `run_cc_mf_debug_experiments.py` 139–149행은 별도로 6개 계수까지 계산하는 경로다.
 4. SF의 최종 병합 블록에 epsilon이 있고 gamma가 없을 때만 helper가 gamma를 재계산한다. 명시된 유효 gamma가 우선한다. Python에서 epsilon만 직접 바꾸면 이미 생성된 gamma는 유지된다. MF의 `N+1`개 epsilon 배열이 SF에 그대로 병합되면 gamma 계산의 `float(epsilon)`에서 실패할 수 있다. 같은 YAML에서 MF에 stage별 배열을 쓰면 `cc_sf.chance_epsilon`은 scalar로 명시적으로 덮어써야 한다.
 5. `mat_Qe` / `mat_Re`의 YAML list는 ndarray로 변환되지 않는다. 모델은 `[0,0]` 인덱싱하므로 현재 loader에서 행렬 YAML override가 정상 지원된다고 가정하면 안 된다. 직접 Python 설정 시에는 ndarray를 사용한다.
 6. `planner_projected_s_backtrack_tolerance`, `hpipm_mode`, `regularize_method`는 코드가 읽을 수 있지만 기본 Param에는 없어 YAML helper에서는 unknown으로 무시된다. backup은 Python에서 속성을 직접 추가한다.
@@ -305,7 +328,7 @@ cc_sf:
 - 기존 device 설정 속성을 호환성 때문에 남길 경우에도 CUDA만 허용한다. CUDA를 사용할 수 없으면 PSDF 초기화 시 명확한 오류로 종료하고 CPU로 자동 전환하지 않는다.
 - acados/CasADi solver와 기존 NumPy 전파까지 GPU solver로 교체하는 작업은 포함하지 않는다. PSDF 결과를 acados stage parameter로 넘기는 경계의 `.detach().cpu().numpy()` 변환은 유지한다. CUDA 전환에 따른 수치 허용오차와 전송 비용은 검증에서 별도로 확인한다.
 
-## 7. 권장 상속 구조
+## 7. 적용한 상속 구조와 override 경계
 
 ```text
 MPCCOptimizer                  # 공통 진행도/경로/MPCC 비용 + deterministic 기본 구현
@@ -315,7 +338,7 @@ MPCCOptimizer                  # 공통 진행도/경로/MPCC 비용 + determini
     + CCMFDiagnosticsMixin    # 현재 진단 역할 유지
 ```
 
-목표 선언은 `CCSFOptimizer(MPCCOptimizer)`, `CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer)`다. MF를 SF의 자식으로 만들거나 두 클래스를 alias로 합치지 않는다. 공통 부모는 MF/SF 방식 이름으로 분기하는 거대한 클래스가 되지 않도록 하고, 기존 Log-Cholesky 수식의 공유 위치인 `control/cc_covariance.py`를 계속 사용한다.
+적용한 선언은 `CCSFOptimizer(MPCCOptimizer)`, `CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer)`다. MF를 SF의 자식으로 만들거나 두 클래스를 alias로 합치지 않는다. 공통 부모는 MF/SF 방식 이름으로 분기하지 않으며, 기존 Log-Cholesky 수식의 공유 위치인 `control/cc_covariance.py`를 계속 사용한다.
 
 ### 7.1 바로 상속 가능한 메서드
 
@@ -340,7 +363,7 @@ MF는 이 추가 그룹에 작은 차이가 있다. `set_state`는 PSDF cache를
 | 경로 parameter | 기존 `stage_parameter()` 호출, curvature 포함 여부 hook | MPCC=5, CC=6과 curvature 사용 |
 | stage 진행도 예측 | `_predict_stage_s_values(s0,lower,upper,solver=None)` | backup용 solver 전달 및 기존 blending/clipping |
 | OCP 기본 설정 | 비용 종류, 입력 bounds, 차원 설정의 공통 helper | full x0, state bounds, parameter layout, DISCRETE, safety rows |
-| 생성 자원 | JSON/code-export/model 이름을 명시적으로 받는 작은 helper | 방법별 main/backup 이름과 생성·해제 정책 |
+| 생성 자원 | MPCC 전용 JSON/code-export 경로와 소유 경로 등록 | 방법별 main/backup 이름과 기존 생성·해제 정책; 자식 `create_solver/cleanup`은 통합하지 않음 |
 | Log-Cholesky 변환/전파 | 기존 `cc_covariance.py` 함수 재사용, MF 기준 공통 alpha/beta 초기화 | 현재 4개 factor 변수, 전파식 형태, 초기화, horizon flag |
 | PSDF device | 공통 CUDA 초기화·검증 | 방법별 wrapper/bridge 종류와 solver 전달 경계 |
 
@@ -389,9 +412,11 @@ SF/MF 고유 safety/risk/backup 기본값은 삭제 대상 SF 구간 옵션을 �
 
 SF의 margin scale slot은 CC-ECS에서 ECS beta 값에 사용되므로 유지하고, SF의 전구간 scale=1 로직을 ECS에 강제하지 않는다. MF/SF의 alpha/beta 통일은 CC-ECS의 process noise=0 규약을 변경하지 않는다. 공통 경로를 상속하는 CC-ECS의 PSDF device도 CUDA 정책에 맞추되, 자체 Param의 CPU fallback과 초기화 호출을 함께 확인한다. ECS의 위험 모델과 별도 계수는 그대로 둔다.
 
-복원 MPCC의 cleanup은 공용 `acados_ocp.json` / `c_generated_code`를 직접 정리한다(115–124행). CC 자식 cleanup에서 이 구현으로 무조건 `super()` 위임하지 않는다. SF/MF의 현재 main/backup 경로를 유지하고, 자원 공통화를 할 때는 실제 해당 인스턴스가 생성한 파일/디렉터리만 추적하는 별도 helper를 사용한다.
+복원 원본 MPCC의 cleanup은 공용 `acados_ocp.json` / `c_generated_code`를 직접 정리했다(원본 115–124행). 현재 부모는 MPCC 전용 경로를 사용하고 solver 생성 시 등록한 파일/디렉터리만 정리하도록 변경했다. CC 자식 cleanup은 부모에 위임하지 않고 SF/MF의 기존 main/backup 경로와 정책을 유지한다.
 
-## 8. 후속 구현 순서와 완료 조건
+## 8. 구현 순서와 완료 조건
+
+1–6단계 구현을 완료했다. 7단계의 소스·AST 검토는 완료했으며 수치·solver 실행 검증은 미실행 상태다.
 
 1. **기준 고정:** 현재 CC 파일과 Param/solver 계약을 기준으로 둔다. 복원 원본의 commit/blob를 보존한다. 이번 작업에서 완료.
 2. **최소 상속:** 위 클래스 선언만 연결하고 현재 생성자·모델·제약·solve/recovery·cleanup은 override로 유지한다. 완전히 동일한 메서드만 부모로 올린다.
@@ -409,6 +434,7 @@ SF의 margin scale slot은 CC-ECS에서 ECS beta 값에 사용되므로 유지�
 
 | 검증 | 확인 내용 / 기존 근거 |
 |---|---|
+| 상속·공유 helper | `tests/test_mpcc_inheritance.py`: 클래스 관계, safety 필드 분리, 독립 배열, 공통 비용·미분, curvature, backup solver 진행도, CUDA 오류 경계, MPCC 소유 자원 정리 |
 | 설정 호환성 | 삭제된 SF 구간 키가 더 이상 영향을 주지 않고 unknown 경고 대상인지 확인. 그 외 필드·타입·값, SF 병합 우선순위, epsilon/gamma, scale/threshold 파생값, planner 인자 보존 |
 | 공통 계수 | MF/SF의 여섯 alpha/beta 기본값이 1.1절과 동일한지, 이미 반영된 `.6` 배율을 중복 적용하지 않는지 확인 |
 | Log-Cholesky | `tests/test_cc_covariance.py`: factor 변환, 기존 전파, 양수 초기 표준편차, frozen tail |
@@ -429,6 +455,6 @@ SF의 margin scale slot은 CC-ECS에서 ECS beta 값에 사용되므로 유지�
 
 ## 10. 집에서 이어서 작업할 때
 
-먼저 이 문서 3절의 Log-Cholesky 보존 조건과 7절의 override 경계를 기준으로 시작한다. 복원된 파일이 있다는 이유만으로 factory에 `mpcc`를 등록하거나 CC의 `create_model/setup/solve_nlp`를 부모 구현으로 교체하지 않는다.
+먼저 최신 커밋을 받은 뒤 이 문서 1.2절의 구현 상태, 3절의 Log-Cholesky 보존 조건, 7절의 override 경계를 확인한다. factory에 `mpcc`를 등록하거나 CC의 `create_model/setup/solve_nlp`를 부모 구현으로 교체하는 작업은 이번 범위에 포함하지 않았다.
 
-다음 구현 단위는 **“최소 상속 연결 + 완전히 동일한 helper 제거 + 공통 MPCC 비용 추출 + 확정한 세 변경 적용”**이다. SF 구간 옵션 삭제, MF 기준 alpha/beta, CUDA 통일은 이번 계획에 포함한다. 그 밖의 파라미터 스키마 개선, 추가 튜닝, 위험 모델 변경, 시간 정의 통일은 분리한다. 원본 복원과 계획만 저장된 상태이며, 이번 수정도 문서에만 반영했다. 실제 상속과 새 설정 적용은 후속 구현 작업이다.
+**상속 연결, 공통 helper·비용 추출, SF 구간 옵션 삭제, MF 기준 alpha/beta, CUDA 통일은 구현했다.** 다음 작업은 Python 3.10+와 기존 acados/CasADi·CUDA 환경에서 9절의 회귀 검증을 실행하는 것이다. 저장소 지침에 따라 실행 요청 전에는 이 검증을 시작하지 않는다. 특히 SF 계수 변경과 CUDA 전환의 수치 영향, main/backup 실제 실행을 확인해야 한다. 그 밖의 파라미터 스키마 개선, 추가 튜닝, 위험 모델 변경, 시간 정의 통일은 별도 작업으로 둔다.

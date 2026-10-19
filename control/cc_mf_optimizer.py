@@ -11,54 +11,31 @@ from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 from control.cc_covariance import (
     covariance_from_log_cholesky,
     initial_local_covariance,
+    initialize_cc_noise_params,
     log_cholesky_from_covariance,
     propagate_log_cholesky,
     resolve_robust_horizon,
     symbolic_dd_step,
     symbolic_log_cholesky_transition,
 )
+from control.mpcc_optimizer import (
+    MPCCOptimizer,
+    initialize_mpcc_solver_params,
+    initialize_mpcc_tracking_params,
+)
 from utils.acados_diagnostics import report_solver_failure
 from utils.cc_mf_diagnostics import CCMFDiagnosticsMixin
 from utils.spline_path import (
-    clamp_progress,
     normalize_path_data,
-    progress_bounds,
     project_progress,
     stage_parameter,
 )
 from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
-from models.geometry_utils import polygon_to_edges
 
 
 class CCMFOptimizerParam:
     def __init__(self):
-        # Horizon and MPCC cost
-        self.horizon = 20
-        self.tf = 0.1 * self.horizon
-        self.mat_Qe = np.diag([1.0, 10.0])
-        self.mat_Re = np.diag([1.0, 0.01])
-        self.q_s = 1.0
-        self.terminal_weight = 5.0
-        self.v_s_target = 0.8
-        self.q_s_ref = 2.0
-
-        # Path and progress
-        self.v_s_max = 2.0
-        self.enforce_v_s_not_faster_than_vmax = True
-        self.path_gate_epsilon = 0.05
-        self.tangent_reg_delta = 1e-6
-        self.reference_weight_reg = 1e-8
-        self.fd_eps = 1e-3
-        self.max_segments = 20
-        self.line_search_window = 0.5
-        self.line_search_samples = 41
-        self.s_upper_guard = 100.0
-        self.use_s_state_bounds = True
-        self.s_backtrack_tolerance = 0.3
-
-        # Physical inputs
-        self.vmin, self.vmax = -0.7, 0.7
-        self.omegamin, self.omegamax = -1.2, 1.2
+        initialize_mpcc_tracking_params(self)
 
         # Safety rows: Row G is hard; only Row M has a slack.
         self.d_min = 0.001
@@ -72,7 +49,7 @@ class CCMFOptimizerParam:
         self.mf_active_start_step = 1
         self.mf_active_end_step = None
         self.mf_active_terminal = True
-        self.augmented_psdf_device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.augmented_psdf_device = "cuda"
 
         # Risk and covariance
         # None selects min(10, horizon); set to horizon for full propagation.
@@ -84,26 +61,16 @@ class CCMFOptimizerParam:
         self.q_f0 = 0
         self.q_l0 = 0
         self.q_psi0 = 0
+        # Compatibility field: the shared coefficients already include this scale.
         self.covariance_growth_scale = 0.6
-        self.alpha_f = 0.002 * self.covariance_growth_scale
-        self.alpha_v = 0.0004 * self.covariance_growth_scale
-        self.alpha_kappa = 0.01 * self.covariance_growth_scale
-        self.beta_v = 0.02 * self.covariance_growth_scale
-        self.beta_kappa = 0.008 * self.covariance_growth_scale
-        self.beta_omega = 0.008 * self.covariance_growth_scale
+        initialize_cc_noise_params(self)
         self.risk_cov_jitter = 1e-9
 
         # Animation diagnostics
         self.use_risk_visualization = True
 
         # Solver and recovery
-        self.qp_solver = "PARTIAL_CONDENSING_HPIPM"
-        self.hessian_approx = "GAUSS_NEWTON"
-        self.integrator_type = "DISCRETE"
-        self.nlp_solver_type = "SQP_RTI"
-        self.qp_solver_iter_max = 50
-        self.nlp_solver_max_iter = 50
-        self.tol = 1e-4
+        initialize_mpcc_solver_params(self, integrator_type="DISCRETE")
         self.enable_backup_solver = False
 
         # Optional diagnostics
@@ -113,7 +80,9 @@ class CCMFOptimizerParam:
         self.first_interval_substeps = 10
 
 
-class CCMFOptimizer(CCMFDiagnosticsMixin):
+class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
+    _path_includes_curvature = True
+
     CYCLE_LOG_FIELDS = (
         "time",
         "solve_mode",
@@ -285,14 +254,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         self._last_solve_mode = "uninitialized"
         self._last_backup_status = None
 
-    def __del__(self):
-        self.cleanup()
-
-    def reset(self):
-        self.cleanup()
-
     def set_state(self, state):
-        self.state = state
+        super().set_state(state)
         self._current_psdf = None
 
     def get_current_psdf(self):
@@ -302,14 +265,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         are disabled; the disabled constraint's 1000 sentinel is not a distance.
         """
         return self._current_psdf
-
-    def get_progress_info(self):
-        """Return MPCC progress-state values useful for runtime logging."""
-        return {
-            "path_s": float(self._current_s0),
-            "predicted_s": float(self._prev_predicted_s),
-            "has_predicted_s": bool(self._has_prev_predicted_s),
-        }
 
     def get_runtime_stats(self):
         return {
@@ -407,6 +362,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         # q_s / (2 * r_v_s), so choose the quadratic penalty from v_s_target.
         return 0.5 * q_s / v_s_target
 
+    def _get_progress_reference_weight(self, param):
+        return float(param.q_s_ref)
+
     def create_model(self, param):
         dt = float(param.tf) / float(max(param.horizon, 1))
         self.robust_horizon = resolve_robust_horizon(param)
@@ -441,21 +399,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         omega = u[1]
         v_s = u[2]
 
-        p_ref = p_ref_t_ref[0:2]
-        t_raw = p_ref_t_ref[2:4]
-        s_ref = p_ref_t_ref[4]
         kappa_ref = p_ref_t_ref[5]
-        t_vec = t_raw / (ca.norm_2(t_raw) + float(param.tangent_reg_delta))
-        p_ref_lin = p_ref + (x[3] - s_ref) * t_vec
-
-        dx = x[0] - p_ref_lin[0]
-        dy = x[1] - p_ref_lin[1]
-        # Match existing MPCC sign convention:
-        # e_l = -dot(position_error, tangent)
-        # e_c = dot(position_error, right-normal)
-        e_l = -(dx * t_vec[0] + dy * t_vec[1])
-        e_c = dx * t_vec[1] - dy * t_vec[0]
-        e_s = x[3] - s_ref
 
         xi_next = symbolic_log_cholesky_transition(
             x[4:8], v, omega, kappa_ref, dt, param,
@@ -468,25 +412,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             ca.if_else(p_covariance_propagation > 0.5, xi_next, x[4:8]),
         )
 
-        q_c = float(param.mat_Qe[0, 0])
-        q_l = float(param.mat_Qe[1, 1])
-        r_v = float(param.mat_Re[0, 0])
-        r_w = float(param.mat_Re[1, 1])
-        q_s = float(param.q_s)
-        r_vs = self._get_progress_speed_penalty(param)
-        q_s_ref = float(param.q_s_ref)
-        qf = float(param.terminal_weight)
-
-        cost_stage = (
-            q_c * e_c * e_c
-            + q_l * e_l * e_l
-            + q_s_ref * e_s * e_s
-            + r_v * u[0] * u[0]
-            + r_w * u[1] * u[1]
-            + r_vs * u[2] * u[2]
-            - q_s * u[2]
+        cost_stage, cost_terminal = self._build_mpcc_cost(
+            param, x, u, p_ref_t_ref,
         )
-        cost_terminal = qf * (q_c * e_c * e_c + q_l * e_l * e_l + q_s_ref * e_s * e_s)
 
         model = AcadosModel()
         model.name = "differential_drive_cc_mf"
@@ -504,6 +432,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             s_value,
             self.param.tangent_reg_delta,
             self.param.fd_eps,
+            include_curvature=self._path_includes_curvature,
         )
 
     def _build_stage_param(self, stage_path_param, guard_affine, mf_affine, stage_idx=0):
@@ -801,9 +730,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             "epsilon": epsilon,
         }
 
-    def _clamp_s(self, s_value):
-        return clamp_progress(self.reference_path_data, s_value)
-
     def _project_s_with_line_search(self, position_xy, param):
         previous_s = self._prev_predicted_s if self._has_prev_predicted_s else None
         return project_progress(
@@ -813,9 +739,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             param.line_search_window,
             param.line_search_samples,
         )
-
-    def _get_current_s_bounds(self, param):
-        return progress_bounds(self.reference_path_data, param.s_upper_guard)
 
     def _get_augmented_state_bounds(self, param, s_lower, s_upper):
         idxbx = []
@@ -849,39 +772,12 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             self._current_s0 = max(self._current_s0, s_floor)
         return self._current_s0
 
-    def set_reference_trajectory(self, reference_path_data):
-        if reference_path_data is None:
-            return
-        self.reference_path_data = normalize_path_data(reference_path_data)
-
     def setup_ocp(self, param):
         self.ocp = AcadosOcp()
         model = self.create_model(param)
-        self.ocp.model = model
-
-        nx = model.x.size()[0]
-        nu = model.u.size()[0]
-        N = param.horizon
-        self.nx = nx
-        self.nu = nu
-        self.N = N
-        self.ocp.dims.N = N
-        self.ocp.dims.np = (
-            self.path_param_dim + self.guard_param_dim + self.mf_param_dim + 1
-        )
-        self.ocp.parameter_values = np.zeros((self.ocp.dims.np,), dtype=float)
+        self._configure_ocp_dimensions_and_cost(param, model)
         self.ocp.parameter_values[self.covariance_propagation_param_slice] = 1.0
-
-        self.ocp.cost.cost_type = "EXTERNAL"
-        self.ocp.cost.cost_type_e = "EXTERNAL"
-
-        effective_v_s_max = self._get_effective_v_s_max(param)
-        self.ocp.constraints.lbu = np.array([param.vmin, param.omegamin, 0.0], dtype=float)
-        self.ocp.constraints.ubu = np.array(
-            [param.vmax, param.omegamax, effective_v_s_max],
-            dtype=float,
-        )
-        self.ocp.constraints.idxbu = np.array([0, 1, 2], dtype=np.int64)
+        self._set_input_bounds(param)
 
         x0_phys = (
             np.zeros(3, dtype=float)
@@ -907,7 +803,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         )
 
         # Stage-0 equality on full augmented state.
-        self.ocp.constraints.idxbx_0 = np.arange(nx, dtype=np.int64)
+        self.ocp.constraints.idxbx_0 = np.arange(self.nx, dtype=np.int64)
         self.ocp.constraints.lbx_0 = x0_full.copy()
         self.ocp.constraints.ubx_0 = x0_full.copy()
 
@@ -919,19 +815,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         self.ocp.constraints.lbx_e = lbx.copy()
         self.ocp.constraints.ubx_e = ubx.copy()
 
-        self.ocp.solver_options.qp_solver = param.qp_solver
-        self.ocp.solver_options.hessian_approx = param.hessian_approx
         # The covariance map is a discrete recursion, including an exact
         # identity transition after N_R; ERK would change that recursion.
-        self.ocp.solver_options.integrator_type = "DISCRETE"
-        self.ocp.solver_options.nlp_solver_type = param.nlp_solver_type
-        self.ocp.solver_options.qp_solver_iter_max = param.qp_solver_iter_max
-        self.ocp.solver_options.nlp_solver_max_iter = param.nlp_solver_max_iter
-        self.ocp.solver_options.tol = param.tol
-
-        self.ocp.solver_options.qp_solver_warm_start = True
-        self.ocp.solver_options.nlp_solver_warm_start_first_qp = True
-        self.ocp.solver_options.tf = param.tf
+        self._configure_solver_options(param, integrator_type="DISCRETE")
 
         hpipm_mode = getattr(param, "hpipm_mode", None)
         if hpipm_mode is not None:
@@ -1126,39 +1012,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         if not np.isfinite(states).all() or not np.isfinite(inputs).all():
             raise ValueError("nominal state and input trajectories must be finite")
         return states, inputs
-
-    def _predict_stage_s_values(self, s0, s_lower, s_upper, solver=None):
-        solver = self.solver if solver is None else solver
-        s_values = np.zeros((self.N + 1,), dtype=float)
-        s_values[0] = float(np.clip(s0, s_lower, s_upper))
-        if self.N <= 0:
-            return s_values
-
-        dt = float(self.param.tf) / float(max(self.N, 1))
-        effective_v_s_max = self._get_effective_v_s_max(self.param)
-        for i in range(1, self.N + 1):
-            s_from_state = np.nan
-            try:
-                s_from_state = float(solver.get(i, "x")[3])
-            except Exception:
-                pass
-
-            try:
-                v_s_prev = float(solver.get(i - 1, "u")[2])
-            except Exception:
-                v_s_prev = 0.0
-            v_s_prev = float(np.clip(v_s_prev, 0.0, effective_v_s_max))
-            s_from_input = s_values[i - 1] + dt * v_s_prev
-
-            if np.isfinite(s_from_state):
-                s_next = 0.5 * s_from_state + 0.5 * s_from_input
-            else:
-                s_next = s_from_input
-
-            s_next = float(np.clip(s_next, s_lower, s_upper))
-            s_values[i] = max(s_values[i - 1], s_next)
-
-        return s_values
 
     def _set_constraint_parameters(self, solver, stage_s_values, constraint_data):
         guard_rows = np.column_stack(
@@ -1473,30 +1326,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             return backup_result
         return self._apply_safe_stop(dynamics, solver_status)
 
-    def update_obstacles(self, obstacles_geo):
-        if self.psdf_wrapper is None:
-            return
-        if obstacles_geo is None:
-            self.psdf_wrapper.clear_clusters()
-            return
-
-        all_clusters_A = []
-        all_clusters_B = []
-        for obs_geo in obstacles_geo:
-            edgesA, edgesB = polygon_to_edges(obs_geo)
-            all_clusters_A.append(edgesA)
-            all_clusters_B.append(edgesB)
-
-        if len(all_clusters_A) == 0:
-            self.psdf_wrapper.clear_clusters()
-        elif len(all_clusters_A) <= self.psdf_wrapper.K_max:
-            self.psdf_wrapper.update_edge_clusters(all_clusters_A, all_clusters_B)
-        else:
-            self.psdf_wrapper.update_edge_clusters(
-                all_clusters_A[:self.psdf_wrapper.K_max],
-                all_clusters_B[:self.psdf_wrapper.K_max],
-            )
-
     def _setup_backup_solver(self, param, obstacles):
         self.backup_solver = None
         if not param.enable_backup_solver:
@@ -1532,6 +1361,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
         self._system_dynamics = system._dynamics
         self.set_reference_trajectory(reference_trajectory)
 
+        if param.use_obstacle_constraint:
+            psdf_device = self._require_cuda_device(param.augmented_psdf_device)
+
         if self._is_initialized:
             if param.use_obstacle_constraint:
                 self.update_obstacles(obstacles)
@@ -1552,7 +1384,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
                 system,
                 E_max=100,
                 K_max=20,
-                device=param.augmented_psdf_device,
+                device=psdf_device,
             )
         else:
             self.psdf_wrapper = None
@@ -1938,8 +1770,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin):
             },
         )
 
-    def initialize_augmented_psdf(self, system, E_max=100, K_max=20, device="cpu"):
-        self.device = device
+    def initialize_augmented_psdf(self, system, E_max=100, K_max=20, device="cuda"):
+        self.device = self._require_cuda_device(device)
+        device = self.device
         if not hasattr(system, "_geometry"):
             raise ValueError("System must have _geometry attribute")
 

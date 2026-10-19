@@ -12,6 +12,16 @@ import numpy as np
 from models.dd_dynamics import symbolic_dd_step as _symbolic_dd_step
 
 
+def initialize_cc_noise_params(param):
+    """Share the existing MF growth coefficients with SF, already scaled."""
+    param.alpha_f = 0.0012
+    param.alpha_v = 0.00024
+    param.alpha_kappa = 0.006
+    param.beta_v = 0.012
+    param.beta_kappa = 0.0048
+    param.beta_omega = 0.0048
+
+
 def _finite_array(value, trailing_shape, name):
     array = np.asarray(value, dtype=float)
     if (

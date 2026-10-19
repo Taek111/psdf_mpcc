@@ -121,10 +121,59 @@ class CCSFLogCholeskyTest(unittest.TestCase):
                 float(stage < self.param.robust_horizon),
             )
             self.assertEqual(parameters[self.optimizer.risk_margin_scale_param_slice][0], 1.0)
+
+    def test_removed_stage_window_cannot_disable_future_or_terminal_margin(self):
+        self.assertFalse(hasattr(self.param, "risk_margin_active_start_step"))
+        self.assertFalse(hasattr(self.param, "risk_margin_active_end_step"))
+        # A caller retaining old Python attributes must not reinstate a window.
+        self.param.risk_margin_active_start_step = self.param.horizon + 1
         self.param.risk_margin_active_end_step = 0
         np.testing.assert_array_equal(
             self.optimizer._build_risk_margin_scale_batch(self.param.horizon + 1, self.param),
-            [1.0, 0.0, 0.0, 0.0],
+            np.ones(self.param.horizon + 1),
+        )
+        np.testing.assert_array_equal(
+            self.optimizer.get_risk_margin_active_stage_mask(),
+            np.ones(self.param.horizon + 1, dtype=bool),
+        )
+
+    def test_global_risk_disable_keeps_deterministic_terminal_psdf(self):
+        self.param.use_risk_margin = False
+        self.optimizer.ped_model = AnalyticPSDFCasADi(None, name="test_sf_risk_disabled")
+        self.optimizer.setup_ocp(self.param, None)
+        self.optimizer.add_obstacle_avoidance_constraint(self.param, None, None)
+        model = self.optimizer.ocp.model
+        evaluate = ca.Function(
+            "sf_global_risk_disabled",
+            [model.x, model.p],
+            [model.con_h_expr, model.con_h_expr_e,
+             ca.jacobian(model.con_h_expr_e, model.x)],
+        )
+        gradient = np.array([0.6, -0.8, 0.2])
+        terms = self.optimizer._extract_projected_variance_terms(gradient)
+        parameters = self.optimizer._build_stage_param(
+            np.array([0.0, 0.0, 1.0, 0.0, 0.0, 0.0]),
+            terms, 1.0,
+            psdf_stage=np.r_[np.zeros(3), 0.8, gradient],
+            stage_idx=self.param.horizon,
+        )
+        state = np.r_[np.zeros(4), np.log([0.03, 0.07, 0.02]), -0.04]
+        stage_value, terminal_value, jacobian = evaluate(state, parameters)
+        self.assertAlmostEqual(float(stage_value), 0.8 - self.param.d_min)
+        self.assertAlmostEqual(float(terminal_value), 0.8 - self.param.d_min)
+        np.testing.assert_array_equal(np.asarray(jacobian)[0, 4:], np.zeros(4))
+        np.testing.assert_array_equal(
+            self.optimizer.get_risk_margin_active_stage_mask(),
+            np.zeros(self.param.horizon + 1, dtype=bool),
+        )
+        # Risk disable does not remove the four Log-Cholesky states.
+        self.assertEqual(int(model.x.numel()), 8)
+
+    def test_global_obstacle_disable_reports_no_active_margin(self):
+        self.param.use_obstacle_constraint = False
+        np.testing.assert_array_equal(
+            self.optimizer.get_risk_margin_active_stage_mask(),
+            np.zeros(self.param.horizon + 1, dtype=bool),
         )
 
 

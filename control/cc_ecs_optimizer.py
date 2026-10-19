@@ -78,7 +78,7 @@ class CCECSOptimizerParam:
         self.nlp_solver_max_iter = 50
         self.tol = 1e-4
         self.enable_backup_solver = False
-        self.augmented_psdf_device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.augmented_psdf_device = "cuda"
 
 
 class _ClusterAffinePSDF:
@@ -295,7 +295,8 @@ class CCECSOptimizer(CCSFOptimizer):
         self.ocp.dims.nh_e = self.obstacle_capacity
         # No idxsh or slack costs: all future obstacle rows are hard.
 
-    def initialize_ped_model(self, system, obstacles, E_max=None, K_max=None, device="cpu"):
+    def initialize_ped_model(self, system, obstacles, E_max=None, K_max=None, device="cuda"):
+        device = self._require_cuda_device(device)
         geometries = getattr(getattr(system, "_geometry", None), "_geometries", ())
         if len(geometries) != 1:
             raise ValueError("CC-ECS requires a single convex polygon robot footprint")

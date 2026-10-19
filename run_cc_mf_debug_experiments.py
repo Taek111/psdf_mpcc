@@ -13,7 +13,6 @@ from pathlib import Path
 from types import MappingProxyType
 
 import numpy as np
-import torch
 import yaml
 
 from sim.simulation_mpc import simulation_mpc
@@ -37,7 +36,7 @@ SCENARIO_THRESHOLDS = MappingProxyType(
         "maze": 2.7829378751,
     }
 )
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+DEVICE = "cuda"
 
 R0_CONFIG = MappingProxyType(
     {

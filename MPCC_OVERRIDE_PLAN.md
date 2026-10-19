@@ -2,7 +2,9 @@
 
 작성일: 2026-10-17 (Asia/Seoul)
 
-분석 기준: `70ffe5b106fe8f743150ac7a2435b63fbf64bfee`의 현재 구현
+수정일: 2026-10-19 (Asia/Seoul)
+
+분석 기준: `70ffe5b106fe8f743150ac7a2435b63fbf64bfee`의 구현. 현재 코드에 대한 설명과 아래의 변경 후 목표를 구분한다.
 
 ## 1. 이번 작업의 결과와 변경 범위
 
@@ -16,6 +18,19 @@
 - `MPCC_OVERRIDE_PLAN.md`: 구현 분석, 설정 방식, 상속 경계, 단계별 작업 및 검증 계획.
 
 이번에 수행한 확인은 Git 이력 조회, 소스·AST 정적 비교, 복원 파일의 원본 바이트 비교다. 저장소 지침에 따라 테스트·시뮬레이션·benchmark 및 optimizer import/solver 생성은 실행하지 않았다. 따라서 복원본의 현 환경 실행 성공이나 리팩터링 후 수치 동등성을 검증했다고 주장하지 않는다.
+
+### 1.1 2026-10-19 확정 변경 사항
+
+이번 문서 수정은 아래 세 항목을 후속 구현의 목표로 반영한다. 실행 코드에는 아직 적용하지 않았다.
+
+| 항목 | 변경 후 목표 |
+|---|---|
+| SF risk margin 적용 범위 | `risk_margin_active_start_step`, `risk_margin_active_end_step` 설정과 단계 구간 판정을 제거한다. `use_risk_margin=True`이면 기존 안전 제약을 가진 모든 stage에 terminal까지 margin을 적용한다. |
+| MF/SF alpha 계수 | MF의 현재 실제 값으로 통일: `alpha_f=0.0012`, `alpha_v=0.00024`, `alpha_kappa=0.006` |
+| MF/SF beta 계수 | MF의 현재 실제 값으로 통일: `beta_v=0.012`, `beta_kappa=0.0048`, `beta_omega=0.0048` |
+| device | MPCC 공통 부모와 MF/SF의 PSDF/PyTorch 경로는 모두 `cuda`를 사용한다. CPU 자동 fallback과 SF의 CPU 고정을 제거한다. |
+
+이 세 항목은 기존의 동작·설정 보존 원칙에 대한 명시적 변경이다. Log-Cholesky 표현과 전파식의 형태, 나머지 제약·복구·시간·로그 계약은 유지한다. SF의 계수 변경과 CUDA 전환 후 결과가 과거 설정과 완전히 같아야 한다고 요구하지 않는다. MF의 별도 `mf_active_*` 설정과 geometry mask는 이번 제거 대상이 아니다.
 
 ## 2. 복원 출처
 
@@ -65,8 +80,8 @@ Sigma = L @ L.T
 - [control/cc_covariance.py](control/cc_covariance.py), 27–75행: factor와 축약 공분산 간 변환.
 - 같은 파일 78–123행: 초기값 설정. `initial_pose_covariance`가 없으면 `sigma_*0`를 표준편차로 보고 제곱한 뒤 Log-Cholesky로 변환한다.
 - world-frame `initial_pose_covariance`가 있으면 현재 heading으로 body frame에 회전하고 forward–lateral / forward–heading 교차항을 제거한다. 이것은 현재의 모델 축약이며 임의 PSD repair가 아니다.
-- 같은 파일 161–250행: 현재 NumPy / CasADi Log-Cholesky 전파식을 유지한다. 원소별 covariance 적분, clipping, 새 jitter 주입으로 대체하지 않는다.
-- `robust_horizon=None`이면 `N_R=min(10,N)`. `i<N_R`인 transition에서만 Log-Cholesky를 전파하고 이후에는 그대로 유지한다. 이 구간 이후에도 위험 제약은 해당 활성 설정에 따라 계속 적용된다.
+- 같은 파일 161–250행: 현재 NumPy / CasADi Log-Cholesky 전파식의 형태를 유지하고, MF/SF의 alpha/beta 기본값은 1.1절의 MF 기준으로 통일한다. 원소별 covariance 적분, clipping, 새 jitter 주입으로 대체하지 않는다.
+- `robust_horizon=None`이면 `N_R=min(10,N)`. `i<N_R`인 transition에서만 Log-Cholesky를 전파하고 이후에는 그대로 유지한다. 이 구간 이후에도 SF margin은 전역 switch가 켜져 있으면 terminal까지 적용하며, MF는 기존 MF 활성 조건을 유지한다.
 - 매 solve의 초기 Log-Cholesky 값은 현재 초기 불확실성 설정에서 다시 구성하고 horizon guess를 재생성한다. 이전 solver의 마지막 네 값을 그대로 shift하는 방식으로 바꾸지 않는다.
 - 현재 optimizer는 진행도 `s`만 box bound로 제한한다. Log-Cholesky 변수에 공분산 원소용 bound를 추가하지 않는다.
 
@@ -96,7 +111,7 @@ PSDF MPC와 MPCC는 목적함수·상태·입력이 다르므로 `PSDFOptimizer`
 | 방법 | 배치 | 합계 |
 |---|---|---|
 | 복원 MPCC | path `[0:5]`, PSDF `[5:12]` | 12 |
-| SF | path `[0:6]`, risk terms `[6:10]`, margin mask `[10:11]`, PSDF `[11:18]`, propagation flag `[18:19]` | 19 |
+| SF | path `[0:6]`, risk terms `[6:10]`, margin scale `[10:11]`, PSDF `[11:18]`, propagation flag `[18:19]` | 19 |
 | MF | path `[0:6]`, guard affine `[6:10]`, MF affine `[10:19]`, propagation flag `[19:20]` | 20 |
 
 `path6 = [p_ref_x,p_ref_y,t_ref_x,t_ref_y,s_ref,kappa_ref]`.
@@ -105,6 +120,8 @@ SF risk4는 `[q_f²,q_l²,q_theta²,q_l*q_theta]`다.
 MF guard4는 `[gradient_world(3),intercept]`, MF9는 `[A_mf(8),c_mf]`다.
 
 SF에서 PSDF model을 생략하면 PSDF block이 0개이므로 전체 크기도 줄어든다. 또한 SF의 자식인 CC-ECS는 risk/PSDF block 크기를 확장한다. 따라서 공통 부모에서 `np=19`, `risk_dim=4`, `psdf_dim=7`을 고정하면 안 된다. 각 방법이 layout을 정의하고 `model.p` 크기로 검증해야 한다.
+
+SF의 단계별 활성 범위 옵션을 제거해도 margin scale slot과 `_build_stage_param(..., risk_margin_scale, ...)` 시그니처는 유지한다. SF는 `0..N`에서 scale을 모두 `1`로 채우고 margin의 전역 on/off는 `use_risk_margin`으로 처리한다. 이 slot을 공유하는 CC-ECS는 binary mask가 아니라 연속값인 ECS beta를 전달하므로 부모에서 삭제하거나 `1`로 고정하면 안 된다. propagation flag는 기존대로 `i<N_R`을 사용한다.
 
 ### 4.2 공통으로 추출할 MPCC 비용
 
@@ -125,17 +142,18 @@ l_terminal = terminal_weight * (q_c*e_c² + q_l*e_l² + q_s_ref*e_s²)
 
 부모의 `_build_mpcc_cost(param, x, u, path_p)` 같은 helper로 이 식만 추출한다. 현행 contour/lag 부호, tangent 정규화, terminal 배율, 연산 순서를 보존한다. 이 helper는 전달받은 앞 4개 상태와 path 앞 5개를 사용하고, Log-Cholesky 변수나 위험 모델을 생성하지 않는다. 각 자식은 지금의 `create_model()`에서 이를 호출한다.
 
-## 5. 각 방법에서 유지할 제약과 실행 동작
+## 5. 목표 제약과 유지할 실행 동작
 
 ### 5.1 CC-SF
 
-- 제약: `phi_taylor(pose) - d_min - mask_i*clip(gamma*||L(xi).T q||, floor, cap) >= 0`.
+- 변경 후 제약(`use_risk_margin=True`): `phi_taylor(pose) - d_min - clip(gamma*||L(xi).T q||, floor, cap) >= 0`. stage별 구간 mask는 사용하지 않는다.
 - `q`는 nominal pose의 world gradient를 body frame으로 변환한 값이다. geometry gradient는 stage parameter이고 `L(xi)`는 현행 Log-Cholesky 변수에 의존한다.
 - path와 terminal에 hard row를 유지한다. zero-gradient에서 margin과 미분이 유한하도록 한 분기까지 그대로 보존한다.
-- `risk_margin_active_start_step` / `end_step`은 0-based inclusive 범위다. `robust_horizon`과 독립이다.
+- 단계별 시작/종료 설정과 `_is_risk_margin_active_stage()`의 구간 판정을 제거한다. margin은 `robust_horizon` 이후 frozen tail을 포함해 terminal까지 적용한다. stage-0 equality 및 안전 row 설치 정책은 기존대로 두며 새 row를 추가하지 않는다.
 - `use_risk_margin=False`는 margin만 제거한다. Log-Cholesky 모델이나 deterministic PSDF 제약을 없애는 옵션이 아니다.
 - `use_obstacle_constraint=False`는 PSDF 초기화와 제약 추가를 생략한다.
-- prepare의 현재 순서: 진행도 갱신 → 전체 stage-0 equality → bounds → finite 검사/clip → stage 진행도 예측 → Log-Cholesky guess 재생성 → PSDF batch → risk terms/mask → terminal 포함 `N+1`개 parameter → solve.
+- prepare 순서: 진행도 갱신 → 전체 stage-0 equality → bounds → finite 검사/clip → stage 진행도 예측 → Log-Cholesky guess 재생성 → PSDF batch → risk terms 및 전구간 scale=1 → terminal 포함 `N+1`개 parameter → solve.
+- `_build_risk_margin_scale_batch()`는 SF에서 전구간 `1`을 반환하도록 단순화한다. `get_risk_margin_active_stage_mask()`와 risk 로그/그림도 전역 switch와 전구간 적용 기준으로 맞춘다. 삭제된 설정이 남은 YAML은 기존 unknown-key 경고 정책으로 처리하며, 활성 옵션으로 다시 읽지 않는다.
 - main 실패 시 backup `SQP_WITH_FEASIBLE_QP`를 시도하고, 실패하면 nominal safe-stop plan을 사용한다. backup 성공 시 실제 active solver에서 결과·진행도를 읽고 primal guess를 main에 복사한다.
 - safe stop에서 `v_s=0`, 진행도 고정 및 Log-Cholesky guess 재생성을 유지한다.
 
@@ -170,7 +188,7 @@ l_terminal = terminal_weight * (q_c*e_c² + q_l*e_l² + q_s_ref*e_s²)
 
 MF cycle CSV의 `solver_status`는 main status를 보존하지만 solution stats는 recovery 이후 effective status를 나타낼 수 있다. 이 차이도 의도적으로 유지한다. [control/controller.py](control/controller.py) 28–86행의 status 해석과 93–148행의 반환·로깅 호출을 계약으로 취급한다.
 
-## 6. 현재 parameter 설정 방식
+## 6. 현재 parameter 설정 방식과 변경 후 기본값
 
 ### 6.1 입력 경로와 우선순위
 
@@ -193,7 +211,9 @@ SF 병합에서는 `cc_mf.use_risk_visualization`만 먼저 제거한다. SF가 
 
 현재 [config/config.yaml](config/config.yaml)은 `psdf` 시나리오만 활성화되어 있고 활성 `cc_mf:` / `cc_sf:` override 블록이 없다. 따라서 CC를 선택할 때의 설정 출발점은 각 Python Param 기본값이다.
 
-### 6.2 공통 기본값
+### 6.2 변경 후 공통 기본값
+
+별도 표시한 변경 항목 외에는 현재 값을 유지한다. alpha/beta와 device는 이번 수정의 목표값이다.
 
 | 그룹 | 기본값 |
 |---|---|
@@ -207,6 +227,9 @@ SF 병합에서는 `cc_mf.use_risk_visualization`만 먼저 제거한다. SF가 
 | 기존 호환 필드 | `path_gate_epsilon=.05`, `reference_weight_reg=1e-8` |
 | 초기 불확실성 | `initial_pose_covariance=None`, `sigma_f0=.0002`, `sigma_l0=.00025`, `sigma_psi0=.00025` |
 | 전파 | `robust_horizon=None` → `min(10,N)`, `q_f0=q_l0=q_psi0=0`, `risk_cov_jitter=1e-9` |
+| alpha 계수 — MF/SF 통일 | `alpha_f=0.0012`, `alpha_v=0.00024`, `alpha_kappa=0.006` |
+| beta 계수 — MF/SF 통일 | `beta_v=0.012`, `beta_kappa=0.0048`, `beta_omega=0.0048` |
+| PSDF/PyTorch device — 통일 | `cuda`, CPU 자동 fallback 없음 |
 | 기본 solver | `PARTIAL_CONDENSING_HPIPM`, `GAUSS_NEWTON`, `SQP_RTI`, QP/NLP 반복 최대 50/50, `tol=1e-4` |
 | integrator | 실제 OCP는 두 CC 모두 `DISCRETE` 강제 |
 
@@ -214,7 +237,7 @@ solver의 유효 `v_s` 상한은 `min(v_s_max,max(0,vmax))=.7`이다. 그러나 
 
 planner는 추가로 `num_horizon=N`, `local_path_timestep=tf/N`, `sample_count=N`, `max_segments`, `proj_dist_buffer=.03`, `min_point_distance=1e-4`, natural spline, projected backtrack 기본 `.15`를 사용한다. 현재 두 CC는 `psdf_detection` 블록을 명시적으로 무시한다.
 
-### 6.3 각 방법 고유 기본값
+### 6.3 변경 후 각 방법 고유 기본값
 
 | 항목 | MF | SF |
 |---|---|---|
@@ -223,23 +246,20 @@ planner는 추가로 `num_horizon=N`, `local_path_timestep=tf/N`, `sample_count=
 | epsilon | `.20`, scalar 또는 `N+1` stage 값 | `.20`, scalar |
 | gamma | 없음 | `Phi^-1(1-.20)≈.8416212336` |
 | slack | `mf_slack_linear=100`, `mf_slack_quadratic=1` | hard row, MF slack 없음 |
-| 활성 구간 | start=1, end=None → N−1, terminal=True 별도 | start=0, end=None → terminal까지 |
+| 활성 구간 | 기존 MF start=1, end=None → N−1, terminal=True 별도 | 단계 구간 옵션 없음. 전역 switch가 켜져 있으면 terminal까지 전구간 적용 |
 | margin | 해당 없음 | floor=0, cap=2 |
 | growth scale | `covariance_growth_scale=.6` | scale 필드 없음 |
-| alpha_f / alpha_v / alpha_kappa | `.0012/.00024/.006` | `.002/.0004/.01` |
-| beta_v / beta_kappa / beta_omega | `.012/.0048/.0048` | `.02/.008/.008` |
 | backup | `enable_backup_solver=False` | 설정 필드 없이 항상 생성 시도 |
-| device | CUDA 가능 시 CUDA, 아니면 CPU | PSDF 초기화는 CPU |
 | diagnostics | `debug_mf=False`, `debug_infeasibility=False`, `use_risk_visualization=True` | `debug_risk=True`, nominal heads 출력=False, only_active=True |
 | 기타 | `constraint_debug_tolerance=1e-6`, `first_interval_substeps=10` | `use_projected_variance_margin=True` 호환 필드 |
 
-근거: [control/cc_mf_optimizer.py](control/cc_mf_optimizer.py) 33–113행, [control/cc_sf_optimizer.py](control/cc_sf_optimizer.py) 32–112행.
+기존 값의 근거: [control/cc_mf_optimizer.py](control/cc_mf_optimizer.py) 33–113행, [control/cc_sf_optimizer.py](control/cc_sf_optimizer.py) 32–112행. 삭제할 SF 구간 옵션, 공통 alpha/beta 및 CUDA 전환은 1.1절의 변경 후 목표를 따른다.
 
-두 방법의 alpha/beta 기본값은 다르다. 같은 전파식을 공유한다는 이유로 수치까지 합치면 기존 MF의 동작이 바뀐다.
+MF의 여섯 실제 계수를 공통 초기화 함수에 한 번만 정의하여 두 CC Param에 적용한다. 위 값에는 MF의 `covariance_growth_scale=0.6` 효과가 이미 반영되어 있으므로 다시 `0.6`을 곱하지 않는다. MF의 실제 기본값은 유지하고 SF가 그 값에 맞춰진다. 기존 명시적 계수 override 경로는 유지하되 비교 실험에서는 두 방법에 동일한 설정을 전달한다.
 
 ### 6.4 override와 파생 값의 주의점
 
-`_apply_param_overrides()`는 `hasattr` 후 `setattr`만 한다. 이 동작 자체도 호환성 범위다.
+현재 `_apply_param_overrides()`는 `hasattr` 후 `setattr`만 한다. 이 기본 방식은 유지하되, 삭제한 SF 구간 옵션과 CUDA 사용 조건은 명시적 변경으로 반영한다. 아래는 현재 경로에서 주의해야 할 동작이다.
 
 1. `horizon`만 바꿔도 `tf`는 자동 갱신되지 않는다. simulation은 `tf/N`과 plant timestep이 다르면 실패시킨다(1978–1983행).
 2. `d_mf_mask=self.d_col`은 생성 시 값 복사다. `d_col`만 override해도 mask threshold는 따라 바뀌지 않는다.
@@ -252,7 +272,7 @@ planner는 추가로 `num_horizon=N`, `local_path_timestep=tf/N`, `sample_count=
 9. `initial_pose_covariance`는 명시적 설정이다. localization-error 설정에서 자동으로 estimator covariance를 연결하는 경로는 없다.
 10. Param의 모든 필드를 solver 생성 후 자유롭게 바꿀 수 있는 구조가 아니다. 비용·동역학 계수·차원·제약 구조는 solver 생성 시 수식에 고정된다. stage parameters, 현재 pose, reference, 장애물, 초기 Log-Cholesky 구성 등은 cycle마다 갱신되는 별도 경로다. 생성 후 alpha/beta 또는 dt 관련 값을 바꾸면 Python의 guess 전파는 새 값을 읽고 이미 생성된 CasADi 동역학은 이전 값을 유지하는 불일치도 생길 수 있다. 이런 변경은 재생성이 필요하며, 이번 계획에서 새 live-update 보장을 추가하지 않는다.
 
-현재 방식으로 설정할 때의 예시(이번 작업에서 YAML에 적용하지 않음):
+변경 후에도 사용할 설정 예시(이번 작업에서 YAML에 적용하지 않음):
 
 ```yaml
 # 최상위 블록. 아래 cc_mf 값은 SF에도 먼저 적용된다.
@@ -263,14 +283,27 @@ cc_mf:
   d_mf_mask: 0.001
   chance_epsilon: 0.20
   enable_backup_solver: false
+  # MF의 실제 값이며 SF에도 먼저 적용된다. scale을 다시 곱하지 않는다.
+  alpha_f: 0.0012
+  alpha_v: 0.00024
+  alpha_kappa: 0.006
+  beta_v: 0.012
+  beta_kappa: 0.0048
+  beta_omega: 0.0048
 
 cc_sf:
   chance_epsilon: 0.20   # gamma가 명시되지 않으면 helper에서 재계산
   use_risk_margin: true
-  risk_margin_active_start_step: 0
 ```
 
-이 예시의 MF 전용 키는 SF에서 unknown 경고를 낼 수 있다. MF와 SF의 완전히 독립적인 설정이 필요하면 별도 YAML을 사용하거나 각 방법의 공통 속성을 SF 블록에서 명시적으로 덮어쓴다. 현행 fallback 제거, 새 `mpcc:` 블록 도입, 타입 변환/파생값 자동화는 상속 리팩터링과 별도 변경으로 다룬다.
+이 예시의 MF 전용 키는 SF에서 unknown 경고를 낼 수 있다. MF와 SF의 완전히 독립적인 설정이 필요하면 별도 YAML을 사용하거나 각 방법의 공통 속성을 SF 블록에서 명시적으로 덮어쓴다. SF가 MF 설정 블록을 먼저 적용하는 fallback의 제거, 새 `mpcc:` 블록 도입, 타입 변환/파생값 자동화는 상속 리팩터링과 별도 변경으로 다룬다.
+
+### 6.5 CUDA 통일 범위
+
+- MPCC 공통 부모 및 MF/SF의 `initialize_ped_model()` / `initialize_augmented_psdf()`, `AugmentedPSDFWrapper`, `AnalyticPSDFCasADi`에 동일한 `cuda` device를 명시적으로 전달한다. 생성자 기본값만 바꾸지 말고 setup의 `device="cpu"` 전달과 CUDA 가용성에 따른 CPU 선택도 제거한다.
+- geometry vertices/edges, pose, Log-Cholesky 입력 tensor, MF epsilon, PSDF/risk 계산 tensor와 wrapper/bridge의 device를 맞춘다. main/backup과 진단 경로도 같은 CUDA 정책을 사용한다.
+- 기존 device 설정 속성을 호환성 때문에 남길 경우에도 CUDA만 허용한다. CUDA를 사용할 수 없으면 PSDF 초기화 시 명확한 오류로 종료하고 CPU로 자동 전환하지 않는다.
+- acados/CasADi solver와 기존 NumPy 전파까지 GPU solver로 교체하는 작업은 포함하지 않는다. PSDF 결과를 acados stage parameter로 넘기는 경계의 `.detach().cpu().numpy()` 변환은 유지한다. CUDA 전환에 따른 수치 허용오차와 전송 비용은 검증에서 별도로 확인한다.
 
 ## 7. 권장 상속 구조
 
@@ -308,7 +341,8 @@ MF는 이 추가 그룹에 작은 차이가 있다. `set_state`는 PSDF cache를
 | stage 진행도 예측 | `_predict_stage_s_values(s0,lower,upper,solver=None)` | backup용 solver 전달 및 기존 blending/clipping |
 | OCP 기본 설정 | 비용 종류, 입력 bounds, 차원 설정의 공통 helper | full x0, state bounds, parameter layout, DISCRETE, safety rows |
 | 생성 자원 | JSON/code-export/model 이름을 명시적으로 받는 작은 helper | 방법별 main/backup 이름과 생성·해제 정책 |
-| Log-Cholesky 변환/전파 | 기존 `cc_covariance.py` 함수 재사용 | 현재 4개 factor 변수, 수식, 초기화, horizon flag |
+| Log-Cholesky 변환/전파 | 기존 `cc_covariance.py` 함수 재사용, MF 기준 공통 alpha/beta 초기화 | 현재 4개 factor 변수, 전파식 형태, 초기화, horizon flag |
+| PSDF device | 공통 CUDA 초기화·검증 | 방법별 wrapper/bridge 종류와 solver 전달 경계 |
 
 `_predict_stage_s_values`는 현재 SF/MF가 동일하고 `solver=None`을 받는다. 과거 부모는 `self.solver`만 읽는다. 부모에 optional 인자를 추가해 예전 호출과 backup 호출을 모두 보존한 다음 중복을 제거한다.
 
@@ -329,18 +363,18 @@ MF는 이 추가 그룹에 작은 차이가 있다. `set_state`는 PSDF cache를
 | `add_obstacle_avoidance_constraint` | `(param,system,obstacles_geo)`, hard SF | `(param,obstacles_geo)`, hard G / soft M |
 | `add_warm_start`, `_prepare_and_solve` | 현재 guess/finite 검사/parameter 갱신 순서 | 현재 cache·batch·stage0 veto 순서 |
 | `setup`, `solve_nlp`, recovery | 현재 backup 정책·timing·stats | 현재 선택적 backup·safe stop·timing snapshot |
-| PSDF 초기화 | `initialize_ped_model`, analytic bridge, CPU | `initialize_augmented_psdf`, MF wrapper, 기존 device |
+| PSDF 초기화 | `initialize_ped_model`, analytic bridge, CUDA | `initialize_augmented_psdf`, MF wrapper, CUDA |
 | solution/diagnostics | 기존 `AcadosSolution` 및 risk getter | 기존 `AcadosSolution` 및 mixin/log getter |
 
 단순히 `super().create_model()`을 부른 뒤 4차원 상태에 네 값을 덧붙이는 방식은 사용하지 않는다. 자식에서 현재 심볼·동역학을 만들고 공통 cost helper만 호출한다. 과거 `create_solver()`는 `self.solver`를 대입하고 반환하지 않으므로 현재 자식의 solver-return 계약으로 그대로 대체할 수 없다.
 
 ### 7.4 Param 구조
 
-초기 단계에서는 `CCMFOptimizerParam`, `CCSFOptimizerParam` 이름과 허용 속성 집합을 보존한다. 공통 비용/진행도/물리 입력 기본값만 작은 initializer로 추출한다. 더 나아간다면 **공통 부분만 담은** `MPCCTrackingParam`을 두고 세 Param이 각각 이를 사용하게 할 수 있다.
+초기 단계에서는 `CCMFOptimizerParam`, `CCSFOptimizerParam` 이름을 보존한다. 허용 속성 집합은 SF의 두 구간 옵션 삭제와 CUDA 설정 검증을 제외하고 유지한다. 공통 비용/진행도/물리 입력 기본값은 작은 initializer로 추출하고, MF/SF의 여섯 alpha/beta 값은 별도 공통 initializer에서 동일하게 설정한다. 더 나아간다면 **공통 추종 부분만 담은** `MPCCTrackingParam`을 두고 세 Param이 각각 이를 사용하게 할 수 있다. 불확실성이 없는 deterministic 부모에 alpha/beta를 강제로 추가할 필요는 없다.
 
 `CCMFOptimizerParam(MPCCOptimizerParam)`처럼 복원 Param 전체를 바로 상속하지 않는다. 과거 Param에는 `use_soft_constraint`, `slack_weight`, `detection_*` 등 현재 MF/SF에 없는 속성이 있다. 이 속성이 생기면 `hasattr` 기반 loader에서 예전에는 무시하던 YAML이 갑자기 허용되어 설정 계약이 달라진다.
 
-SF/MF 고유 safety/risk/backup/device 기본값은 각 클래스에 남긴다. matrix 객체는 인스턴스마다 새로 만들고 mutable default를 공유하지 않는다. 필드 집합·타입·수치·파생값 계산 시점을 기존 구현과 비교한다.
+SF/MF 고유 safety/risk/backup 기본값은 삭제 대상 SF 구간 옵션을 제외하고 각 클래스에 남긴다. device는 공통 CUDA 정책을 따른다. matrix 객체는 인스턴스마다 새로 만들고 mutable default를 공유하지 않는다. 필드 집합·타입·수치·파생값 계산 시점은 1.1절의 의도된 변경과 나머지 호환성 항목을 구분해서 비교한다.
 
 ### 7.5 기존 CC-ECS 및 자원 관리
 
@@ -353,18 +387,21 @@ SF/MF 고유 safety/risk/backup/device 기본값은 각 클래스에 남긴다. 
 - `from control.cc_sf_optimizer import AcadosSolution`
 - CC-ECS가 바꿀 수 있는 risk/PSDF block 크기와 slices.
 
+SF의 margin scale slot은 CC-ECS에서 ECS beta 값에 사용되므로 유지하고, SF의 전구간 scale=1 로직을 ECS에 강제하지 않는다. MF/SF의 alpha/beta 통일은 CC-ECS의 process noise=0 규약을 변경하지 않는다. 공통 경로를 상속하는 CC-ECS의 PSDF device도 CUDA 정책에 맞추되, 자체 Param의 CPU fallback과 초기화 호출을 함께 확인한다. ECS의 위험 모델과 별도 계수는 그대로 둔다.
+
 복원 MPCC의 cleanup은 공용 `acados_ocp.json` / `c_generated_code`를 직접 정리한다(115–124행). CC 자식 cleanup에서 이 구현으로 무조건 `super()` 위임하지 않는다. SF/MF의 현재 main/backup 경로를 유지하고, 자원 공통화를 할 때는 실제 해당 인스턴스가 생성한 파일/디렉터리만 추적하는 별도 helper를 사용한다.
 
 ## 8. 후속 구현 순서와 완료 조건
 
 1. **기준 고정:** 현재 CC 파일과 Param/solver 계약을 기준으로 둔다. 복원 원본의 commit/blob를 보존한다. 이번 작업에서 완료.
 2. **최소 상속:** 위 클래스 선언만 연결하고 현재 생성자·모델·제약·solve/recovery·cleanup은 override로 유지한다. 완전히 동일한 메서드만 부모로 올린다.
-3. **MPCC 비용 추출:** 세 방법의 비용식을 helper 하나로 공유한다. Log-Cholesky 모델과 제약식은 그대로 둔다.
+3. **MPCC 비용 추출:** 세 방법의 비용식을 helper 하나로 공유한다. Log-Cholesky 표현과 전파식 형태를 유지한다.
 4. **경로/진행도 정리:** curvature hook, optional solver, MF cache/입력 변환 adapter를 도입하고 동일성이 확인된 중복만 제거한다.
-5. **OCP/Param 반복 정리:** 작은 공통 설정 helper와 공통 기본값 initializer를 추출한다. 각 방법의 필드 집합·차원·DISCRETE·backup·device·시그니처를 유지한다.
-6. **회귀 검증 후 확대 판단:** 아래 검증이 통과한 범위만 채택한다. solve/recovery/diagnostics 통합은 동작 보존 이득이 확인될 때 별도로 진행하며 첫 완료 조건으로 삼지 않는다.
+5. **OCP/Param 반복 정리:** 작은 공통 설정 helper와 공통 기본값 initializer를 추출한다. 각 방법의 차원·DISCRETE·backup·공개 시그니처를 유지한다.
+6. **확정한 세 변경 적용:** SF 구간 옵션과 구간 판정을 제거하고 전구간 margin을 적용한다. MF 기준의 여섯 alpha/beta 실제 값을 공유하며 중복 scale 적용을 막는다. PSDF 초기화·wrapper·bridge·진단을 CUDA로 통일하고 CPU fallback을 제거한다. 기존 SF 구간 제한 테스트의 기대값도 전구간 정책으로 갱신한다.
+7. **회귀 검증 후 확대 판단:** 아래 검증이 통과한 범위만 채택한다. 의도된 세 변경과 구조 리팩터링의 영향은 나누어 비교한다. solve/recovery/diagnostics 통합은 동작 보존 이득이 확인될 때 별도로 진행하며 첫 완료 조건으로 삼지 않는다.
 
-완료 기준은 줄 수 감소 자체가 아니라 “공통 MPCC 계산을 한 곳에서 유지하면서 기존 SF/MF의 Log-Cholesky 모델, 제약, 실행·설정·로그 계약이 바뀌지 않는 것”이다.
+완료 기준은 “공통 MPCC 계산을 한 곳에서 유지하고, SF 전구간 margin·MF 기준 공통 계수·CUDA 통일을 적용하며, 그 밖의 기존 Log-Cholesky 표현과 제약·실행·설정·로그 계약을 보존하는 것”이다.
 
 ## 9. 검증 계획 — 현재 실행하지 않음
 
@@ -372,19 +409,21 @@ SF/MF 고유 safety/risk/backup/device 기본값은 각 클래스에 남긴다. 
 
 | 검증 | 확인 내용 / 기존 근거 |
 |---|---|
-| 설정 호환성 | 기존/리팩터링 Param의 필드·타입·값, SF 병합 우선순위, unknown key, epsilon/gamma, scale/threshold 파생값, planner 인자 |
+| 설정 호환성 | 삭제된 SF 구간 키가 더 이상 영향을 주지 않고 unknown 경고 대상인지 확인. 그 외 필드·타입·값, SF 병합 우선순위, epsilon/gamma, scale/threshold 파생값, planner 인자 보존 |
+| 공통 계수 | MF/SF의 여섯 alpha/beta 기본값이 1.1절과 동일한지, 이미 반영된 `.6` 배율을 중복 적용하지 않는지 확인 |
 | Log-Cholesky | `tests/test_cc_covariance.py`: factor 변환, 기존 전파, 양수 초기 표준편차, frozen tail |
-| 모델 동등성 | `tests/test_cc_mf.py`의 SF/MF dynamics·cost 비교, frozen tail 입력 민감도 0, bound 검사; 두 방법 비교 시 서로 다른 noise 계수는 맞춰서 비교 |
+| 모델 동등성 | `tests/test_cc_mf.py`의 SF/MF dynamics·cost 비교, frozen tail 입력 민감도 0, bound 검사. 같은 MF 기준 공통 계수에서 비교 |
 | 물리 step | `tests/test_dd_dynamics.py`: DD pose map과 plant RK4 일치 |
 | 경로 | `tests/test_spline_path.py`: curvature 포함, fallback, projection; main과 backup solver의 진행도 예측 |
-| SF 안전 제약 | `tests/test_cc_sf.py`: signed gradient factor norm, zero-gradient/terminal 유한 미분, frozen tail에서도 risk mask 유지 |
+| SF 안전 제약 | `tests/test_cc_sf.py`: 기존 구간 제한 기대값을 전구간 적용으로 갱신. signed gradient factor norm, zero-gradient/terminal 유한 미분, global off, frozen tail에서도 margin 유지 |
 | MF 안전 제약 | `tests/test_cc_mf.py`: p slices, G hard/M soft, strict mask, window/terminal, MF 오류 시 G 유지 |
 | MF stage 0 | `tests/test_cc_mf_stage0.py`: exact phi 재사용, threshold equality, solver skip, stale status 차단, cache reset, stop 설치 실패 |
 | timing/status/log | `tests/test_cc_mf.py`, `tests/test_cc_mf_psdf_logging.py`: main+backup solver-only 시간, 예외, 성공 통계, 중복 PSDF 호출 방지 |
-| 간접 상속 | `tests/test_cc_ecs.py`, 필요 시 `tests/test_cc_ecs_integration.py`: SF 시그니처 및 가변 parameter block 호환 |
+| 간접 상속 | `tests/test_cc_ecs.py`, 필요 시 `tests/test_cc_ecs_integration.py`: SF 시그니처·가변 parameter block·ECS beta slot·process noise=0 보존 |
+| CUDA | 초기화 호출·wrapper·bridge·PSDF/risk/진단 tensor의 device 일치, CPU 자동 fallback 부재, CUDA 불가 시 명확한 오류, solver 경계의 CPU 변환 및 수치 허용오차 |
 | 자원 관리 | main/backup 이름 분리, 다른 optimizer의 생성 파일 보존, reset/cleanup/부분 초기화 |
 
-추가로 기존 구현과 리팩터링 구현에 동일한 입력을 넣어 stage/terminal 비용과 미분, discrete map, constraint value/Jacobian, `p` 배열, bounds/slack 설정, prepare 시 solver에 전달한 값을 비교한다. shape/index/flag는 정확히 같아야 하며 부동소수 계산은 기존 테스트 허용오차를 기준으로 차이 원인을 확인한다.
+추가로 기존 구현과 리팩터링 구현에 동일한 입력을 넣어 stage/terminal 비용과 미분, discrete map, constraint value/Jacobian, `p` 배열, bounds/slack 설정, prepare 시 solver에 전달한 값을 비교한다. 구조 리팩터링의 비교 기준은 기존 SF에도 MF 기준 계수·전구간 margin·CUDA를 적용한 구현으로 맞춘다. 기존 MF도 CUDA에서 비교한다. 이 기준에서는 shape/index/flag가 같아야 하며, 원래 SF 설정과의 차이는 의도된 변경 영향으로 따로 기록한다. 부동소수 계산은 기존 허용오차를 출발점으로 CUDA의 정밀도 차이를 확인하고 차이가 크면 원인을 조사한다.
 
 실제 acados 회귀 실행은 같은 환경·설정·seed·시작 pose에서 순차 수행한다. 첫 제어 입력, 경로 진행도, solver status, 복구 mode/count, terminal 제약, 성공/실패 이유를 비교한다. SF/MF의 기존 시간 측정 의미는 따로 확인한다. 실행할 때마다 새 결과 디렉터리를 사용하고 기존 CSV를 덮어쓰지 않는다.
 
@@ -392,4 +431,4 @@ SF/MF 고유 safety/risk/backup/device 기본값은 각 클래스에 남긴다. 
 
 먼저 이 문서 3절의 Log-Cholesky 보존 조건과 7절의 override 경계를 기준으로 시작한다. 복원된 파일이 있다는 이유만으로 factory에 `mpcc`를 등록하거나 CC의 `create_model/setup/solve_nlp`를 부모 구현으로 교체하지 않는다.
 
-다음 구현 단위는 **“최소 상속 연결 + 완전히 동일한 helper 제거 + 공통 MPCC 비용 추출”**이다. 파라미터 스키마 개선, 기본값 튜닝, 위험 모델 변경, 시간 정의 통일은 이 작업과 분리한다. 이번 커밋에는 원본 복원과 이 계획만 포함하며 실제 상속 적용은 후속 작업이다.
+다음 구현 단위는 **“최소 상속 연결 + 완전히 동일한 helper 제거 + 공통 MPCC 비용 추출 + 확정한 세 변경 적용”**이다. SF 구간 옵션 삭제, MF 기준 alpha/beta, CUDA 통일은 이번 계획에 포함한다. 그 밖의 파라미터 스키마 개선, 추가 튜닝, 위험 모델 변경, 시간 정의 통일은 분리한다. 원본 복원과 계획만 저장된 상태이며, 이번 수정도 문서에만 반영했다. 실제 상속과 새 설정 적용은 후속 구현 작업이다.

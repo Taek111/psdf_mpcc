@@ -1,0 +1,471 @@
+{
+  "analyzed_utc": "2026-10-19T06:49:16.747663+00:00",
+  "analysis_environment": {
+    "python": "3.12.10 (main, Apr  9 2025, 04:03:51) [Clang 20.1.0 ]",
+    "python_executable": "/tmp/psdf_mpcc_validation_20261019/bin/python",
+    "platform": "Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.31"
+  },
+  "checkout_commit": "721e7578db89dbbc7ed4812dc80e91b1dddd3e88",
+  "checkout_status": "M MPCC_OVERRIDE_PLAN.md\n M config/config.yaml\n M control/__init__.py\n M sim/simulation_mpc.py\n?? benchmark_runs/mpcc_refactor_validation_20261019/\n?? config/config_mpcc_refactor_validation.yaml\n?? tests/test_mpcc_integration.py",
+  "gpu_and_driver": "NVIDIA GeForce GTX 1660 SUPER, 591.86",
+  "pytorch_cuda_runtime": "11.8",
+  "acados_template_path": "/home/taek111/projects/acados/interfaces/acados_template/acados_template/__init__.py",
+  "acados_source_commit": "fd231104913cc9c305e0dff736281b91dc1dbc5b",
+  "results_dir": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current",
+  "scope": "Initial pose plus every saved post-plant-step pose. No optimizer is instantiated. Sampled checks do not guarantee continuous collision freedom between control steps.",
+  "geometry_definition": "Minimum Euclidean footprint-to-obstacle distance and map boundary clearance. Obstacle contact/overlap is zero; negative values indicate map violations. Strict obstacle overlap uses normalized-axis SAT with tolerance 1e-10 m.",
+  "timing_definitions": {
+    "controller_total": "perf_counter around generate_control_input, including setup/PSDF preparation/recovery and first-step code generation; excludes subsequent controller logging and plant update.",
+    "solver_cc_mf": "perf_counter around acados solve calls only; main plus backup solve durations per cycle.",
+    "solver_mpcc_cc_sf": "Legacy time.time interval including solver preparation, with SF recovery/diagnostics; not directly comparable to MF's solver-only interval.",
+    "statistics": "Seconds; pooled saved steps, finite nonnegative values; NumPy linear percentile. First step is included unless explicitly excluded."
+  },
+  "versions_note": "Versions below describe the analyzer interpreter; execute this script in the same environment used for the CLI run.",
+  "package_versions": {
+    "numpy": "1.26.4",
+    "torch": "2.4.1+cu118",
+    "casadi": "3.7.1",
+    "scipy": "1.13.1",
+    "PyYAML": "6.0.3",
+    "acados_template": "0.1"
+  },
+  "source_sha256": {
+    "control/mpcc_optimizer.py": "0c7fa1f578265fc2bcd750043d6e109e4a7c0ca39cc10e3f76df9de1bd792e1e",
+    "control/cc_mf_optimizer.py": "59a81a7a599cfcd3d542b96ca2c9a0639c0368c71f0228e8ecb32f7847adac0f",
+    "control/cc_sf_optimizer.py": "ccb409d8dfbbed3e9b3a64c14919807cec11d3ee122724a42cf635e796d75b38",
+    "control/cc_covariance.py": "245a27534245bc3cf7e9f51b6214050031ef3a2e8a97342c59a7fae406e8089a",
+    "sim/simulation_mpc.py": "3a23735e261517b46b609ae978396395c4aeb79f23067a94a9f7b74e8f5214cd",
+    "sim/start_perturbation.py": "8f49d31343d662cf6b50ade026e5fedbda93767e15ea609e4cfd199b11e651b8",
+    "models/dd.py": "4644e28795e8ee791b0bfe3fca4493116c462befd717afc5a856f823c14412a1",
+    "models/geometry_utils.py": "b219bffae83b5aed05ecad194adec8f08b67c50368cd205e3ca41f08415699de",
+    "config/config_mpcc_refactor_validation.yaml": "180b02f74c4c70371278616409cbe6d92cd443b7648a4855fb86f8e46adcdc8c"
+  },
+  "trials": [
+    {
+      "trial": {
+        "configuration_id": "config01",
+        "maze_type": "maze",
+        "optimizer_type": "mpcc",
+        "robot_shape": "rectangle",
+        "dynamics_type": "differential_drive",
+        "path_planner": "astar",
+        "trial_number": "1",
+        "start_seed": "0",
+        "start_perturbation_enabled": "False",
+        "initial_x": "0.075",
+        "initial_y": "0.7949999999999999",
+        "initial_theta": "-1.5707963267948966",
+        "success": "1",
+        "status": "success",
+        "failure_reason": "",
+        "goal_reached": "True",
+        "final_time": "23.30000000000006",
+        "distance_to_goal": "0.01950536766553533",
+        "successful_solver_steps": "233",
+        "solver_time_mean_s": "0.015720925105999466",
+        "solver_time_p95_s": "0.01857419013977051",
+        "current_name": "MPC_mpcc_rectangle_maze",
+        "output_root_dir": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current/runs/config01/trial_0001",
+        "error": ""
+      },
+      "history_path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current/runs/config01/trial_0001/data/trial_history_MPC_mpcc_rectangle_maze.csv",
+      "history_sha256": "6d55888edff5c614ff07cc277feeaf35ca2474011fd860f77fc37ec10c9854dc",
+      "initial_pose": [
+        0.075,
+        0.7949999999999999,
+        -1.5707963267948966
+      ],
+      "final_pose": [
+        1.804133178098798,
+        0.09863854576433338,
+        -0.587544548378506
+      ],
+      "scenario_goal_pose": [
+        1.7999999999999998,
+        0.09,
+        0.0
+      ],
+      "completed_plant_steps": 233,
+      "sample_count": 234,
+      "status_counts": {
+        "solver_raw_status": {
+          "success": 233
+        },
+        "solver_status_code": {
+          "0": 233
+        },
+        "solver_success": {
+          "True": 233
+        }
+      },
+      "minimum_polygon_clearance_m": 0.001063183270970895,
+      "minimum_clearance_sample_index": 204,
+      "minimum_clearance_time_s": 20.400000000000002,
+      "minimum_clearance_pose": [
+        1.7721178702274303,
+        0.12711648644920154,
+        -0.903446287689947
+      ],
+      "contact_or_overlap_sample_indices": [],
+      "outside_map_sample_indices": [],
+      "strict_overlap_samples": [],
+      "footprint_polygons_local": [
+        [
+          [
+            -0.075,
+            -0.035
+          ],
+          [
+            0.075,
+            -0.035
+          ],
+          [
+            0.075,
+            0.035
+          ],
+          [
+            -0.075,
+            0.035
+          ]
+        ]
+      ],
+      "map_bounds": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.95,
+          0.8999999999999999
+        ]
+      ],
+      "obstacle_count": 17,
+      "controller_total_time_all_steps": {
+        "count": 233,
+        "valid_count": 233,
+        "mean_s": 0.046246694721173605,
+        "median_s": 0.031922419992042705,
+        "p95_s": 0.04329768660245463,
+        "max_s": 3.1167783320124727
+      },
+      "controller_total_time_excluding_first": {
+        "count": 232,
+        "valid_count": 232,
+        "mean_s": 0.03301164456043525,
+        "median_s": 0.031901020993245766,
+        "p95_s": 0.04282602749735814,
+        "max_s": 0.06366214499576017
+      },
+      "controller_first_step_time_s": 3.1167783320124727,
+      "solver_time_all_steps": {
+        "count": 233,
+        "valid_count": 233,
+        "mean_s": 0.015720925105999466,
+        "median_s": 0.013958215713500977,
+        "p95_s": 0.01857419013977051,
+        "max_s": 0.31574511528015137
+      },
+      "solver_time_successful_steps": {
+        "count": 233,
+        "valid_count": 233,
+        "mean_s": 0.015720925105999466,
+        "median_s": 0.013958215713500977,
+        "p95_s": 0.01857419013977051,
+        "max_s": 0.31574511528015137
+      },
+      "logged_psdf": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current/runs/config01/trial_0001/data/pose_sdf_MPC_mpcc_rectangle_maze.csv",
+        "count": 233,
+        "finite_count": 233,
+        "minimum_m": 0.0010631643235683441,
+        "negative_sample_count": 0,
+        "scope": "Existing controller logging at pre-plant poses; may omit final pose or reuse optimizer cache. Not recomputed by this analyzer."
+      }
+    },
+    {
+      "trial": {
+        "configuration_id": "config02",
+        "maze_type": "maze",
+        "optimizer_type": "cc_mf",
+        "robot_shape": "rectangle",
+        "dynamics_type": "differential_drive",
+        "path_planner": "astar",
+        "trial_number": "1",
+        "start_seed": "0",
+        "start_perturbation_enabled": "False",
+        "initial_x": "0.075",
+        "initial_y": "0.7949999999999999",
+        "initial_theta": "-1.5707963267948966",
+        "success": "1",
+        "status": "success",
+        "failure_reason": "",
+        "goal_reached": "True",
+        "final_time": "31.00000000000017",
+        "distance_to_goal": "0.019947393423501505",
+        "successful_solver_steps": "310",
+        "solver_time_mean_s": "0.0008679674877296953",
+        "solver_time_p95_s": "0.0012039160079439172",
+        "current_name": "MPC_cc_mf_rectangle_maze",
+        "output_root_dir": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current/runs/config02/trial_0001",
+        "error": ""
+      },
+      "history_path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current/runs/config02/trial_0001/data/trial_history_MPC_cc_mf_rectangle_maze.csv",
+      "history_sha256": "ecee607d4c887099084dddd2acc0795124170e0265f9ea3f97d74372a5c3e7a1",
+      "initial_pose": [
+        0.075,
+        0.7949999999999999,
+        -1.5707963267948966
+      ],
+      "final_pose": [
+        1.8027862478082404,
+        0.09773364123174201,
+        -0.45581751852518004
+      ],
+      "scenario_goal_pose": [
+        1.7999999999999998,
+        0.09,
+        0.0
+      ],
+      "completed_plant_steps": 310,
+      "sample_count": 311,
+      "status_counts": {
+        "solver_raw_status": {
+          "success": 310
+        },
+        "solver_status_code": {
+          "0": 310
+        },
+        "solver_success": {
+          "True": 310
+        }
+      },
+      "minimum_polygon_clearance_m": 0.007861316638845104,
+      "minimum_clearance_sample_index": 99,
+      "minimum_clearance_time_s": 9.9,
+      "minimum_clearance_pose": [
+        0.8734256057432846,
+        0.5661332062031249,
+        -0.5720812998653777
+      ],
+      "contact_or_overlap_sample_indices": [],
+      "outside_map_sample_indices": [],
+      "strict_overlap_samples": [],
+      "footprint_polygons_local": [
+        [
+          [
+            -0.075,
+            -0.035
+          ],
+          [
+            0.075,
+            -0.035
+          ],
+          [
+            0.075,
+            0.035
+          ],
+          [
+            -0.075,
+            0.035
+          ]
+        ]
+      ],
+      "map_bounds": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.95,
+          0.8999999999999999
+        ]
+      ],
+      "obstacle_count": 17,
+      "controller_total_time_all_steps": {
+        "count": 310,
+        "valid_count": 310,
+        "mean_s": 0.04350051581024027,
+        "median_s": 0.033253105997573584,
+        "p95_s": 0.04530035304924241,
+        "max_s": 2.685525767999934
+      },
+      "controller_total_time_excluding_first": {
+        "count": 309,
+        "valid_count": 309,
+        "mean_s": 0.034950272275645795,
+        "median_s": 0.033253105997573584,
+        "p95_s": 0.04486432840931229,
+        "max_s": 0.056085535004967824
+      },
+      "controller_first_step_time_s": 2.685525767999934,
+      "solver_time_all_steps": {
+        "count": 310,
+        "valid_count": 310,
+        "mean_s": 0.0008679674877296953,
+        "median_s": 0.0008240405149990693,
+        "p95_s": 0.0012039160079439172,
+        "max_s": 0.003018865012563765
+      },
+      "solver_time_successful_steps": {
+        "count": 310,
+        "valid_count": 310,
+        "mean_s": 0.0008679674877296953,
+        "median_s": 0.0008240405149990693,
+        "p95_s": 0.0012039160079439172,
+        "max_s": 0.003018865012563765
+      },
+      "logged_psdf": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current/runs/config02/trial_0001/data/pose_sdf_MPC_cc_mf_rectangle_maze.csv",
+        "count": 310,
+        "finite_count": 310,
+        "minimum_m": 0.007861331105232239,
+        "negative_sample_count": 0,
+        "scope": "Existing controller logging at pre-plant poses; may omit final pose or reuse optimizer cache. Not recomputed by this analyzer."
+      }
+    },
+    {
+      "trial": {
+        "configuration_id": "config03",
+        "maze_type": "maze",
+        "optimizer_type": "cc_sf",
+        "robot_shape": "rectangle",
+        "dynamics_type": "differential_drive",
+        "path_planner": "astar",
+        "trial_number": "1",
+        "start_seed": "0",
+        "start_perturbation_enabled": "False",
+        "initial_x": "0.075",
+        "initial_y": "0.7949999999999999",
+        "initial_theta": "-1.5707963267948966",
+        "success": "1",
+        "status": "success",
+        "failure_reason": "",
+        "goal_reached": "True",
+        "final_time": "27.700000000000124",
+        "distance_to_goal": "0.019935327900562363",
+        "successful_solver_steps": "277",
+        "solver_time_mean_s": "0.03002456637496122",
+        "solver_time_p95_s": "0.037604665756225585",
+        "current_name": "MPC_cc_sf_rectangle_maze",
+        "output_root_dir": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current/runs/config03/trial_0001",
+        "error": ""
+      },
+      "history_path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current/runs/config03/trial_0001/data/trial_history_MPC_cc_sf_rectangle_maze.csv",
+      "history_sha256": "bfee492341ef7fd9f5279e27920a2d2836b73ac022674c85439715da5112f285",
+      "initial_pose": [
+        0.075,
+        0.7949999999999999,
+        -1.5707963267948966
+      ],
+      "final_pose": [
+        1.802758086744505,
+        0.09769341464506749,
+        -0.4543885819921145
+      ],
+      "scenario_goal_pose": [
+        1.7999999999999998,
+        0.09,
+        0.0
+      ],
+      "completed_plant_steps": 277,
+      "sample_count": 278,
+      "status_counts": {
+        "solver_raw_status": {
+          "success": 277
+        },
+        "solver_status_code": {
+          "0": 277
+        },
+        "solver_success": {
+          "True": 277
+        }
+      },
+      "minimum_polygon_clearance_m": 0.008554009382642972,
+      "minimum_clearance_sample_index": 89,
+      "minimum_clearance_time_s": 8.9,
+      "minimum_clearance_pose": [
+        0.875870857448458,
+        0.5634977347399258,
+        -0.48785037247651386
+      ],
+      "contact_or_overlap_sample_indices": [],
+      "outside_map_sample_indices": [],
+      "strict_overlap_samples": [],
+      "footprint_polygons_local": [
+        [
+          [
+            -0.075,
+            -0.035
+          ],
+          [
+            0.075,
+            -0.035
+          ],
+          [
+            0.075,
+            0.035
+          ],
+          [
+            -0.075,
+            0.035
+          ]
+        ]
+      ],
+      "map_bounds": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.95,
+          0.8999999999999999
+        ]
+      ],
+      "obstacle_count": 17,
+      "controller_total_time_all_steps": {
+        "count": 277,
+        "valid_count": 277,
+        "mean_s": 0.067929290498448,
+        "median_s": 0.04818672701367177,
+        "p95_s": 0.06390212037949822,
+        "max_s": 5.113982287002727
+      },
+      "controller_total_time_excluding_first": {
+        "count": 276,
+        "valid_count": 276,
+        "mean_s": 0.04964648978647597,
+        "median_s": 0.0481703270052094,
+        "p95_s": 0.06335977224080125,
+        "max_s": 0.09896282298723236
+      },
+      "controller_first_step_time_s": 5.113982287002727,
+      "solver_time_all_steps": {
+        "count": 277,
+        "valid_count": 277,
+        "mean_s": 0.03002456637496122,
+        "median_s": 0.02892136573791504,
+        "p95_s": 0.037604665756225585,
+        "max_s": 0.06122136116027832
+      },
+      "solver_time_successful_steps": {
+        "count": 277,
+        "valid_count": 277,
+        "mean_s": 0.03002456637496122,
+        "median_s": 0.02892136573791504,
+        "p95_s": 0.037604665756225585,
+        "max_s": 0.06122136116027832
+      },
+      "logged_psdf": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current/runs/config03/trial_0001/data/pose_sdf_MPC_cc_sf_rectangle_maze.csv",
+        "count": 277,
+        "finite_count": 277,
+        "minimum_m": 0.008554019033908844,
+        "negative_sample_count": 0,
+        "scope": "Existing controller logging at pre-plant poses; may omit final pose or reuse optimizer cache. Not recomputed by this analyzer."
+      }
+    }
+  ],
+  "run_manifest_path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current/run_manifest.yaml",
+  "run_manifest_sha256": "5888fbbef551bc34b312cffa57151e5a6d3eadd199b53a90562abd6d85fbd2db",
+  "trial_results_sha256": "4fe273089db27e3fc4f990c296c366647d79a6fa0caf0517f0b7b3355ca42caf"
+}

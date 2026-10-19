@@ -8,13 +8,13 @@
 
 ## 1. 이번 작업의 결과와 변경 범위
 
-`control/mpcc_optimizer.py`의 마지막 과거 버전을 먼저 **원문 그대로 복원**한 뒤, 이 문서의 계획에 따라 공통 부모로 리팩터링했다. 현재 `CCMFOptimizer`와 `CCSFOptimizer`는 `MPCCOptimizer`를 상속한다. 이 문서는 설계 근거, 구현 결과와 아직 실행하지 않은 검증 계획을 함께 보관한다.
+`control/mpcc_optimizer.py`의 마지막 과거 버전을 먼저 **원문 그대로 복원**한 뒤, 이 문서의 계획에 따라 공통 부모로 리팩터링했다. 현재 `CCMFOptimizer`와 `CCSFOptimizer`는 `MPCCOptimizer`를 상속한다. 이 문서는 설계 근거, 구현 결과와 검증 현황을 함께 보관한다.
 
 **사용자 요구에 따라 현재 CC-MF / CC-SF의 Log-Cholesky Parameterization을 그대로 유지한다.** 공분산 행렬 원소를 직접 최적화 상태로 사용하는 방식으로 바꾸지 않는다. 과거 MPCC에서는 공통 부모와 override 구조를 만드는 데 필요한 부분만 참고한다. 과거의 4차원 모델, ERK 설정, warm start, solve 절차로 현재 CC 구현을 되돌리지 않는다.
 
 이번 변경 파일:
 
-- `control/mpcc_optimizer.py`: 공통 MPCC 비용·경로·진행도·OCP helper와 CUDA 검증. 현재 factory/CLI에 `mpcc`를 다시 등록하지 않았다.
+- `control/mpcc_optimizer.py`: 공통 MPCC 비용·경로·진행도·OCP helper와 CUDA 검증. 리팩터링 후 사용자의 실행 요청에 따라 factory/CLI에 `mpcc`도 등록했다(1.3절).
 - `control/cc_mf_optimizer.py`, `control/cc_sf_optimizer.py`: MPCC 상속, 공통 helper 사용, 방법별 모델·제약·복구 유지.
 - `control/cc_covariance.py`: MF/SF 공통 noise 기본값 초기화 함수 추가. 기존 변환·전파 함수는 유지.
 - `control/cc_ecs_optimizer.py`: 기존 SF 상속 및 ECS 수식 유지, PSDF 초기화 CUDA 정책 반영.
@@ -22,7 +22,7 @@
 - `tests/test_mpcc_inheritance.py`, `tests/test_cc_mf.py`, `tests/test_cc_sf.py`, `tests/test_cc_ecs.py`: 새 상속 구조·의도된 설정 변경에 대한 회귀 사례 추가 및 갱신.
 - `MPCC_OVERRIDE_PLAN.md`: 구현 분석, 설정 방식, 상속 경계, 구현 기록 및 검증 계획.
 
-원본 복원 단계에서는 Git 이력과 파일 바이트 일치를 확인했다. 리팩터링 단계에서는 소스·AST 정적 비교와 구문 검사를 수행했다. 저장소 지침에 따라 테스트·시뮬레이션·benchmark 및 optimizer import/solver 생성은 실행하지 않았다. 따라서 리팩터링 후 실행 성공이나 수치 동등성은 아직 검증되지 않았다.
+원본 복원 단계에서는 Git 이력과 파일 바이트 일치를 확인했고 리팩터링 단계에서는 소스·AST 정적 비교와 구문 검사를 수행했다. 이후 사용자가 실제 실행을 요청하여 DD/maze/rectangle에서 세 controller의 주행과 관련 회귀 테스트를 실행했다. 실행 범위와 한계는 1.3절에 기록한다.
 
 ### 1.1 2026-10-19 확정 변경 사항
 
@@ -53,7 +53,23 @@
 
 정적 비교에서 `cc_covariance.py`의 기존 함수 12개는 AST가 동일하다. MF/SF의 `add_obstacle_avoidance_constraint`, `_prepare_and_solve`, `solve_nlp`, `cleanup`, `create_solver`와 각 `AcadosSolution`도 리팩터링 전과 AST가 동일하다. 비용식을 제외한 모델 구성은 AST가 동일하며, 추출한 비용식도 변수명 대응과 기존 `q_s_ref` 접근 adapter를 제외하면 AST가 동일하다. Python 3.12에서 `control/`과 `tests/`의 41개 Python 파일 및 변경한 실험 스크립트를 import 없이 AST로 파싱했다.
 
-새 회귀 사례는 상속 관계, 기본값과 배열 독립성, stage/terminal 비용 및 미분, curvature, backup 진행도, CUDA 오류 경계, MPCC 자원 소유권을 다룬다. 기존 SF 테스트는 전 구간 margin과 global off를 확인하도록 갱신했고 MF/SF 동역학 비교는 공통 기본 계수를 사용하도록 했다. **테스트 코드는 준비했지만 실행하지 않았다.** 9절의 수치·solver·CUDA 실행 검증은 사용자의 별도 실행 요청 후 진행한다.
+새 회귀 사례는 상속 관계, 기본값과 배열 독립성, stage/terminal 비용 및 미분, curvature, backup 진행도, CUDA 오류 경계, MPCC 자원 소유권을 다룬다. 기존 SF 테스트는 전 구간 margin과 global off를 확인하도록 갱신했고 MF/SF 동역학 비교는 공통 기본 계수를 사용하도록 했다. 리팩터링 커밋 당시에는 정적 검토만 했으며, 후속 실행 결과는 아래와 같다.
+
+### 1.3 실제 실행 검증 — 2026-10-19
+
+사용자의 요청에 따라 `mpcc`를 factory/CLI와 결과 로깅에 연결하고, 세 controller를 **DD kinematics / maze / rectangle(0.15×0.07 m) / A*** 조건에서 각 1회 순차 실행했다. 공통 시작 pose는 `[0.075, 0.795, -pi/2]`이며 perturbation과 localization error는 껐다. 각 방법의 Param 기본값, 최대 60초, 기존 목표 판정(L1 위치 오차 ≤ 0.02 m)을 사용했다.
+
+| 방법 | 결과 | 시뮬레이션 도달시간 | solver 성공 단계 | 샘플 최소 실제 도형 간격 |
+|---|---|---:|---:|---:|
+| MPCC | 성공 | 23.3 s | 233 / 233 | 1.063 mm |
+| CC-MF | 성공 | 31.0 s | 310 / 310 | 7.861 mm |
+| CC-SF | 성공 | 27.7 s | 277 / 277 | 8.554 mm |
+
+MF/SF의 backup 복구와 safe stop은 모두 0회다. 초기 pose와 매 plant step 후 pose(0.1초 간격)를 별도 polygon 거리/SAT 검사로 확인했으며 접촉·겹침 샘플은 없었다. 이 결과는 단일 nominal 실행이며 연속 시간 전체의 충돌 자유나 perturbation에 대한 성공률 보장은 아니다.
+
+공유 MPCC·MF/SF·Log-Cholesky·DD·ECS 호환성 관련 집중 회귀 **101개는 모두 통과**했다. 더 넓은 110개 검사에서는 107개 통과, 1개 skip, 2개 오류가 있었으며 각각 기존 ECS 예제 YAML 파일 누락과 별도 PSDF optimizer의 `l4casadi` 미설치였다. 상세 로그와 환경, 재현 명령은 [실행 보고서](benchmark_runs/mpcc_refactor_validation_20261019/README.md)에 보관한다.
+
+세 controller에서 이번 조건의 실행 회귀가 재현되지 않아 MF/SF의 알고리즘·파라미터를 추가 수정하거나 과거 버전의 별도 주행을 실행하지 않았다. Log-Cholesky 표현과 기존 제약·복구 구현은 유지했다. 광범위한 seed/환경 benchmark 및 과거 코드와의 전체 horizon 수치 추적 비교는 이번 검증 범위 밖이다.
 
 ## 2. 복원 출처
 
@@ -416,7 +432,7 @@ SF의 margin scale slot은 CC-ECS에서 ECS beta 값에 사용되므로 유지�
 
 ## 8. 구현 순서와 완료 조건
 
-1–6단계 구현을 완료했다. 7단계의 소스·AST 검토는 완료했으며 수치·solver 실행 검증은 미실행 상태다.
+1–6단계 구현을 완료했다. 7단계의 소스·AST 검토와 1.3절의 집중 회귀·단일 nominal 주행을 완료했다. 아래 전체 검증 표가 모두 실행된 것은 아니다.
 
 1. **기준 고정:** 현재 CC 파일과 Param/solver 계약을 기준으로 둔다. 복원 원본의 commit/blob를 보존한다. 이번 작업에서 완료.
 2. **최소 상속:** 위 클래스 선언만 연결하고 현재 생성자·모델·제약·solve/recovery·cleanup은 override로 유지한다. 완전히 동일한 메서드만 부모로 올린다.
@@ -428,9 +444,9 @@ SF의 margin scale slot은 CC-ECS에서 ECS beta 값에 사용되므로 유지�
 
 완료 기준은 “공통 MPCC 계산을 한 곳에서 유지하고, SF 전구간 margin·MF 기준 공통 계수·CUDA 통일을 적용하며, 그 밖의 기존 Log-Cholesky 표현과 제약·실행·설정·로그 계약을 보존하는 것”이다.
 
-## 9. 검증 계획 — 현재 실행하지 않음
+## 9. 검증 계획과 실행 범위
 
-저장소의 테스트·benchmark 미실행 지침을 유지한다. 아래는 이후 사용자가 실행을 요청한 환경에서 수행할 계획이다.
+사용자의 실행 요청으로 수행한 범위는 1.3절과 실행 보고서에 기록했다. 아래는 검증 항목 전체이며, 별도로 요청하지 않은 반복 benchmark나 모든 과거 버전 비교까지 완료했다는 의미는 아니다.
 
 | 검증 | 확인 내용 / 기존 근거 |
 |---|---|
@@ -455,6 +471,6 @@ SF의 margin scale slot은 CC-ECS에서 ECS beta 값에 사용되므로 유지�
 
 ## 10. 집에서 이어서 작업할 때
 
-먼저 최신 커밋을 받은 뒤 이 문서 1.2절의 구현 상태, 3절의 Log-Cholesky 보존 조건, 7절의 override 경계를 확인한다. factory에 `mpcc`를 등록하거나 CC의 `create_model/setup/solve_nlp`를 부모 구현으로 교체하는 작업은 이번 범위에 포함하지 않았다.
+먼저 최신 커밋을 받은 뒤 이 문서 1.2절의 구현 상태, 1.3절의 실행 결과, 3절의 Log-Cholesky 보존 조건, 7절의 override 경계를 확인한다. `mpcc`는 후속 실행 요청에 따라 factory/CLI에 등록했으며, CC의 `create_model/setup/solve_nlp`는 각 자식 구현을 유지한다.
 
-**상속 연결, 공통 helper·비용 추출, SF 구간 옵션 삭제, MF 기준 alpha/beta, CUDA 통일은 구현했다.** 다음 작업은 Python 3.10+와 기존 acados/CasADi·CUDA 환경에서 9절의 회귀 검증을 실행하는 것이다. 저장소 지침에 따라 실행 요청 전에는 이 검증을 시작하지 않는다. 특히 SF 계수 변경과 CUDA 전환의 수치 영향, main/backup 실제 실행을 확인해야 한다. 그 밖의 파라미터 스키마 개선, 추가 튜닝, 위험 모델 변경, 시간 정의 통일은 별도 작업으로 둔다.
+**상속 연결, 공통 helper·비용 추출, SF 구간 옵션 삭제, MF 기준 alpha/beta, CUDA 통일은 구현했고 집중 회귀 및 세 방법의 nominal maze 실행도 통과했다.** 재현 시 실행 보고서의 Python 3.12/acados/CasADi/CUDA 환경과 전용 설정을 사용한다. 반복 benchmark나 다른 환경 검증은 별도 요청에 따라 새 결과 디렉터리에서 수행한다. 파라미터 스키마 개선, 추가 튜닝, 위험 모델 변경, 시간 정의 통일은 별도 작업으로 둔다.

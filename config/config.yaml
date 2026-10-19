@@ -5,7 +5,7 @@
 # Each test can have the following options:
 # Environment type (options: "s_path", "straight_corridor", "maze", "oblique_maze", "parking")
 # Robot shape (options: "rectangle", "pentagon", "triangle", "lshape")
-# Controller/optimizer type (options: "obca", "psdf", "cc_mf", "cc_sf", "dcbf", "cc_ecs", "sipoc", "uobca")
+# Controller/optimizer type (options: "obca", "psdf", "mpcc", "cc_mf", "cc_sf", "dcbf", "cc_ecs", "sipoc", "uobca")
 # Dynamics model (currently only "differential_drive" is supported)
 # Path planner type (options: "astar", "hybrid_astar")
 
@@ -68,6 +68,7 @@ defaults:
 # optimizer_type options:
 #   - "obca": OBCAOptimizer from control/obca_optimizer.py (CasADi/IPOPT)
 #   - "psdf": PSDF-based MPC with obstacle detection (acados SQP-RTI)
+#   - "mpcc": Deterministic PSDF-constrained MPCC with spline path tracking (acados SQP-RTI)
 #   - "cc_mf": Chance-constrained MPCC with signed-PSDF guard and MF affine rows (acados SQP-RTI)
 #   - "cc_sf": Chance-constrained MPCC with projected-variance PSDF margin (acados SQP-RTI)
 #   - "dcbf": DCBF optimizer from control/dcbf_optimizer.py (CasADi/IPOPT)

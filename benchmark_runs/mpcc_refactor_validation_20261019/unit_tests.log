@@ -1,0 +1,71 @@
+...................................................................................../home/taek111/projects/psdf_mpcc/models/geometry_utils.py:246: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at ../torch/csrc/utils/tensor_new.cpp:278.)
+  edgesA = torch.tensor(edgesA, dtype=torch.float32)
+......E.......s.E........
+======================================================================
+ERROR: test_example_config_has_four_isolated_ecs_runs (tests.test_cc_ecs_integration.CCECSIntegrationTest.test_example_config_has_four_isolated_ecs_runs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/taek111/projects/psdf_mpcc/tests/test_cc_ecs_integration.py", line 151, in test_example_config_has_four_isolated_ecs_runs
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/taek111/.local/share/uv/python/cpython-3.12.10-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/taek111/.local/share/uv/python/cpython-3.12.10-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/taek111/projects/psdf_mpcc/config/config_nmpc_cc_ecs_rectangle_all4.yaml'
+
+======================================================================
+ERROR: test_erk_ocps_explicitly_select_one_classical_rk4_step (tests.test_dd_dynamics.MPCIntegrationTest.test_erk_ocps_explicitly_select_one_classical_rk4_step)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/taek111/projects/psdf_mpcc/tests/test_dd_dynamics.py", line 127, in test_erk_ocps_explicitly_select_one_classical_rk4_step
+    for ocp in self.make_erk_ocps():
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/home/taek111/projects/psdf_mpcc/tests/test_dd_dynamics.py", line 118, in make_erk_ocps
+    from control.psdf_optimizer import PSDFOptimizer, PSDFOptimizerParam
+  File "/home/taek111/projects/psdf_mpcc/control/psdf_optimizer.py", line 14, in <module>
+    import l4casadi as l4c
+ModuleNotFoundError: No module named 'l4casadi'
+
+----------------------------------------------------------------------
+Ran 110 tests in 2.053s
+
+FAILED (errors=2, skipped=1)
+Warning: could not report final diagnostics: formatting failed
+CC-MF execution summary: SQP-WITH FEASIBLE QP=0, Safe stop=1, Plant-applied control inputs=0
+Applied nominal_safe_controller plan: safe_stop.
+[CC-MF 0000] SAFE_STOP solve=0.0ms pose=(0.250,-0.100,0.200) u=(0.000,0.000) s=0.050
+CC-MF execution summary: SQP-WITH FEASIBLE QP=0, Safe stop=1, Plant-applied control inputs=0
+Added two affine safety rows at intermediate/terminal stages: 0=HARD guard/recovery, 1=SOFT MF
+Added two affine safety rows at intermediate/terminal stages: 0=HARD guard/recovery, 1=SOFT MF
+field AcadosOcpDims.N has been migrated to AcadosOcpOptions.N_horizon. setting AcadosOcpOptions.N_horizon = N. For future comppatibility, please use AcadosOcpOptions.N_horizon directly.
+
+WARNING: Gauss-Newton Hessian approximation with EXTERNAL cost type not well defined!
+got cost_type EXTERNAL for cost_type_0, cost_type, cost_type_e, hessian_approx: 'GAUSS_NEWTON'.
+With this setting, acados will proceed computing the exact Hessian for the cost term and no Hessian contribution from constraints and dynamics.
+If the external cost is a linear least squares cost, this coincides with the Gauss-Newton Hessian.
+Note: There is also the option to use the external cost module with a numerical Hessian approximation (see `ext_cost_num_hess`).
+OR the option to provide a symbolic custom Hessian approximation (see `cost_expr_ext_cost_custom_hess`).
+
+Added two affine safety rows at intermediate/terminal stages: 0=HARD guard/recovery, 1=SOFT MF
+Warning: stage-0 full-state bounds update failed; keeping previous equality bounds.
+Warning: failed to update per-stage augmented-state bounds in solver.
+Added HARD projected-variance obstacle constraint with d_min = 0.001
+Added HARD projected-variance obstacle constraint with d_min = 0.001
+[CC-ECS 0001] sqp_rti status=0 solve=0.0ms s=0.000
+[CC-ECS 0001] safe_stop status=4 solve=0.0ms s=0.000
+CC-ECS execution summary: Recovered=0, Safe stop=1, Plant-applied control inputs=0
+[CC-ECS 0001] backup_feasible_qp status=0 solve=1000.0ms s=0.000
+[CC-ECS 0002] sqp_rti status=0 solve=250.0ms s=0.000
+CC-ECS execution summary: Recovered=1, Safe stop=0, Plant-applied control inputs=0
+CC-ECS constraints history saved to /tmp/tmpikfndhhn/data/cc_ecs_constraints_MPC_cc_ecs_rectangle_maze.csv
+CC-ECS covariance history saved to /tmp/tmpikfndhhn/data/cc_ecs_covariance_MPC_cc_ecs_rectangle_maze.csv
+CC-ECS cycle history saved to /tmp/tmpikfndhhn/data/cc_ecs_cycle_MPC_cc_ecs_rectangle_maze.csv
+CC-ECS configured from config: horizon=3, tf=0.3, d_min=0.006, v_s_max=0.4
+Resetting cc_ecs optimizer for clean state...
+CC-MF execution summary: SQP-WITH FEASIBLE QP=0, Safe stop=1, Plant-applied control inputs=0
+CC-MF execution summary: SQP-WITH FEASIBLE QP=1, Safe stop=0, Plant-applied control inputs=0
+Resetting sipoc optimizer for clean state...
+CC-MF configured from config: horizon=20, tf=4.0

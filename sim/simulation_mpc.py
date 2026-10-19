@@ -1016,6 +1016,7 @@ class simulation_mpc:
             "uobca": "MPC_UOBCA_",
             "sipoc": "MPC_sipoc_",
             "psdf": "MPC_psdf_",
+            "mpcc": "MPC_mpcc_",
             "cc_sf": "MPC_cc_sf_",
             "cc_mf": "MPC_cc_mf_",
             "cc_ecs": "MPC_cc_ecs_",
@@ -1635,7 +1636,7 @@ class simulation_mpc:
         Args:
             maze_type: Type of maze environment ("s_path", "straight_corridor", "maze", "oblique_maze", "parking")
             robot_shape: Shape of robot ("rectangle", "pentagon", "triangle", "lshape")
-            optimizer_type: Type of optimizer ("obca", "psdf", "cc_mf",
+            optimizer_type: Type of optimizer ("obca", "psdf", "mpcc", "cc_mf",
                 "cc_sf", "dcbf", "cc_ecs", "sipoc", "uobca")
             dynamics_type: Type of dynamics ("differential_drive")
             path_planner: Type of path planner.
@@ -1818,6 +1819,44 @@ class simulation_mpc:
             
             optimizer = PSDFOptimizer()
             optimizer_name = "psdf"
+        elif optimizer_type == "mpcc":
+            from control.mpcc_optimizer import MPCCOptimizer, MPCCOptimizerParam
+
+            opt_param = MPCCOptimizerParam()
+            self._apply_param_overrides(
+                opt_param, self._get_config_block(config, "mpcc"), "MPCC",
+            )
+            if config and "psdf_detection" in config:
+                print(
+                    "MPCC ignores legacy 'psdf_detection' settings; "
+                    "detection parameters are unused."
+                )
+
+            dt = float(opt_param.tf) / float(opt_param.horizon)
+            local_window_length = max(
+                float(opt_param.v_s_max) * float(opt_param.tf) * 1.25,
+                0.8,
+            )
+            self.robot.set_local_planner(
+                SplineReferenceGenerator(
+                    reference_speed=max(0.25, 0.7 * float(opt_param.v_s_max)),
+                    num_horizon=opt_param.horizon,
+                    local_path_timestep=dt,
+                    window_length=local_window_length,
+                    max_segments=opt_param.max_segments,
+                    proj_dist_buffer=0.03,
+                    sample_count=opt_param.horizon,
+                    min_point_distance=1e-4,
+                    spline_bc_type="natural",
+                    projected_s_backtrack_tolerance=getattr(
+                        opt_param,
+                        "planner_projected_s_backtrack_tolerance",
+                        0.15,
+                    ),
+                )
+            )
+            optimizer = MPCCOptimizer()
+            optimizer_name = "mpcc"
         elif optimizer_type == "cc_mf":
             from control.cc_mf_optimizer import CCMFOptimizer, CCMFOptimizerParam
 
@@ -2005,7 +2044,7 @@ class simulation_mpc:
         )
         
         # If using PSDF-family optimizer, set up data logging and obstacle update hooks
-        if optimizer_type in ("psdf", "cc_mf", "cc_sf", "cc_ecs", "dcbf"):
+        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs", "dcbf"):
             # Monkey patch the controller to log pose-SDF data and perform obstacle detection
             original_generate_control = controller.generate_control_input
             
@@ -2182,7 +2221,7 @@ class simulation_mpc:
             self.save_cc_ecs_history_to_csv()
 
         # Save pose-SDF data to CSV for PSDF-family optimizers
-        if optimizer_type in ("psdf", "cc_mf", "cc_sf", "cc_ecs"):
+        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs"):
             csv_filename = f"pose_sdf_{self.current_name}"
             self.save_pose_sdf_to_csv(csv_filename)
         

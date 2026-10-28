@@ -1,0 +1,49 @@
+# Optional CC-MF-IMP example. This file does not change config/config.yaml.
+# Run only when validation/simulation is explicitly requested:
+# python test_nmpc.py -c config/config_cc_mf_imp.yaml
+# CLI selection also accepts --optimizer-type cc-mf-imp.
+
+start_perturbation:
+  enabled: false
+  seed: 0
+
+localization_error:
+  enabled: false
+
+defaults:
+  simulation_time: 20.0
+  generate_animation: false
+  generate_plots: false
+
+trial_failure_criteria:
+  enabled: true
+  movement_window_sec: 4.0
+  movement_threshold: 0.03
+  max_consecutive_solver_failures: 20
+
+# Independent settings: the cc_mf block is never implicitly inherited.
+cc_mf_imp:
+  augmented_psdf_device: cuda
+  chance_epsilon: 0.20  # Upper-bound Newton requires 0 < epsilon < 0.5.
+  d_min: 0.0002
+  d_col: 0.0002
+  use_obstacle_constraint: true
+  use_row_mf: true
+  mf_active_start_step: 1
+  mf_active_end_step: null
+  mf_active_terminal: true
+  mf_imp_root_max_iter: 12
+  mf_imp_root_atol_m: 1.0e-8
+  mf_imp_root_rtol: 1.0e-10
+  mf_imp_root_prob_atol: 1.0e-10
+  # Provisional distance-slack penalties; retune before comparing performance.
+  mf_slack_linear: 100.0   # cost / m
+  mf_slack_quadratic: 1.0  # cost / m^2
+  debug_mf: false
+
+test_configs:
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_mf_imp  # cc-mf-imp is also accepted here.
+    dynamics_type: differential_drive
+    path_planner: astar

@@ -8,6 +8,8 @@ in the explicitly gated geometry test.
 import io
 import unittest
 from contextlib import redirect_stdout
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -20,7 +22,7 @@ from control.cc_sf_optimizer import CCSFOptimizer, CCSFOptimizerParam
 from control.mpcc_optimizer import MPCCOptimizer, MPCCOptimizerParam
 from models.geometry_utils import RectangleRegion
 from sim.simulation_mpc import simulation_mpc
-from utils.spline_path import build_cubic_spline_path_data, curvature
+from utils.spline_path import build_cubic_spline_path_data
 
 
 MPCC_TYPES = (
@@ -48,7 +50,7 @@ class MPCCInheritanceTest(unittest.TestCase):
 
     def test_common_noise_defaults_match_current_mf_tuning_but_ecs_stays_noise_free(self):
         expected = {
-            "alpha_f": 0.0012, "alpha_v": 0.00024, "alpha_kappa": 0.006,
+            "alpha_f": 0.0012, "alpha_v": 0.00024, "alpha_kappa": 0.0003,
             "beta_v": 0.012, "beta_kappa": 0.0048, "beta_omega": 0.0048,
         }
         for param_type in (CCMFOptimizerParam, CCSFOptimizerParam):
@@ -134,7 +136,7 @@ class MPCCInheritanceTest(unittest.TestCase):
                     np.testing.assert_allclose(du, reference_derivatives[1], atol=1e-14)
                     np.testing.assert_array_equal(dx[:, 4:], np.zeros((2, 4)))
 
-    def test_shared_path_helper_preserves_cc_curvature_and_deterministic_layout(self):
+    def test_shared_path_helper_keeps_cc_layout_without_evaluating_curvature(self):
         path = build_cubic_spline_path_data(
             np.array([[0.0, 0.0], [0.5, 0.2], [1.0, 0.0]])
         )
@@ -143,15 +145,18 @@ class MPCCInheritanceTest(unittest.TestCase):
         for optimizer_type, param_type in MPCC_TYPES:
             optimizer = self.make_optimizer(optimizer_type, param_type)
             optimizer.set_reference_trajectory(path)
-            frame = optimizer._build_stage_path_parameter(progress)
+            with patch(
+                "utils.spline_path.curvature",
+                side_effect=AssertionError("unused curvature must not be evaluated"),
+            ):
+                frame = optimizer._build_stage_path_parameter(progress)
             if optimizer_type is MPCCOptimizer:
                 self.assertEqual(frame.shape, (5,))
                 reference = frame
             else:
                 self.assertEqual(frame.shape, (6,))
                 np.testing.assert_allclose(frame[:5], reference)
-                self.assertAlmostEqual(frame[5], curvature(path, progress))
-                self.assertNotEqual(frame[5], 0.0)
+                self.assertEqual(frame[5], 0.0)
 
     def test_progress_prediction_reads_explicit_backup_solver(self):
         class ProgressSolver:
@@ -183,52 +188,84 @@ class MPCCInheritanceTest(unittest.TestCase):
 
 class MPCCResourceOwnershipTest(unittest.TestCase):
     def test_uninitialized_cleanup_preserves_existing_generic_and_mpcc_artifacts(self):
-        files = {"acados_ocp.json", "acados_ocp_mpcc.json"}
-        directories = {"c_generated_code", "c_generated_code_mpcc"}
         with (
-            patch("control.mpcc_optimizer.os.path.exists", side_effect=files.__contains__),
-            patch("control.mpcc_optimizer.os.path.isdir", side_effect=directories.__contains__),
-            patch("control.mpcc_optimizer.os.remove") as remove,
+            patch("utils.acados_codegen.TemporaryDirectory") as allocate,
             patch("shutil.rmtree") as rmtree,
         ):
             optimizer = MPCCOptimizer()
             optimizer.cleanup()
-            remove.assert_not_called()
+            allocate.assert_not_called()
             rmtree.assert_not_called()
 
-    def test_cleanup_removes_only_paths_registered_by_solver_creation(self):
-        files = {"acados_ocp.json", "acados_ocp_mpcc.json"}
-        directories = {"c_generated_code", "c_generated_code_mpcc"}
+    def test_cleanup_removes_owned_workspace_even_if_ocp_path_changes(self):
         fake_ocp = SimpleNamespace(solver_options=SimpleNamespace())
         fake_solver = object()
+        optimizer = MPCCOptimizer()
+        self.addCleanup(optimizer.cleanup)
         with (
+            TemporaryDirectory() as unrelated,
             patch("control.mpcc_optimizer.AcadosOcpSolver", return_value=fake_solver) as create,
-            patch("control.mpcc_optimizer.os.path.exists", side_effect=files.__contains__),
-            patch("control.mpcc_optimizer.os.path.isdir", side_effect=directories.__contains__),
-            patch("control.mpcc_optimizer.os.remove", side_effect=files.remove) as remove,
-            patch(
-                "shutil.rmtree",
-                side_effect=lambda path, **kwargs: directories.remove(path),
-            ) as rmtree,
         ):
-            optimizer = MPCCOptimizer()
-            try:
-                optimizer.ocp = fake_ocp
-                optimizer.create_solver()
-                create.assert_called_once_with(fake_ocp, json_file="acados_ocp_mpcc.json")
-                self.assertIs(optimizer.solver, fake_solver)
-                self.assertEqual(fake_ocp.code_export_directory, "c_generated_code_mpcc")
-                # Configured names alone do not establish ownership. Cleanup
-                # must still use the MPCC paths registered by create_solver().
-                optimizer.json_filename = "acados_ocp.json"
-                optimizer.code_export_directory = "c_generated_code"
-            finally:
-                optimizer.cleanup()
-            optimizer.cleanup()  # Repeated cleanup must not delete again.
-            remove.assert_called_once_with("acados_ocp_mpcc.json")
-            rmtree.assert_called_once_with("c_generated_code_mpcc", ignore_errors=True)
-            self.assertEqual(files, {"acados_ocp.json"})
-            self.assertEqual(directories, {"c_generated_code"})
+            sentinel = Path(unrelated) / "acados_ocp.json"
+            sentinel.write_text("unrelated experiment", encoding="utf-8")
+            optimizer.ocp = fake_ocp
+            optimizer.create_solver()
+            json_path = Path(optimizer.json_filename)
+            workspace = json_path.parent
+            create.assert_called_once_with(fake_ocp, json_file=str(json_path))
+            self.assertIs(optimizer.solver, fake_solver)
+            self.assertEqual(fake_ocp.code_export_directory, optimizer.code_export_directory)
+            json_path.write_text("{}", encoding="utf-8")
+            # Ownership is independent of the OCP's later configured path.
+            fake_ocp.code_export_directory = unrelated
+            optimizer.cleanup()
+            optimizer.cleanup()
+            self.assertFalse(workspace.exists())
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "unrelated experiment")
+
+
+class MPCCSolverTimingTest(unittest.TestCase):
+    def test_solver_time_excludes_reference_preparation_and_progress_reads(self):
+        optimizer = MPCCOptimizer()
+        self.addCleanup(optimizer.cleanup)
+        optimizer.param = MPCCOptimizerParam()
+        optimizer.param.horizon = optimizer.N = 2
+        optimizer.param.tf = 0.2
+        optimizer.state = SimpleNamespace(_x=np.zeros(3), _u=np.zeros(2))
+        optimizer.create_model(optimizer.param)
+        clock = SimpleNamespace(value=0.0)
+
+        class Solver:
+            status = 0
+
+            def __init__(self):
+                self.states = np.zeros((3, 4))
+                self.inputs = np.zeros((2, 3))
+
+            def get(self, stage, field):
+                clock.value += 2.0
+                return (self.states if field == "x" else self.inputs)[stage].copy()
+
+            def set(self, stage, field, value):
+                clock.value += 4.0
+                if field == "x":
+                    self.states[stage] = value
+                elif field == "u":
+                    self.inputs[stage] = value
+
+            def solve(self):
+                clock.value += 0.125
+                return self.status
+
+        optimizer.solver = Solver()
+        with (
+            patch("control.mpcc_optimizer.time.perf_counter", side_effect=lambda: clock.value),
+            redirect_stdout(io.StringIO()),
+        ):
+            solution = optimizer.solve_nlp()
+        self.assertEqual(solution.stats()["return_status"], "success")
+        self.assertEqual(optimizer.solver_times, [0.125])
+        self.assertGreater(clock.value, 10.0)
 
 
 class MPCCCudaPolicyTest(unittest.TestCase):

@@ -142,7 +142,7 @@ class CCMFMultiFeatureTest(unittest.TestCase):
         expected = {
             "alpha_f": 0.0012,
             "alpha_v": 0.00024,
-            "alpha_kappa": 0.006,
+            "alpha_kappa": 0.0003,
             "beta_v": 0.012,
             "beta_kappa": 0.0048,
             "beta_omega": 0.0048,
@@ -474,7 +474,6 @@ class CCMFMultiFeatureTest(unittest.TestCase):
     def test_guard_coefficients_and_stagewise_mf_mask(self):
         self.param.use_row_mf = True
         self.param.d_col = 0.03
-        self.param.d_mf_mask = 0.05
         epsilon = float(self.param.chance_epsilon)
         z_bar = np.zeros((4, 8), dtype=float)
         z_bar[:, :3] = np.array(
@@ -543,14 +542,14 @@ class CCMFMultiFeatureTest(unittest.TestCase):
 
     def test_mf_mask_uses_strict_phi_threshold(self):
         self.param.use_row_mf = True
-        self.param.d_mf_mask = 0.05
+        self.param.d_col = 0.05
         z_bar = np.zeros((4, 8), dtype=float)
         phi = np.array(
             [
                 0.10,
-                self.param.d_mf_mask,
-                np.nextafter(self.param.d_mf_mask, np.inf),
-                np.nextafter(self.param.d_mf_mask, -np.inf),
+                self.param.d_col,
+                np.nextafter(self.param.d_col, np.inf),
+                np.nextafter(self.param.d_col, -np.inf),
             ]
         )
         gradient = np.tile(np.array([1.0, 0.0, 0.0]), (4, 1))
@@ -570,7 +569,7 @@ class CCMFMultiFeatureTest(unittest.TestCase):
 
     def test_mf_active_window_separates_intermediate_and_terminal_stages(self):
         self.param.use_row_mf = True
-        self.param.d_mf_mask = 0.0
+        self.param.d_col = 0.0
         self.param.mf_active_start_step = 1
         self.param.mf_active_end_step = 1
         self.param.mf_active_terminal = False
@@ -614,7 +613,7 @@ class CCMFMultiFeatureTest(unittest.TestCase):
         self.param.use_row_mf = True
         self.assertTrue(self.param.use_row_mf)
         self.assertFalse(hasattr(self.param, "use_row_g"))
-        self.param.d_mf_mask = 0.0
+        self.param.d_col = 0.0
         z_bar = np.zeros((4, 8), dtype=float)
         z_bar[:, :3] = np.array(
             [
@@ -698,7 +697,6 @@ class CCMFMultiFeatureTest(unittest.TestCase):
     def test_batch_mf_failure_falls_back_and_masks_only_failed_stage(self):
         self.param.use_row_mf = True
         self.param.d_col = 0.03
-        self.param.d_mf_mask = 0.0
         epsilon = float(self.param.chance_epsilon)
         failed_stage = 2
         wrapper = _StagewiseFallbackPSDFWrapper(failed_stage)
@@ -810,6 +808,45 @@ class CCMFMultiFeatureTest(unittest.TestCase):
         self.assertIsNone(self.optimizer.get_last_constraint_diagnostics())
         self.assertEqual(solution.get_state_trajectory().shape, (8, 4))
         self.assertEqual(solution.get_input_trajectory().shape, (3, 3))
+
+    def test_failed_prepare_clears_previous_cycle_probability_log(self):
+        self.optimizer._last_nominal_probability_sum = np.array([0.01, 0.02])
+
+        def fail_before_constraint_evaluation(_):
+            raise RuntimeError("synthetic prepare failure")
+
+        self.optimizer._get_current_s_bounds = fail_before_constraint_evaluation
+
+        with self.assertRaisesRegex(RuntimeError, "synthetic prepare failure"):
+            self.optimizer._prepare_and_solve(object())
+
+        self.assertIsNone(self.optimizer._last_nominal_probability_sum)
+
+    def test_failed_backup_restores_main_probability_log(self):
+        self.optimizer.solver = object()
+        backup_solver = _FakeSolver(np.zeros((4, 8)), np.zeros((3, 3)))
+        backup_solver.reset = lambda **_: None
+        self.optimizer.backup_solver = backup_solver
+        self.optimizer._constraint_data = {"source": "main"}
+        main_sum = np.array([0.01, 0.02])
+        self.optimizer._last_nominal_probability_sum = main_sum.copy()
+        self.optimizer._copy_primal_guess = lambda *_: None
+
+        def failed_backup_prepare(_):
+            self.optimizer._constraint_data = {"source": "backup"}
+            self.optimizer._last_nominal_probability_sum = np.array([0.4, 0.5])
+            return 1
+
+        self.optimizer._prepare_and_solve = failed_backup_prepare
+
+        with redirect_stdout(io.StringIO()):
+            self.assertIsNone(self.optimizer._try_backup_recovery())
+
+        self.assertEqual(self.optimizer._constraint_data, {"source": "main"})
+        np.testing.assert_equal(
+            self.optimizer._last_nominal_probability_sum,
+            main_sum,
+        )
 
     def _setup_solver_timing(self, outcomes):
         """Keep the real solve lifecycle while charging fake work to a clock."""
@@ -987,12 +1024,6 @@ class CCMFMultiFeatureTest(unittest.TestCase):
         solver = _FakeSolver(states, inputs_)
         self.optimizer.solver = solver
         self.optimizer._prepare_and_solve = lambda _: 1
-        self.optimizer._last_boole_risk_visualization_data = {
-            "nominal_poses": np.zeros((4, 3)),
-            "boole_risk_sum": np.full(4, 0.02),
-            "epsilon": np.full(4, 0.05),
-            "mf_mask": np.array([False, True, True, True]),
-        }
         self.optimizer._report_solver_failure = lambda _: None
         self.param.debug_mf = False
         self.param.debug_infeasibility = True
@@ -1012,9 +1043,6 @@ class CCMFMultiFeatureTest(unittest.TestCase):
         self.optimizer.solve_nlp()
 
         self.assertEqual(events, [("diagnostics", True), ("recovery", 1)])
-        self.assertIsNone(
-            self.optimizer.get_last_boole_risk_visualization_data()
-        )
 
     def test_failed_diagnostic_report_error_does_not_block_recovery(self):
         states = np.zeros((4, 8), dtype=float)
@@ -1053,7 +1081,7 @@ class CCMFMultiFeatureTest(unittest.TestCase):
     def test_constraint_log_keeps_only_feasibility_fields(self):
         diagnostics = {
             "constraint_stages": np.arange(1, 4),
-            "d_mf_mask": 0.1,
+            "d_col": 0.1,
             "mf_activation_phi": np.array([0.0, 0.2, 0.05, 0.3]),
             "mf_domain_eligible": np.array([False, True, False, True]),
             "mf_valid": np.array([False, True, True, True]),

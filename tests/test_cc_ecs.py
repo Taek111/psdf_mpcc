@@ -107,26 +107,38 @@ class CCECSTest(unittest.TestCase):
              ca.jacobian(model.con_h_expr, model.x), model.con_h_expr_0],
         )
 
-    def test_noise_free_covariance_matches_reduced_A_P_AT(self):
+    def test_noise_free_covariance_matches_reduced_rk4_pose_jacobian(self):
         self.assertTrue(all(getattr(self.param, name) == 0 for name in PROCESS_NOISE_FIELDS))
         xi = np.r_[np.log([0.03, 0.07, 0.02]), -0.04]
         p = covariance_from_log_cholesky(xi)
         dt = self.param.tf / self.param.horizon
         model = self.optimizer.ocp.model
         dynamics = ca.Function("ecs_step", [model.x, model.u, model.p], [model.disc_dyn_expr])
+        pose_jacobian = ca.Function(
+            "ecs_pose_jacobian", [model.x, model.u, model.p],
+            [ca.jacobian(model.disc_dyn_expr[:3], model.x)[:, :3]],
+        )
         parameters = self.optimizer.ocp.parameter_values.copy()
         parameters[self.optimizer.covariance_propagation_param_slice] = 1.0
         for v, omega in ((0.0, 0.0), (0.2, 0.7), (-0.3, -0.4)):
             with self.subTest(v=v, omega=omega):
-                a = np.array([[1.0, dt * omega, 0.0],
-                              [-dt * omega, 1.0, dt * v], [0.0, 0.0, 1.0]])
+                state = np.r_[np.zeros(4), xi]
+                symbolic = np.asarray(dynamics(state, [v, omega, 0.1], parameters)).ravel()
+                # The initial body/world transform is identity at theta = 0.
+                cosine, sine = np.cos(symbolic[2]), np.sin(symbolic[2])
+                next_transform = np.array([
+                    [cosine, -sine, 0.0],
+                    [sine, cosine, 0.0],
+                    [0.0, 0.0, 1.0],
+                ])
+                a = next_transform.T @ np.asarray(
+                    pose_jacobian(state, [v, omega, 0.1], parameters),
+                )
                 expected = a @ p @ a.T
                 expected[0, 1] = expected[1, 0] = 0.0
                 expected[0, 2] = expected[2, 0] = 0.0
                 numeric = propagate_log_cholesky(xi, v, omega, 8.0, dt, self.param)
                 np.testing.assert_allclose(covariance_from_log_cholesky(numeric), expected)
-                state = np.r_[np.zeros(4), xi]
-                symbolic = np.asarray(dynamics(state, [v, omega, 0.1], parameters)).ravel()
                 np.testing.assert_allclose(symbolic[4:], numeric)
                 if v == omega == 0:
                     np.testing.assert_allclose(numeric, xi)
@@ -265,6 +277,7 @@ class CCECSTest(unittest.TestCase):
         self.assertGreater(solver.parameters[1][self.optimizer.risk_margin_scale_param_slice][0], 0.0)
 
     def test_empty_obstacles_are_finite_inactive_rows_and_have_no_constraint_log(self):
+        self.param.debug_mode = True
         self.optimizer._evaluate_cluster_geometry = lambda poses: (
             np.empty((len(poses), 0)), np.empty((len(poses), 0, 3)),
         )
@@ -277,6 +290,36 @@ class CCECSTest(unittest.TestCase):
         self.assertEqual(self.optimizer.get_constraint_log_rows(), [])
         self.assertEqual(len(self.optimizer.get_covariance_log_rows()), 4)
         self.assertIsNone(self.optimizer.get_cycle_log_rows()[0]["minimum_fixed_row_residual"])
+
+    def test_debug_mode_skips_reevaluation_but_keeps_cycle_status_and_time(self):
+        self.assertFalse(self.param.debug_mode)
+        self.optimizer.solver = self._solver()
+        with patch.object(
+            self.optimizer, "_evaluate_cluster_geometry", wraps=self._plane_geometry,
+        ) as geometry:
+            self.optimizer.solve_nlp()
+            self.assertEqual(geometry.call_count, 1)  # Nominal constraints only.
+            self.assertEqual(self.optimizer.get_constraint_log_rows(), [])
+            self.assertEqual(self.optimizer.get_covariance_log_rows(), [])
+            self.assertIsNone(self.optimizer.get_last_constraint_diagnostics())
+            cycle = self.optimizer.get_cycle_log_rows()[0]
+            self.assertEqual(cycle["solver_status"], 0)
+            self.assertEqual(cycle["solver_time_s"], self.optimizer.solver_times[0])
+            self.assertIsNone(cycle["minimum_reevaluated_ecs_residual"])
+
+            self.param.debug_mode = True
+            self.optimizer.solve_nlp()
+            self.assertEqual(geometry.call_count, 3)
+            self.assertEqual(len(self.optimizer.get_covariance_log_rows()), 4)
+            self.assertIsNotNone(self.optimizer.get_last_constraint_diagnostics())
+            detailed_count = len(self.optimizer.get_constraint_log_rows())
+            self.assertGreater(detailed_count, 0)
+
+            self.param.debug_mode = False
+            self.optimizer.solve_nlp()
+            self.assertEqual(geometry.call_count, 4)
+            self.assertEqual(len(self.optimizer.get_constraint_log_rows()), detailed_count)
+            self.assertIsNone(self.optimizer.get_last_constraint_diagnostics())
 
     @unittest.skipUnless(torch.cuda.is_available(), "PSDF initialization requires CUDA")
     def test_initial_update_capacity_overflow_and_invalid_geometry(self):
@@ -334,6 +377,9 @@ class CCECSTest(unittest.TestCase):
         self.assertEqual(self.optimizer.get_cycle_log_rows()[0]["main_status"], 4)
 
     def test_failed_backup_safe_stop_preserves_failure_and_main_fixed_rows(self):
+        self.param.debug_mode = True
+        self.optimizer.state._u = np.array([-0.6, 0.9])
+        self.optimizer._system_dynamics = None
         def shift_failed_nominal(solver):
             solver.states[1:, 2] = 0.8
         self.optimizer.solver = self._solver(status=4, on_solve=shift_failed_nominal)
@@ -356,7 +402,12 @@ class CCECSTest(unittest.TestCase):
             np.testing.assert_allclose(
                 np.asarray(rows).ravel()[:2], diagnostics["fixed_row_residual"][k],
             )
-        np.testing.assert_array_equal(solution.get_input_trajectory()[2], np.zeros(3))
+        np.testing.assert_array_equal(solution.get_input_trajectory(), np.zeros((3, 3)))
+        expected = np.r_[self.optimizer.state._x, self.optimizer._current_s0]
+        np.testing.assert_array_equal(
+            solution.get_state_trajectory()[:4].T, np.tile(expected, (4, 1)),
+        )
+        self.assertEqual(self.optimizer.get_runtime_stats()["safe_stop_count"], 1)
 
     def test_geometry_errors_and_solver_exceptions_are_not_hidden(self):
         solver = self._solver(on_solve=lambda _: (_ for _ in ()).throw(RuntimeError("solver error")))

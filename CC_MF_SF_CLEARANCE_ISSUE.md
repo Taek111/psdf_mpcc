@@ -111,7 +111,7 @@ $$
 
 - 양쪽 `risk_cov_jitter=1e-9`, MF의 `covariance_growth_scale=0.6`, SF의 `use_projected_variance_margin=True`는 현재 생산 경로에서 수식을 바꾸지 않는 호환 필드다. 특히 `covariance_growth_scale`을 바꿔도 alpha/beta가 재계산되지 않는다.
 - MF의 `constraint_debug_tolerance=1e-6`, `first_interval_substeps=10`은 진단용이다. Substep sampling이 OCP constraint나 실제 충돌 veto를 추가하지 않는다.
-- MF는 기본값 → 최상위 `cc_mf` override 순서다. SF는 기본값 → 최상위 `cc_mf`(`use_risk_visualization` 제외) → 최상위 `cc_sf` 순서다. 이번 실험 설정에는 두 override 블록이 없다.
+- MF는 기본값 → 최상위 `cc_mf` override 순서다. SF는 기본값 → 최상위 `cc_mf` → 최상위 `cc_sf` 순서다. 이번 실험 설정에는 두 override 블록이 없다.
 - SF의 유효 `chance_gamma`가 `chance_epsilon`보다 우선한다. YAML helper는 epsilon만 override하면 gamma를 재계산하지만, Python에서 epsilon만 변경하면 기존 gamma가 남는다.
 - MF의 `d_mf_mask`는 생성 시 `d_col`을 한 번 복사한다. 이후 `d_col` 변경과 자동 연동되지 않는다. 설정 비교는 새 optimizer를 생성하여 수행해야 한다.
 

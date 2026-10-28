@@ -1,5 +1,4 @@
 import copy
-import os
 from statistics import NormalDist
 import time
 
@@ -45,6 +44,8 @@ class CCSFOptimizerParam:
         self.chance_gamma = float(NormalDist().inv_cdf(1.0 - self.chance_epsilon))
         self.risk_margin_floor = 0.0
         self.risk_margin_cap = 2.0
+        self.debug_mode = False
+        # Optional risk-diagnostic subflag; debug_mode is the master switch.
         self.debug_risk = True
         self.debug_print_nominal_risk_heads = False
         self.debug_print_nominal_risk_head_only_active = True
@@ -61,12 +62,14 @@ class CCSFOptimizerParam:
 
 
 class CCSFOptimizer(MPCCOptimizer):
+    _codegen_name = "cc_sf"
     _path_includes_curvature = True
 
     def __init__(self, variables=None, costs=None, dynamics_opt=None):
         self.ocp = None
         self.solver = None
         self.solver_times = []
+        self._cycle_solver_time = 0.0
         self.state = None
         self.reference_path_data = None
         self.N = None
@@ -100,13 +103,11 @@ class CCSFOptimizer(MPCCOptimizer):
         self._last_risk_tensors = None
         self._last_risk_clearances = None
 
-        self.json_filename = "acados_ocp_cc_sf.json"
         self.backup_solver = None
-        self.code_export_directory = "c_generated_code_cc_sf"
-        self.backup_json_filename = "acados_ocp_cc_sf_backup.json"
-        self.backup_code_export_directory = "c_generated_code_cc_sf_backup"
         self._last_solve_mode = "uninitialized"
-        self._temp_files = []
+        # solve_nlp owns optional debug output; suppress duplicate per-step
+        # plant-input printing in BaseController when diagnostics are disabled.
+        self.prints_compact_runtime_summary = True
         self._reset_runtime_counters()
 
     def _reset_runtime_counters(self):
@@ -135,25 +136,12 @@ class CCSFOptimizer(MPCCOptimizer):
     def cleanup(self):
         self._print_runtime_summary()
         self._reset_runtime_counters()
-        try:
-            for file_path in self._temp_files:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            if os.path.exists(self.json_filename):
-                os.remove(self.json_filename)
-            if os.path.exists(self.code_export_directory) and os.path.isdir(self.code_export_directory):
-                import shutil
-                shutil.rmtree(self.code_export_directory, ignore_errors=True)
-            if os.path.exists(self.backup_code_export_directory) and os.path.isdir(self.backup_code_export_directory):
-                import shutil
-                shutil.rmtree(self.backup_code_export_directory, ignore_errors=True)
-        except Exception as e:
-            print(f"Warning: Error during cleanup: {e}")
-
         self.ocp = None
         self.solver = None
         self.backup_solver = None
+        self._cleanup_codegen_workspace()
         self.solver_times = []
+        self._cycle_solver_time = 0.0
         self.psdf_wrapper = None
         self.ped_model = None
         self._is_initialized = False
@@ -161,7 +149,6 @@ class CCSFOptimizer(MPCCOptimizer):
         self.reference_path_data = None
         self._system_dynamics = None
         self._system = None
-        self._temp_files = []
         self.path_param_dim = None
         self.risk_tensor_param_dim = 4
         self.risk_margin_scale_param_dim = 1
@@ -233,7 +220,7 @@ class CCSFOptimizer(MPCCOptimizer):
         nx = 8  # [x, y, theta, s, xi_f, xi_l, xi_theta, xi_c]
         nu = 3  # [v, omega, v_s]
         # Stage-varying path parameter:
-        # [p_ref_x, p_ref_y, t_ref_x, t_ref_y, s_ref, kappa_ref]
+        # [p_ref_x, p_ref_y, t_ref_x, t_ref_y, s_ref, reserved_zero]
         self.path_param_dim = 6
 
         x = ca.MX.sym("x", nx)
@@ -271,10 +258,8 @@ class CCSFOptimizer(MPCCOptimizer):
         omega = u[1]
         v_s = u[2]
 
-        kappa_ref = p_ref_t_ref[5]
-
         xi_next = symbolic_log_cholesky_transition(
-            x[4:8], v, omega, kappa_ref, dt, param
+            x[4:8], v, omega, 0.0, dt, param
         )
         discrete_dynamics = ca.vertcat(
             symbolic_dd_step(x[:3], v, omega, dt),
@@ -343,7 +328,10 @@ class CCSFOptimizer(MPCCOptimizer):
 
     def _debug_risk_enabled(self, param=None):
         target_param = self.param if param is None else param
-        return bool(getattr(target_param, "debug_risk", False))
+        return bool(
+            getattr(target_param, "debug_mode", False)
+            and getattr(target_param, "debug_risk", True)
+        )
 
     def _build_projected_variance_heads(self, grad_local):
         grad_np = np.asarray(grad_local, dtype=float)
@@ -457,7 +445,9 @@ class CCSFOptimizer(MPCCOptimizer):
         print(f"risk_margin_stages(active): [{', '.join(stage_entries)}]")
 
     def _log_stage_risk_heads(self, risk_tensor_batch, param, source_label="nominal"):
-        if not getattr(param, "debug_print_nominal_risk_heads", False):
+        if not self._debug_risk_enabled(param) or not getattr(
+            param, "debug_print_nominal_risk_heads", False
+        ):
             return
 
         risk_tensor_batch = np.asarray(risk_tensor_batch, dtype=float)
@@ -540,13 +530,9 @@ class CCSFOptimizer(MPCCOptimizer):
             covariance_batch[i] = covariance_state
             if i >= inputs.shape[0] or i >= robust_horizon:
                 continue
-            kappa_i = (
-                0.0
-                if self.reference_path_data is None
-                else float(self._build_stage_path_parameter(stage_s_values[i])[5])
-            )
+            # Covariance uses physical inputs v/omega, not path curvature.
             covariance_state = propagate_log_cholesky(
-                covariance_state, inputs[i, 0], inputs[i, 1], kappa_i, dt, self.param
+                covariance_state, inputs[i, 0], inputs[i, 1], 0.0, dt, self.param
             )
         return covariance_batch
 
@@ -650,11 +636,9 @@ class CCSFOptimizer(MPCCOptimizer):
                 pass
 
     def create_solver(self, json_filename=None, code_export_directory=None):
-        if code_export_directory is not None:
-            try:
-                self.ocp.code_export_directory = code_export_directory
-            except Exception:
-                pass
+        self.ocp.code_export_directory = (
+            self.code_export_directory if code_export_directory is None else code_export_directory
+        )
 
         if (
             getattr(getattr(self, "ped_model", None), "requires_external_shared_lib", False)
@@ -668,16 +652,17 @@ class CCSFOptimizer(MPCCOptimizer):
         self.variables["u"] = "u"
         used_json_filename = self.json_filename if json_filename is None else json_filename
         solver = AcadosOcpSolver(self.ocp, json_file=used_json_filename)
-        if used_json_filename not in self._temp_files:
-            self._temp_files.append(used_json_filename)
         return solver
 
-    def add_obstacle_avoidance_constraint(self, param, system, obstacles_geo):
+    def add_obstacle_avoidance_constraint(
+        self, param, system, obstacles_geo, *, update_obstacle_data=True,
+    ):
         if not getattr(param, "use_obstacle_constraint", True):
             print("Obstacle avoidance constraint is disabled by use_obstacle_constraint=False")
             return
 
-        self.update_obstacles(obstacles_geo)
+        if update_obstacle_data:
+            self.update_obstacles(obstacles_geo)
 
         if self.ped_model is None or self.ocp is None:
             print("Warning: PED model not initialized, skipping obstacle avoidance constraint")
@@ -723,12 +708,20 @@ class CCSFOptimizer(MPCCOptimizer):
         self.ocp.model.con_h_expr = constraint_expr
         self.ocp.constraints.lh = np.array([0.0], dtype=float)
         self.ocp.constraints.uh = np.array([1e8], dtype=float)
+        # Keep N control intervals, with N safety rows at stages 0,...,N-1.
+        # Stage 0 checks the fixed measured state; x_N has no safety row.
+        self.ocp.constraints.constr_type_0 = "BGH"
+        self.ocp.dims.nh_0 = 1
+        self.ocp.model.con_h_expr_0 = constraint_expr
+        self.ocp.constraints.lh_0 = np.array([0.0], dtype=float)
+        self.ocp.constraints.uh_0 = np.array([1e8], dtype=float)
         self.ocp.constraints.constr_type_e = "BGH"
-        self.ocp.dims.nh_e = 1
-        self.ocp.model.con_h_expr_e = constraint_expr
-        self.ocp.constraints.lh_e = np.array([0.0], dtype=float)
-        self.ocp.constraints.uh_e = np.array([1e8], dtype=float)
-        print(f"Added HARD projected-variance obstacle constraint with d_min = {d_min}")
+        self.ocp.dims.nh_e = 0
+        self.ocp.model.con_h_expr_e = ca.MX.zeros(0, 1)
+        self.ocp.constraints.lh_e = np.empty(0, dtype=float)
+        self.ocp.constraints.uh_e = np.empty(0, dtype=float)
+        print(f"Added HARD projected-variance obstacle constraint at stages 0..{self.N - 1} "
+              f"with d_min = {d_min}")
 
     def add_warm_start(self, param, system, solver=None):
         solver = self.solver if solver is None else solver
@@ -898,16 +891,20 @@ class CCSFOptimizer(MPCCOptimizer):
         )
         solver.set(self.N, "p", terminal_stage_param)
 
-        return solver.solve()
+        # Include every main/backup solve in this cycle, but exclude geometry,
+        # parameter updates, recovery construction and optional diagnostics.
+        started = time.perf_counter()
+        try:
+            status = solver.solve()
+        finally:
+            self._cycle_solver_time += time.perf_counter() - started
+        status = int(status)
+        solver.status = status
+        return status
 
     def recovery_infeasible(self, fast_status):
         if self.solver is None or self.state is None:
-            return self.solver, fast_status, "safe_stop"
-
-        dynamics = self._system_dynamics
-        if dynamics is None or not hasattr(dynamics, "nominal_safe_controller"):
-            print("Warning: nominal_safe_controller is unavailable; keeping failed solver iterate.")
-            return self.solver, fast_status, "fast"
+            raise RuntimeError("CC-SF safe stop requires a solver and current state")
 
         print(f"Fast SQP_RTI solver failed with status {fast_status}. Starting infeasible recovery.")
 
@@ -943,47 +940,31 @@ class CCSFOptimizer(MPCCOptimizer):
         else:
             print("Backup solver is unavailable; falling back to safe stop.")
 
-        dt = float(self.param.tf) / float(max(self.N, 1))
-        cov0 = self._build_initial_covariance_state(self.param)
-        s_curr = self._clamp_s(self._current_s0)
-        x_curr = np.array(self.state._x, dtype=float).copy()
-        u_prev = np.asarray(getattr(self.state, "_u", np.zeros((2,), dtype=float)), dtype=float).reshape(-1)
-        v_last = float(u_prev[0]) if u_prev.size > 0 else 0.0
-
         try:
-            self.solver.reset(reset_qp_solver_mem=1)
-            self.solver.set(
-                0,
-                "x",
-                np.array([x_curr[0], x_curr[1], x_curr[2], s_curr, cov0[0], cov0[1], cov0[2], cov0[3]], dtype=float),
+            # Physical and virtual inputs stop immediately. Keep this separate
+            # from nominal_safe_controller, which also constructs warm starts.
+            inputs = np.zeros((self.N, self.nu), dtype=float)
+            states = np.zeros((self.N + 1, self.nx), dtype=float)
+            states[:, :3] = np.asarray(self.state._x, dtype=float)[:3]
+            states[:, 3] = self._clamp_s(self._current_s0)
+            states[:, 4:8] = self._propagate_covariance_state_batch(
+                inputs, states[:, 3]
             )
+            if not np.isfinite(states).all():
+                raise ValueError("CC-SF safe-stop trajectory must be finite")
 
-            for i in range(self.N):
-                x_next, u_nom = dynamics.nominal_safe_controller(x_curr, dt, v_last, -1.0, 1.0)
-                u_nom = np.asarray(u_nom, dtype=float).reshape(-1)
-                v_nom = float(u_nom[0]) if u_nom.size > 0 else 0.0
-                omega_nom = float(u_nom[1]) if u_nom.size > 1 else 0.0
-                v_s_nom = 0.0
-                s_next = s_curr
-
-                self.solver.set(i, "u", np.array([v_nom, omega_nom, v_s_nom], dtype=float))
-                self.solver.set(
-                    i + 1,
-                    "x",
-                    np.array([x_next[0], x_next[1], x_next[2], s_next, cov0[0], cov0[1], cov0[2], cov0[3]], dtype=float),
-                )
-
-                x_curr = np.asarray(x_next, dtype=float).copy()
-                v_last = v_nom
-                s_curr = s_next
-
-            self._regenerate_covariance_guess(self.solver)
-            self._last_solve_mode = "safe_stop"
-            return self.solver, fast_status, "safe_stop"
+            self.solver.reset(reset_qp_solver_mem=1)
+            for stage in range(self.N + 1):
+                self.solver.set(stage, "x", states[stage])
+                if stage < self.N:
+                    self.solver.set(stage, "u", inputs[stage])
+            # A constructed stop is not a successful solver result, even if
+            # reset() changes the solver's status in a future acados version.
+            self.solver.status = int(fast_status)
         except Exception as e:
-            print(f"Warning: infeasible recovery failed: {e}")
-            self._last_solve_mode = "safe_stop"
-            return self.solver, fast_status, "safe_stop"
+            raise RuntimeError("Could not install CC-SF zero-input safe-stop plan") from e
+        self._last_solve_mode = "safe_stop"
+        return self.solver, fast_status, "safe_stop"
 
     def setup(self, param, system, reference_trajectory, obstacles):
         self.param = param
@@ -1003,7 +984,9 @@ class CCSFOptimizer(MPCCOptimizer):
                 print("CC-SF obstacle constraint disabled: skipping PSDF model initialization.")
             self.setup_ocp(param, reference_trajectory)
             if use_obstacle_constraint:
-                self.add_obstacle_avoidance_constraint(param, system, obstacles)
+                self.add_obstacle_avoidance_constraint(
+                    param, system, obstacles, update_obstacle_data=False,
+                )
             self.solver = self.create_solver(
                 code_export_directory=self.code_export_directory,
             )
@@ -1016,7 +999,9 @@ class CCSFOptimizer(MPCCOptimizer):
                 backup_param.regularize_method = "PROJECT"
                 self.setup_ocp(backup_param, reference_trajectory)
                 if use_obstacle_constraint:
-                    self.add_obstacle_avoidance_constraint(backup_param, system, obstacles)
+                    self.add_obstacle_avoidance_constraint(
+                        backup_param, system, obstacles, update_obstacle_data=False,
+                    )
                 self.backup_solver = self.create_solver(
                     json_filename=self.backup_json_filename,
                     code_export_directory=self.backup_code_export_directory,
@@ -1036,27 +1021,28 @@ class CCSFOptimizer(MPCCOptimizer):
         if self.solver is None:
             raise RuntimeError("CC-SF solver is not initialized. Call setup() first.")
 
-        start = time.time()
+        self._cycle_solver_time = 0.0
         status = self._prepare_and_solve(self.solver)
         active_solver = self.solver
         mode = "fast"
 
         if status != 0:
-            report_solver_failure(
-                self.solver,
-                status,
-                max_iteration_message=(
-                    "Acados reached the maximum SQP iterations before meeting "
-                    "the configured tolerance."
-                ),
-            )
+            if getattr(self.param, "debug_mode", False):
+                report_solver_failure(
+                    self.solver,
+                    status,
+                    max_iteration_message=(
+                        "Acados reached the maximum SQP iterations before meeting "
+                        "the configured tolerance."
+                    ),
+                )
             active_solver, status, mode = self.recovery_infeasible(status)
             if mode == "backup_feasible_qp":
                 self._backup_feasible_qp_success_count += 1
             elif mode == "safe_stop":
                 self._safe_stop_count += 1
             if mode == "safe_stop":
-                print("Applied nominal_safe_controller safe-stop plan after infeasible CC-SF solve.")
+                print("Applied zero-input safe-stop plan after infeasible CC-SF solve.")
         if status == 0:
             try:
                 if self.N >= 1:
@@ -1099,7 +1085,7 @@ class CCSFOptimizer(MPCCOptimizer):
             self._last_risk_clearances = None
 
         self._last_solve_mode = mode
-        solve_time = time.time() - start
+        solve_time = self._cycle_solver_time
         self.solver_times.append(solve_time)
         if self._debug_risk_enabled():
             risk_margin_max = 0.0 if self._last_risk_margins is None else float(np.max(self._last_risk_margins))
@@ -1108,9 +1094,6 @@ class CCSFOptimizer(MPCCOptimizer):
                 f"risk_margin_max: {risk_margin_max}, solve_mode: {mode}"
             )
             self._log_stage_risk_margins(self._last_risk_margins, self.param)
-        else:
-            print(f"solver time: {solve_time}, path_s: {self._current_s0}, solve_mode: {mode}")
-
         return AcadosSolution(active_solver, self.N, self.variables)
 
     def initialize_ped_model(self, system, obstacles, E_max=100, K_max=20, device="cuda"):

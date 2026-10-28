@@ -126,23 +126,4 @@ class BaseController:
             logger._xtrajs.append(self._opt_sol.value(self._optimizer.variables["x"]).T)
             logger._utrajs.append(self._opt_sol.value(self._optimizer.variables["u"]).T)
 
-        risk_margin_traj = None
-        if hasattr(self._optimizer, "get_last_risk_margin_trajectory"):
-            try:
-                risk_margin_traj = self._optimizer.get_last_risk_margin_trajectory()
-            except Exception:
-                risk_margin_traj = None
-        logger._risk_margin_trajs.append(risk_margin_traj)
-
-        boole_risk_visualization_data = None
-        if hasattr(self._optimizer, "get_last_boole_risk_visualization_data"):
-            try:
-                boole_risk_visualization_data = (
-                    self._optimizer.get_last_boole_risk_visualization_data()
-                )
-            except Exception:
-                boole_risk_visualization_data = None
-        logger._boole_risk_visualization_data.append(
-            boole_risk_visualization_data
-        )
         logger._solver_status_infos.append(self.get_last_solver_status_info())

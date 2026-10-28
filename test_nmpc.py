@@ -6,7 +6,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from control import DEFAULT_OPTIMIZER_TYPE, SUPPORTED_OPTIMIZER_TYPES
+from control import (
+    DEFAULT_OPTIMIZER_TYPE,
+    SUPPORTED_OPTIMIZER_TYPES,
+    normalize_optimizer_type,
+)
+from control.cc_mf_imp_errors import MFImplicitRootError
 from sim.simulation_mpc import simulation_mpc
 from sim.start_perturbation import resolve_start_perturbation
 from sim.trial_metrics import TrialMetricsRecorder, collect_successful_solver_steps
@@ -115,7 +120,6 @@ def generate_animation_if_possible(
         maze_type=args.maze_type,
         frame_skip=args.frame_skip,
         method_name=args.optimizer_type,
-        use_risk_visualization=getattr(args, "use_risk_visualization", None),
     )
 
 
@@ -355,6 +359,7 @@ def run_single_test(
     )
     interrupt_requested = False
     result = None
+    implicit_error = None
     previous_sigint_handler = signal.getsignal(signal.SIGINT)
 
     def handle_sigint(signum, frame):
@@ -390,7 +395,6 @@ def run_single_test(
                 test_sim.sim,
                 figure_name=test_sim.current_name.lower(),
                 maze_type=args.maze_type,
-                include_risk_profile=args.generate_risk_profile,
             )
 
         print("Single test completed.")
@@ -404,6 +408,11 @@ def run_single_test(
         result = finalize_interrupted_trial(
             test_sim, args, "keyboard_interrupt", collect_metrics,
         )
+    except MFImplicitRootError as exc:
+        # Keep partial trial data for the batch recorder, then stop the run.
+        # A requested root evaluation failure must never become a next-trial retry.
+        implicit_error = exc
+        result = failed_trial_result(test_sim, exc)
     except RuntimeError as exc:
         interrupted = is_interrupt_runtime_error(exc, interrupt_requested)
         if collect_metrics and interrupt_requested:
@@ -440,10 +449,14 @@ def run_single_test(
             try:
                 cleanup_simulation(test_sim)
             except Exception as exc:
-                if not collect_metrics:
+                if not collect_metrics and implicit_error is None:
                     raise
                 print(f"Warning: trial cleanup failed: {exc}")
                 result["error"] = f"{result.get('error', '')} Cleanup: {exc}".strip()
+
+    if implicit_error is not None:
+        implicit_error.trial_result = result
+        raise implicit_error
 
     return result
 
@@ -481,7 +494,9 @@ def run_trial_batch(args: argparse.Namespace, config: Optional[dict] = None) -> 
             ("path_planner", "astar"),
         ):
             setattr(run_args, key, test_config.get(key, default))
-        simulation_mpc._resolve_optimizer_variant(run_args.optimizer_type)
+        run_args.optimizer_type = simulation_mpc._resolve_optimizer_variant(
+            run_args.optimizer_type
+        )
         if not args.single:
             run_args.simulation_time = test_config.get(
                 "simulation_time", defaults.get("simulation_time", 20.0)
@@ -492,12 +507,6 @@ def run_trial_batch(args: argparse.Namespace, config: Optional[dict] = None) -> 
             )
             run_args.generate_plots = (
                 args.generate_plots and defaults.get("generate_plots", True)
-            )
-            run_args.generate_risk_profile = test_config.get(
-                "generate_risk_profile", defaults.get("generate_risk_profile", False)
-            )
-            run_args.use_risk_visualization = test_config.get(
-                "use_risk_visualization", defaults.get("use_risk_visualization", None)
             )
         start_settings = resolve_start_perturbation({
             **config["start_perturbation"], **test_config.get("start_perturbation", {}),
@@ -547,7 +556,25 @@ def run_trial_batch(args: argparse.Namespace, config: Optional[dict] = None) -> 
                 f"\n[Trials] {identity['maze_type']} / {identity['optimizer_type']} "
                 f"trial {trial_number}/{trials}, seed={settings['seed']}"
             )
-            result = run_single_test(run_args, run_config, collect_metrics=True) or {}
+            try:
+                result = run_single_test(run_args, run_config, collect_metrics=True) or {}
+            except MFImplicitRootError as exc:
+                # Preserve the aborted trial in the same outcome/timing files,
+                # but do not execute another configuration or trial afterwards.
+                result = exc.trial_result or {
+                    "status": "error",
+                    "failure_reason": f"implicit_root_failure: {exc}",
+                }
+                try:
+                    row = recorder.record(identity, trial_number, settings, result)
+                    rows.append(row)
+                except Exception as output_error:
+                    print(f"Warning: saving aborted trial metrics failed: {output_error}")
+                print(
+                    "Trial batch stopped after implicit evaluation failure. "
+                    f"Results directory: {results_dir}"
+                )
+                raise
             row = recorder.record(identity, trial_number, settings, result)
             rows.append(row)
             print(
@@ -589,9 +616,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--robot-shape", default="rectangle", help="Robot shape")
     parser.add_argument(
         "--optimizer-type",
+        type=normalize_optimizer_type,
         choices=SUPPORTED_OPTIMIZER_TYPES,
         default=DEFAULT_OPTIMIZER_TYPE,
-        help="Controller/optimizer type (default: %(default)s)",
+        help="Controller/optimizer type; cc-mf-imp aliases cc_mf_imp (default: %(default)s)",
     )
     parser.add_argument("--dynamics-type", default="differential_drive", help="Dynamics type")
     parser.add_argument("--path-planner", default="astar", help="Path planner type")
@@ -630,18 +658,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Disable plot generation in --single mode",
     )
     parser.add_argument(
-        "--risk-profile",
-        dest="generate_risk_profile",
-        action="store_true",
-        help="Generate an additional risk heatmap profile when risk_margin_max is available",
-    )
-    parser.add_argument(
-        "--risk-visualization",
-        dest="use_risk_visualization",
-        action="store_true",
-        help="Show active stage-wise Boole risk circles in CC-MF animations",
-    )
-    parser.add_argument(
         "--safe-stop-batch",
         action="store_true",
         help="Run a safe-stop summary batch; defaults to rectangle x maze for cc_sf and cc_mf",
@@ -661,6 +677,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--safe-stop-optimizer-types",
         nargs="+",
+        type=normalize_optimizer_type,
         choices=SUPPORTED_OPTIMIZER_TYPES,
         default=None,
         help="Optimizer types to use with --safe-stop-batch (default: cc_sf cc_mf)",
@@ -673,8 +690,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.set_defaults(
         generate_animation=True,
         generate_plots=True,
-        generate_risk_profile=True,
-        use_risk_visualization=None,
     )
     return parser
 

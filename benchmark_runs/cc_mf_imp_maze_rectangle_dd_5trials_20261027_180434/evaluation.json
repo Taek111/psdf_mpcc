@@ -1,0 +1,240 @@
+{
+  "geometry_clearance_note": "Exact polygon distance at initial and executed logged poses, including map boundaries. Contact/overlap maps to zero; continuous inter-step collision checking is not performed.",
+  "timing_note": "summary.csv pools only successful acados solve calls, including the first step. Control cycle and preprocessing times are logged separately.",
+  "batches": [
+    {
+      "batch": "baseline",
+      "summary": [
+        {
+          "configuration_id": "config01",
+          "maze_type": "maze",
+          "optimizer_type": "cc_mf_imp",
+          "robot_shape": "rectangle",
+          "dynamics_type": "differential_drive",
+          "path_planner": "astar",
+          "recorded_trials": "5",
+          "completed_trials": "5",
+          "successful_trials": "5",
+          "failed_trials": "0",
+          "interrupted_trials": "0",
+          "success_rate": "1.0",
+          "successful_solver_steps": "1557",
+          "solver_time_mean_s": "0.0009120565825616002",
+          "solver_time_p95_s": "0.001097239998489385"
+        }
+      ],
+      "trials": [
+        {
+          "trial_number": 1,
+          "seed": 0,
+          "status": "success",
+          "failure_reason": "",
+          "final_time_s": 30.700000000000166,
+          "min_logged_psdf_m": 0.0019500479102134705,
+          "min_sampled_geometry_clearance_m": 0.0019500438613498147,
+          "sampled_contact_or_overlap_count": 0,
+          "solver_failure_steps": 0,
+          "solve_modes": {
+            "sqp_rti": 307
+          },
+          "slack_m": {
+            "count": 6140,
+            "min": 1.1389258209510283e-18,
+            "mean": 3.461073611448247e-12,
+            "p95": 1.7734049151941883e-11,
+            "max": 2.0745908528346222e-10
+          },
+          "required_root_count": 5958,
+          "invalid_required_roots": 0,
+          "root_status_counts": {
+            "not_requested": 307,
+            "success": 5958,
+            "domain_inactive": 182
+          },
+          "control_cycle_time_s": {
+            "count": 307,
+            "min": 0.06821760300226742,
+            "mean": 0.2495285128044423,
+            "p95": 0.12494190299948967,
+            "max": 50.28134945999773
+          },
+          "preprocessing_time_s": {
+            "count": 307,
+            "min": 0.04534390200205962,
+            "mean": 0.1255927393778164,
+            "p95": 0.09090845189966786,
+            "max": 20.42522644899873
+          }
+        },
+        {
+          "trial_number": 2,
+          "seed": 1,
+          "status": "success",
+          "failure_reason": "",
+          "final_time_s": 31.70000000000018,
+          "min_logged_psdf_m": 0.0015264414250850677,
+          "min_sampled_geometry_clearance_m": 0.0015264496241911975,
+          "sampled_contact_or_overlap_count": 0,
+          "solver_failure_steps": 0,
+          "solve_modes": {
+            "sqp_rti": 317
+          },
+          "slack_m": {
+            "count": 6340,
+            "min": 1.0435166832136859e-18,
+            "mean": 3.071864187171624e-12,
+            "p95": 1.5164662567275354e-11,
+            "max": 1.162260855627465e-10
+          },
+          "required_root_count": 6209,
+          "invalid_required_roots": 0,
+          "root_status_counts": {
+            "not_requested": 317,
+            "success": 6209,
+            "domain_inactive": 131
+          },
+          "control_cycle_time_s": {
+            "count": 317,
+            "min": 0.06720200099880458,
+            "mean": 0.10085580369714396,
+            "p95": 0.12186294199927943,
+            "max": 5.521919158996752
+          },
+          "preprocessing_time_s": {
+            "count": 317,
+            "min": 0.04499250100343488,
+            "mean": 0.059296610706630136,
+            "p95": 0.09447882099993873,
+            "max": 0.18007440399742336
+          }
+        },
+        {
+          "trial_number": 3,
+          "seed": 2,
+          "status": "success",
+          "failure_reason": "",
+          "final_time_s": 31.100000000000172,
+          "min_logged_psdf_m": 0.0014871619641780853,
+          "min_sampled_geometry_clearance_m": 0.001487158712415095,
+          "sampled_contact_or_overlap_count": 0,
+          "solver_failure_steps": 0,
+          "solve_modes": {
+            "sqp_rti": 311
+          },
+          "slack_m": {
+            "count": 6220,
+            "min": 1.493389617627416e-18,
+            "mean": 3.6020375730777697e-12,
+            "p95": 1.2831768430400211e-11,
+            "max": 2.434034777936747e-10
+          },
+          "required_root_count": 6092,
+          "invalid_required_roots": 0,
+          "root_status_counts": {
+            "not_requested": 311,
+            "success": 6092,
+            "domain_inactive": 128
+          },
+          "control_cycle_time_s": {
+            "count": 311,
+            "min": 0.06895370100028231,
+            "mean": 0.09691911483591471,
+            "p95": 0.1360468025013688,
+            "max": 3.0281408339978952
+          },
+          "preprocessing_time_s": {
+            "count": 311,
+            "min": 0.045531700998253655,
+            "mean": 0.06216452015767198,
+            "p95": 0.1035353520001081,
+            "max": 0.17380120199959492
+          }
+        },
+        {
+          "trial_number": 4,
+          "seed": 3,
+          "status": "success",
+          "failure_reason": "",
+          "final_time_s": 31.00000000000017,
+          "min_logged_psdf_m": 0.0019623897969722748,
+          "min_sampled_geometry_clearance_m": 0.001962379552133663,
+          "sampled_contact_or_overlap_count": 0,
+          "solver_failure_steps": 0,
+          "solve_modes": {
+            "sqp_rti": 310
+          },
+          "slack_m": {
+            "count": 6200,
+            "min": 2.123740599685197e-18,
+            "mean": 3.766552899958564e-12,
+            "p95": 2.032141109664477e-11,
+            "max": 1.1403773816516978e-10
+          },
+          "required_root_count": 6015,
+          "invalid_required_roots": 0,
+          "root_status_counts": {
+            "not_requested": 310,
+            "success": 6015,
+            "domain_inactive": 185
+          },
+          "control_cycle_time_s": {
+            "count": 310,
+            "min": 0.06665509999947972,
+            "mean": 0.09326376152254647,
+            "p95": 0.11913414595182986,
+            "max": 3.250042430998292
+          },
+          "preprocessing_time_s": {
+            "count": 310,
+            "min": 0.044745297000190476,
+            "mean": 0.05849017088386914,
+            "p95": 0.09087228240023251,
+            "max": 0.15316248900126084
+          }
+        },
+        {
+          "trial_number": 5,
+          "seed": 4,
+          "status": "success",
+          "failure_reason": "",
+          "final_time_s": 31.200000000000173,
+          "min_logged_psdf_m": 0.0019117742776870728,
+          "min_sampled_geometry_clearance_m": 0.0019117825956727077,
+          "sampled_contact_or_overlap_count": 0,
+          "solver_failure_steps": 0,
+          "solve_modes": {
+            "sqp_rti": 312
+          },
+          "slack_m": {
+            "count": 6240,
+            "min": 1.2273151104696283e-18,
+            "mean": 3.3121306734257496e-12,
+            "p95": 1.6445616192868082e-11,
+            "max": 2.0285690424382204e-10
+          },
+          "required_root_count": 5983,
+          "invalid_required_roots": 0,
+          "root_status_counts": {
+            "not_requested": 312,
+            "success": 5983,
+            "domain_inactive": 257
+          },
+          "control_cycle_time_s": {
+            "count": 312,
+            "min": 0.06691959899762878,
+            "mean": 0.09188234814101658,
+            "p95": 0.11715312000051198,
+            "max": 3.074440455999138
+          },
+          "preprocessing_time_s": {
+            "count": 312,
+            "min": 0.04433459999927436,
+            "mean": 0.05819844643278534,
+            "p95": 0.09157171945062141,
+            "max": 0.15833500100052333
+          }
+        }
+      ]
+    }
+  ]
+}

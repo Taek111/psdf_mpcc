@@ -1,0 +1,292 @@
+{
+  "scope": "Existing recorded data and source inspection only; no solver calls or new trials.",
+  "git_head_inspected": "5b2802148a9e77372c881c9b07ad3c0943b57e94",
+  "working_tree_run_dirs": [
+    "cc_mf_maze_rectangle_dd_perturb_5trials_20261026_115156"
+  ],
+  "current_mf_run": {
+    "directory": "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_maze_rectangle_dd_perturb_5trials_20261026_115156",
+    "raw_csv_present": true,
+    "methods": [
+      "cc_mf"
+    ],
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "no_matched_sf_ecs_trials_in_this_run": true
+  },
+  "oct26_four_method_comparison": {
+    "document": "benchmark_maze.md",
+    "referenced_directory": "benchmark_runs/maze_rectangle_width010_perturb_four_methods_5trials_20261026_105337",
+    "working_tree_exists": false,
+    "head_config_exists": false,
+    "head_trial_results_exists": false,
+    "document_claims": {
+      "geometry_m": [
+        0.15,
+        0.1
+      ],
+      "seed_range": [
+        0,
+        4
+      ],
+      "mpcc_success": "5/5",
+      "cc_sf_success": "5/5",
+      "cc_mf_success": "3/5",
+      "cc_ecs_success": "5/5",
+      "mf_failed_seeds": [
+        1,
+        4
+      ]
+    },
+    "limitation": "Summary document remains, but referenced raw results and configuration are absent from both working tree and HEAD. Its exact parameter/source version, including ECS noise, cannot be reverified; do not confuse its failed seeds with current MF run failed seeds 0,1."
+  },
+  "oct19_nominal_comparison": {
+    "working_tree_exists": false,
+    "head_manifest_available": true,
+    "head_summary": [
+      {
+        "configuration_id": "config01",
+        "maze_type": "maze",
+        "optimizer_type": "mpcc",
+        "robot_shape": "rectangle",
+        "dynamics_type": "differential_drive",
+        "path_planner": "astar",
+        "recorded_trials": "1",
+        "completed_trials": "1",
+        "successful_trials": "1",
+        "failed_trials": "0",
+        "interrupted_trials": "0",
+        "success_rate": "1.0",
+        "successful_solver_steps": "233",
+        "solver_time_mean_s": "0.015720925105999466",
+        "solver_time_p95_s": "0.01857419013977051"
+      },
+      {
+        "configuration_id": "config02",
+        "maze_type": "maze",
+        "optimizer_type": "cc_mf",
+        "robot_shape": "rectangle",
+        "dynamics_type": "differential_drive",
+        "path_planner": "astar",
+        "recorded_trials": "1",
+        "completed_trials": "1",
+        "successful_trials": "1",
+        "failed_trials": "0",
+        "interrupted_trials": "0",
+        "success_rate": "1.0",
+        "successful_solver_steps": "310",
+        "solver_time_mean_s": "0.0008679674877296953",
+        "solver_time_p95_s": "0.0012039160079439172"
+      },
+      {
+        "configuration_id": "config03",
+        "maze_type": "maze",
+        "optimizer_type": "cc_sf",
+        "robot_shape": "rectangle",
+        "dynamics_type": "differential_drive",
+        "path_planner": "astar",
+        "recorded_trials": "1",
+        "completed_trials": "1",
+        "successful_trials": "1",
+        "failed_trials": "0",
+        "interrupted_trials": "0",
+        "success_rate": "1.0",
+        "successful_solver_steps": "277",
+        "solver_time_mean_s": "0.03002456637496122",
+        "solver_time_p95_s": "0.037604665756225585"
+      }
+    ],
+    "head_trial_results": [
+      {
+        "configuration_id": "config01",
+        "maze_type": "maze",
+        "optimizer_type": "mpcc",
+        "robot_shape": "rectangle",
+        "dynamics_type": "differential_drive",
+        "path_planner": "astar",
+        "trial_number": "1",
+        "start_seed": "0",
+        "start_perturbation_enabled": "False",
+        "initial_x": "0.075",
+        "initial_y": "0.7949999999999999",
+        "initial_theta": "-1.5707963267948966",
+        "success": "1",
+        "status": "success",
+        "failure_reason": "",
+        "goal_reached": "True",
+        "final_time": "23.30000000000006",
+        "distance_to_goal": "0.01950536766553533",
+        "successful_solver_steps": "233",
+        "solver_time_mean_s": "0.015720925105999466",
+        "solver_time_p95_s": "0.01857419013977051",
+        "current_name": "MPC_mpcc_rectangle_maze",
+        "output_root_dir": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current/runs/config01/trial_0001",
+        "error": ""
+      },
+      {
+        "configuration_id": "config02",
+        "maze_type": "maze",
+        "optimizer_type": "cc_mf",
+        "robot_shape": "rectangle",
+        "dynamics_type": "differential_drive",
+        "path_planner": "astar",
+        "trial_number": "1",
+        "start_seed": "0",
+        "start_perturbation_enabled": "False",
+        "initial_x": "0.075",
+        "initial_y": "0.7949999999999999",
+        "initial_theta": "-1.5707963267948966",
+        "success": "1",
+        "status": "success",
+        "failure_reason": "",
+        "goal_reached": "True",
+        "final_time": "31.00000000000017",
+        "distance_to_goal": "0.019947393423501505",
+        "successful_solver_steps": "310",
+        "solver_time_mean_s": "0.0008679674877296953",
+        "solver_time_p95_s": "0.0012039160079439172",
+        "current_name": "MPC_cc_mf_rectangle_maze",
+        "output_root_dir": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current/runs/config02/trial_0001",
+        "error": ""
+      },
+      {
+        "configuration_id": "config03",
+        "maze_type": "maze",
+        "optimizer_type": "cc_sf",
+        "robot_shape": "rectangle",
+        "dynamics_type": "differential_drive",
+        "path_planner": "astar",
+        "trial_number": "1",
+        "start_seed": "0",
+        "start_perturbation_enabled": "False",
+        "initial_x": "0.075",
+        "initial_y": "0.7949999999999999",
+        "initial_theta": "-1.5707963267948966",
+        "success": "1",
+        "status": "success",
+        "failure_reason": "",
+        "goal_reached": "True",
+        "final_time": "27.700000000000124",
+        "distance_to_goal": "0.019935327900562363",
+        "successful_solver_steps": "277",
+        "solver_time_mean_s": "0.03002456637496122",
+        "solver_time_p95_s": "0.037604665756225585",
+        "current_name": "MPC_cc_sf_rectangle_maze",
+        "output_root_dir": "/home/taek111/projects/psdf_mpcc/benchmark_runs/mpcc_refactor_validation_20261019/current/runs/config03/trial_0001",
+        "error": ""
+      }
+    ],
+    "manifest_start_perturbation": {
+      "enabled": false,
+      "seed": 0,
+      "position_std": 0.02,
+      "heading_std_deg": 2.8647889756541165,
+      "max_sigma": 3.0,
+      "min_clearance": 0.01,
+      "max_attempts": 1000
+    },
+    "posthoc_recorded_checkout_commit": "721e7578db89dbbc7ed4812dc80e91b1dddd3e88",
+    "posthoc_recorded_source_sha256": {
+      "control/mpcc_optimizer.py": "0c7fa1f578265fc2bcd750043d6e109e4a7c0ca39cc10e3f76df9de1bd792e1e",
+      "control/cc_mf_optimizer.py": "59a81a7a599cfcd3d542b96ca2c9a0639c0368c71f0228e8ecb32f7847adac0f",
+      "control/cc_sf_optimizer.py": "ccb409d8dfbbed3e9b3a64c14919807cec11d3ee122724a42cf635e796d75b38",
+      "control/cc_covariance.py": "245a27534245bc3cf7e9f51b6214050031ef3a2e8a97342c59a7fae406e8089a",
+      "sim/simulation_mpc.py": "3a23735e261517b46b609ae978396395c4aeb79f23067a94a9f7b74e8f5214cd",
+      "sim/start_perturbation.py": "8f49d31343d662cf6b50ade026e5fedbda93767e15ea609e4cfd199b11e651b8",
+      "models/dd.py": "4644e28795e8ee791b0bfe3fca4493116c462befd717afc5a856f823c14412a1",
+      "models/geometry_utils.py": "b219bffae83b5aed05ecad194adec8f08b67c50368cd205e3ca41f08415699de",
+      "config/config_mpcc_refactor_validation.yaml": "180b02f74c4c70371278616409cbe6d92cd443b7648a4855fb86f8e46adcdc8c"
+    },
+    "geometry_document": "CC_MF_SF_CLEARANCE_ISSUE.md states rectangle 0.15x0.07 m",
+    "limitations": [
+      "One unperturbed nominal trial per method, not current rectangle width0.10 perturbation experiment.",
+      "The Oct19 source hashes are recorded separately. Its MF source hash differs from the current MF run; the current MF run contains no contemporaneous SF source hash or SF execution.",
+      "Posthoc timing definitions explicitly warn legacy SF solver timing includes more work and is not directly comparable to MF."
+    ]
+  },
+  "oct12_ecs_nominal_v2": {
+    "working_tree_exists": false,
+    "head_manifest_available": true,
+    "explicit_cc_ecs_parameters": {
+      "horizon": 20,
+      "tf": 2.0,
+      "chance_epsilon": 0.2,
+      "d_min": 0.001,
+      "robust_horizon": null,
+      "sigma_f0": 0.0002,
+      "sigma_l0": 0.00025,
+      "sigma_psi0": 0.00025,
+      "q_f0": 0.0,
+      "q_l0": 0.0,
+      "q_psi0": 0.0,
+      "alpha_f": 0.0,
+      "alpha_v": 0.0,
+      "alpha_kappa": 0.0,
+      "beta_v": 0.0,
+      "beta_kappa": 0.0,
+      "beta_omega": 0.0,
+      "enable_backup_solver": false
+    },
+    "head_summary": [
+      {
+        "configuration_id": "config01",
+        "maze_type": "maze",
+        "optimizer_type": "cc_ecs",
+        "robot_shape": "rectangle",
+        "dynamics_type": "differential_drive",
+        "path_planner": "astar",
+        "recorded_trials": "1",
+        "completed_trials": "1",
+        "successful_trials": "1",
+        "failed_trials": "0",
+        "interrupted_trials": "0",
+        "success_rate": "1.0",
+        "successful_solver_steps": "243",
+        "solver_time_mean_s": "0.0011542617036937545",
+        "solver_time_p95_s": "0.0014818199997534975"
+      }
+    ],
+    "head_trial_results": [
+      {
+        "configuration_id": "config01",
+        "maze_type": "maze",
+        "optimizer_type": "cc_ecs",
+        "robot_shape": "rectangle",
+        "dynamics_type": "differential_drive",
+        "path_planner": "astar",
+        "trial_number": "1",
+        "start_seed": "",
+        "start_perturbation_enabled": "False",
+        "initial_x": "0.075",
+        "initial_y": "0.7949999999999999",
+        "initial_theta": "-1.5707963267948966",
+        "success": "1",
+        "status": "success",
+        "failure_reason": "",
+        "goal_reached": "True",
+        "final_time": "24.300000000000075",
+        "distance_to_goal": "0.019738962361386198",
+        "successful_solver_steps": "243",
+        "solver_time_mean_s": "0.0011542617036937545",
+        "solver_time_p95_s": "0.0014818199997534975",
+        "current_name": "MPC_cc_ecs_rectangle_maze",
+        "output_root_dir": "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_ecs_maze_rectangle_20261012_nominal_v2/runs/config01/trial_0001",
+        "error": ""
+      }
+    ],
+    "limitation": "Historical nominal run with explicit zero process noise; cannot substitute for absent Oct26 comparison manifest."
+  },
+  "current_source_facts": {
+    "ecs_noise": "CCECSOptimizerParam sets q_f0,q_l0,q_psi0,alpha_f,alpha_v,alpha_kappa,beta_v,beta_kappa,beta_omega all to0; same pattern exists in HEAD source.",
+    "ecs_source_sha256": "86e2d85a43b3a3729a724cec741ed8efee023bd7306e235bb1b1e63180cb7c06",
+    "mf_sf_noise": "Both call initialize_cc_noise_params: alpha_f=.0012,alpha_v=.00024,alpha_kappa=.006,beta_v=.012,beta_kappa=.0048,beta_omega=.0048.",
+    "risk_cov_jitter": "Present only as a parameter declaration in control/cc_mf_optimizer.py and control/cc_sf_optimizer.py; no usages found in control,models,tests. It is not an active tuning knob.",
+    "mf_cdf_linearization": "models/augmented_psdf.py computes CDF sum and analytic pdf-weighted Jacobian; tail saturation and cross-feature cancellation are possible mathematical mechanisms, not measured causes in the current logs.",
+    "same_state_constraint_comparison_limit": "Current CSVs do not store full nominal predicted pose/geometry, MF Jacobians, stage masks, fixed-geometry candidate residuals or fresh-geometry candidate residuals. Exact original same-state MF/SF QP comparisons cannot be reconstructed from these logs alone."
+  }
+}

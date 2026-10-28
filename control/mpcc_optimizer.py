@@ -4,7 +4,6 @@ CC optimizers inherit tracking/cost helpers while owning their Log-Cholesky
 models, safety constraints, solve/recovery lifecycle, and generated resources.
 """
 
-import os
 import time
 
 import casadi as ca
@@ -16,6 +15,7 @@ from control.analytic_psdf_casadi import AnalyticPSDFCasADi
 from models.geometry_utils import polygon_to_edges
 from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
 from utils.acados_diagnostics import report_solver_failure
+from utils.acados_codegen import AcadosCodegenMixin
 from utils.spline_path import (
     clamp_progress,
     normalize_path_data,
@@ -81,8 +81,12 @@ class MPCCOptimizerParam:
         self.detection_frequency = 10.0
 
 
-class MPCCOptimizer:
+class MPCCOptimizer(AcadosCodegenMixin):
+    _codegen_name = "mpcc"
     _path_includes_curvature = False
+    # setup() owns the per-control-step obstacle snapshot. Simulation hooks
+    # must not upload the same data before calling this optimizer's setup.
+    updates_obstacles_in_setup = True
 
     def __init__(self, variables=None, costs=None, dynamics_opt=None):
         self.ocp = None
@@ -113,31 +117,14 @@ class MPCCOptimizer:
         # Local window obstacle detector placeholder (kept for compatibility)
         self.obstacle_detector = None
 
-        self.json_filename = "acados_ocp_mpcc.json"
-        self.code_export_directory = "c_generated_code_mpcc"
-        self._owned_codegen_directories = set()
-        self._temp_files = []
-
     def cleanup(self):
-        try:
-            for file_path in self._temp_files:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            for directory in self._owned_codegen_directories:
-                if os.path.isdir(directory):
-                    import shutil
-                    shutil.rmtree(directory, ignore_errors=True)
-        except Exception as e:
-            print(f"Warning: Error during cleanup: {e}")
-
         self.ocp = None
         self.solver = None
+        self._cleanup_codegen_workspace()
         self.solver_times = []
         self.psdf_wrapper = None
         self.ped_model = None
         self._is_initialized = False
-        self._temp_files = []
-        self._owned_codegen_directories = set()
 
         self.reference_path_data = None
         self.path_param_dim = None
@@ -272,13 +259,19 @@ class MPCCOptimizer:
         return model
 
     def _build_stage_path_parameter(self, s_value):
-        return stage_parameter(
+        path_parameter = stage_parameter(
             self.reference_path_data,
             s_value,
             getattr(self.param, "tangent_reg_delta", 1e-6),
             getattr(self.param, "fd_eps", 1e-3),
-            include_curvature=self._path_includes_curvature,
+            include_curvature=False,
         )
+        if self._path_includes_curvature:
+            # CC models retain their six-value parameter layout, but the
+            # final compatibility slot is unused by the physical covariance
+            # transition. Do not evaluate spline curvature to populate it.
+            return np.append(path_parameter, 0.0)
+        return path_parameter
 
     def _predict_stage_s_values(self, s0, s_lower, s_upper, solver=None):
         solver = self.solver if solver is None else solver
@@ -435,17 +428,17 @@ class MPCCOptimizer:
         self.variables["x"] = "x"
         self.variables["u"] = "u"
         self.ocp.code_export_directory = self.code_export_directory
-        self._owned_codegen_directories.add(self.code_export_directory)
-        if self.json_filename not in self._temp_files:
-            self._temp_files.append(self.json_filename)
         self.solver = AcadosOcpSolver(self.ocp, json_file=self.json_filename)
 
-    def add_obstacle_avoidance_constraint(self, param, system, obstacles_geo):
+    def add_obstacle_avoidance_constraint(
+        self, param, system, obstacles_geo, *, update_obstacle_data=True,
+    ):
         if not getattr(param, "use_obstacle_constraint", True):
             print("Obstacle avoidance constraint is disabled by use_obstacle_constraint=False")
             return
 
-        self.update_obstacles(obstacles_geo)
+        if update_obstacle_data:
+            self.update_obstacles(obstacles_geo)
 
         if self.ped_model is None or self.ocp is None:
             print("Warning: PED model not initialized, skipping obstacle avoidance constraint")
@@ -550,7 +543,9 @@ class MPCCOptimizer:
                 print("MPCC obstacle constraint disabled: skipping PSDF model initialization.")
             self.setup_ocp(param, reference_trajectory)
             if use_obstacle_constraint:
-                self.add_obstacle_avoidance_constraint(param, system, obstacles)
+                self.add_obstacle_avoidance_constraint(
+                    param, system, obstacles, update_obstacle_data=False,
+                )
             self.create_solver()
             self.add_warm_start(param, system)
             self._is_initialized = True
@@ -563,7 +558,6 @@ class MPCCOptimizer:
         if self.solver is None:
             raise RuntimeError("MPCC solver is not initialized. Call setup() first.")
 
-        start = time.time()
         s_lower, s_upper = self._get_current_s_bounds(self.param)
         if self.state is not None:
             self.update_reference_path_params(self.reference_path_data, self.state)
@@ -627,8 +621,11 @@ class MPCCOptimizer:
             terminal_stage_param[self.psdf_param_slice] = psdf_terminal
         self.solver.set(self.N, "p", terminal_stage_param)
 
+        # Match the CC variants: measure only the solver call, excluding
+        # geometry, reference updates, warm-start preparation and diagnostics.
+        start = time.perf_counter()
         status = self.solver.solve()
-        solve_time = time.time() - start
+        solve_time = time.perf_counter() - start
         self.solver_times.append(solve_time)
         print(f"solver time: {solve_time}, path_s: {self._current_s0}")
 

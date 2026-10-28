@@ -1,4 +1,11 @@
-"""Incremental navigation outcomes and successful solver-step timing CSVs."""
+"""Incremental navigation outcomes and successful solver-step timing CSVs.
+
+MPCC, CC-SF, CC-MF and CC-ECS record seconds spent inside ``solve()`` using
+``time.perf_counter()``. A recovered cycle sums its main and backup calls;
+preparation, diagnostics and fallback-plan construction are excluded. A cycle
+that skips the solver records zero but is unsuccessful, so it is excluded from
+the successful-step summaries below. Controller wall time is logged separately.
+"""
 
 import csv
 import math

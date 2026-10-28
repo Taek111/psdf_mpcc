@@ -122,9 +122,10 @@ class CCMFStageZeroTest(unittest.TestCase):
         self.assertEqual(output, "")
 
     def test_unsafe_stage_zero_stops_even_with_masked_mf_and_stale_success_status(self):
-        for left in (.045, .0755):
-            with self.subTest(left=left):
+        for left, previous_speed in ((.045, -.6), (.075 + self.param.d_col / 2, .6)):
+            with self.subTest(left=left, previous_speed=previous_speed):
                 self.set_wall(left)
+                self.optimizer.state._u = np.array([previous_speed, .5])
                 solution, _ = self.solve()
                 self.assertFalse(self.optimizer._constraint_data["mf_mask"][0])
                 self.assertEqual(self.optimizer.solver.solve_calls, 0)
@@ -133,8 +134,12 @@ class CCMFStageZeroTest(unittest.TestCase):
                     "return_status": "safe_stop_stage0", "status_code": None,
                     "success": False, "solver_called": False,
                 })
-                # Reuse the established bounded braking behavior, not a nominal input.
-                np.testing.assert_allclose(solution.get_input_trajectory()[:, 0], [.2, 0., 0.])
+                # Even a moving robot receives zero physical and virtual input immediately.
+                np.testing.assert_array_equal(solution.get_input_trajectory(), np.zeros((3, 3)))
+                expected = np.r_[self.optimizer.state._x, self.optimizer._current_s0]
+                np.testing.assert_array_equal(
+                    solution.get_state_trajectory()[:4].T, np.tile(expected, (4, 1)),
+                )
                 self.optimizer.recovery_infeasible.assert_not_called()
                 self.optimizer.compute_diagnostics.assert_not_called()
                 row = self.optimizer.get_cycle_log_rows()[-1]

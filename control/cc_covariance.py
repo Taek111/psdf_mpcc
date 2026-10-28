@@ -16,7 +16,7 @@ def initialize_cc_noise_params(param):
     """Share the existing MF growth coefficients with SF, already scaled."""
     param.alpha_f = 0.0012
     param.alpha_v = 0.00024
-    param.alpha_kappa = 0.006
+    param.alpha_kappa = 0.0003
     param.beta_v = 0.012
     param.beta_kappa = 0.0048
     param.beta_omega = 0.0048
@@ -168,7 +168,9 @@ def _step_duration(dt):
     return dt
 
 
-def _transition_components(xi, v, omega, kappa, dt, param, exp, fabs, log, sqrt):
+def _transition_components(
+    xi, v, omega, kappa, dt, param, exp, fabs, log, sqrt, cos, sin,
+):
     """Common algebra keeps NumPy rollouts and CasADi model transitions identical."""
     (
         q_f0, q_l0, q_psi0, alpha_f, alpha_v, alpha_kappa,
@@ -176,7 +178,7 @@ def _transition_components(xi, v, omega, kappa, dt, param, exp, fabs, log, sqrt)
     ) = _noise_coefficients(param)
     dt = _step_duration(dt)
     speed_squared = v * v
-    curvature_speed_squared = speed_squared * fabs(kappa)
+    curvature_speed_squared = fabs(v * omega)
     noise_f = dt * (q_f0 + alpha_f * speed_squared)
     noise_l = dt * (q_l0 + alpha_v * speed_squared + alpha_kappa * curvature_speed_squared)
     noise_heading = dt * (
@@ -192,25 +194,43 @@ def _transition_components(xi, v, omega, kappa, dt, param, exp, fabs, log, sqrt)
     variance_heading = cross_factor * cross_factor + conditional_heading_variance
     rotation = dt * omega
     translation = dt * v
+    cosine, sine = cos(rotation), sin(rotation)
+    heading_to_forward = translation * (
+        sine + 4.0 * sin(0.5 * rotation)
+    ) / 6.0
+    heading_to_lateral = translation * (
+        1.0 + 4.0 * cos(0.5 * rotation) + cosine
+    ) / 6.0
 
-    # Retained entries of A Sigma A.T + dt diag(q), where
-    # A = [[1, dt*omega, 0], [-dt*omega, 1, dt*v], [0, 0, 1]].
-    next_variance_f = variance_f + rotation * rotation * variance_l + noise_f
-    lateral_extra = rotation * rotation * variance_f + noise_l
-    translated_factor_l = factor_l + translation * cross_factor
+    # With T(theta) = block_diag(R(theta), 1), the fixed-input RK4 pose map
+    # gives A = T(theta_next).T @ (d pose_next / d pose) @ T(theta).
+    # Its body-frame entries are [[cosine, sine, heading_to_forward],
+    #                            [-sine, cosine, heading_to_lateral],
+    #                            [0, 0, 1]]. Retain the reduced blocks of
+    # A Sigma A.T + dt diag(q), using squared factors to avoid cancellation.
+    transformed_factor_f = sine * factor_l + heading_to_forward * cross_factor
+    next_variance_f = (
+        cosine * cosine * variance_f
+        + transformed_factor_f * transformed_factor_f
+        + heading_to_forward * heading_to_forward * conditional_heading_variance
+        + noise_f
+    )
+    lateral_extra = sine * sine * variance_f + noise_l
+    transformed_factor_l = cosine * factor_l + heading_to_lateral * cross_factor
     next_variance_l = (
-        translated_factor_l * translated_factor_l
-        + translation * translation * conditional_heading_variance
+        transformed_factor_l * transformed_factor_l
+        + heading_to_lateral * heading_to_lateral * conditional_heading_variance
         + lateral_extra
     )
     next_cross_covariance = (
-        cross_factor * translated_factor_l
-        + translation * conditional_heading_variance
+        cross_factor * transformed_factor_l
+        + heading_to_lateral * conditional_heading_variance
     )
     # det(lateral/heading block) / next_variance_l, factored to avoid
     # subtracting almost equal marginal and cross-covariance terms.
     next_conditional_heading_variance = (
-        variance_l * conditional_heading_variance + lateral_extra * variance_heading
+        cosine * cosine * variance_l * conditional_heading_variance
+        + lateral_extra * variance_heading
     ) / next_variance_l + noise_heading
     return (
         0.5 * log(next_variance_f),
@@ -221,14 +241,20 @@ def _transition_components(xi, v, omega, kappa, dt, param, exp, fabs, log, sqrt)
 
 
 def propagate_log_cholesky(xi, v, omega, kappa, dt, param):
-    """Predict one reduced covariance step; the caller applies horizon freezing."""
+    """Predict with the RK4 pose Jacobian; the caller applies horizon freezing.
+
+    ``kappa`` is retained for call compatibility and input broadcasting only;
+    process noise uses the physical turning term ``abs(v * omega)``.
+    """
     xi = _finite_array(xi, (4,), "log-Cholesky state")
     inputs = tuple(np.asarray(value, dtype=float) for value in (v, omega, kappa))
     if any(not np.all(np.isfinite(value)) for value in inputs):
         raise ValueError("covariance prediction inputs must be finite")
+    inputs = np.broadcast_arrays(*inputs)
     with np.errstate(over="ignore", under="ignore", invalid="ignore", divide="ignore"):
         components = _transition_components(
-            np.moveaxis(xi, -1, 0), *inputs, dt, param, np.exp, np.abs, np.log, np.sqrt
+            np.moveaxis(xi, -1, 0), *inputs, dt, param,
+            np.exp, np.abs, np.log, np.sqrt, np.cos, np.sin,
         )
         result = np.stack(np.broadcast_arrays(*components), axis=-1)
     covariance_from_log_cholesky(result)
@@ -251,11 +277,12 @@ def symbolic_covariance_from_log_cholesky(xi):
 
 
 def symbolic_log_cholesky_transition(xi, v, omega, kappa, dt, param):
-    """CasADi one-step prediction matching :func:`propagate_log_cholesky`."""
+    """Match :func:`propagate_log_cholesky`; ``kappa`` is compatibility-only."""
     import casadi as ca
 
     return ca.vertcat(*_transition_components(
-        xi, v, omega, kappa, dt, param, ca.exp, ca.fabs, ca.log, ca.sqrt
+        xi, v, omega, kappa, dt, param,
+        ca.exp, ca.fabs, ca.log, ca.sqrt, ca.cos, ca.sin,
     ))
 
 

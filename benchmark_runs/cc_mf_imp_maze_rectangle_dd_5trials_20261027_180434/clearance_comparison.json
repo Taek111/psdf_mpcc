@@ -1,0 +1,290 @@
+{
+  "definition": "Exact rectangle footprint distance to obstacles and map boundaries at initial pose and every executed logged pose (dt=0.1 s), including final pose. Pool all five trials; percentile uses linear interpolation. No solver-success sample filtering.",
+  "same_geometry_and_initial_poses": true,
+  "summaries": [
+    {
+      "batch": "cc_mf_imp",
+      "source": "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_imp_maze_rectangle_dd_5trials_20261027_180434/baseline",
+      "trials": 5,
+      "successes": 5,
+      "mean_traversal_time_s": 31.140000000000168,
+      "samples": 1562,
+      "mean_mm": 8.158242357812318,
+      "p05_mm": 2.2384720483405354,
+      "min_mm": 1.487158712415095
+    },
+    {
+      "batch": "cc_sf_four_methods",
+      "source": "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452",
+      "trials": 5,
+      "successes": 5,
+      "mean_traversal_time_s": 28.94000000000014,
+      "samples": 1452,
+      "mean_mm": 8.352017227694299,
+      "p05_mm": 2.3624648677274958,
+      "min_mm": 1.9614699316423505
+    },
+    {
+      "batch": "cc_sf_safe_stop",
+      "source": "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_sf_safe_stop_5trials_20261026_173620",
+      "trials": 5,
+      "successes": 5,
+      "mean_traversal_time_s": 28.94000000000014,
+      "samples": 1452,
+      "mean_mm": 8.352017227694299,
+      "p05_mm": 2.3624648677274958,
+      "min_mm": 1.9614699316423505
+    },
+    {
+      "batch": "mpcc",
+      "source": "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452",
+      "trials": 5,
+      "successes": 5,
+      "mean_traversal_time_s": 26.160000000000103,
+      "samples": 1313,
+      "mean_mm": 7.868677366711721,
+      "p05_mm": 1.3399034856667371,
+      "min_mm": 1.0375141414393394
+    },
+    {
+      "batch": "cc_ecs",
+      "source": "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452",
+      "trials": 5,
+      "successes": 5,
+      "mean_traversal_time_s": 28.76000000000014,
+      "samples": 1443,
+      "mean_mm": 8.464400204011715,
+      "p05_mm": 2.0466084909988824,
+      "min_mm": 1.6756272116775837
+    }
+  ],
+  "per_trial": [
+    {
+      "batch": "cc_mf_imp",
+      "seed": 0,
+      "samples": 308,
+      "mean_mm": 8.45892755948914,
+      "p05_mm": 2.2662636561894907,
+      "min_mm": 1.9500438613498146
+    },
+    {
+      "batch": "cc_mf_imp",
+      "seed": 1,
+      "samples": 318,
+      "mean_mm": 8.344123563199567,
+      "p05_mm": 2.167445217444387,
+      "min_mm": 1.5264496241911976
+    },
+    {
+      "batch": "cc_mf_imp",
+      "seed": 2,
+      "samples": 312,
+      "mean_mm": 8.30139939706848,
+      "p05_mm": 2.085321703902084,
+      "min_mm": 1.487158712415095
+    },
+    {
+      "batch": "cc_mf_imp",
+      "seed": 3,
+      "samples": 311,
+      "mean_mm": 7.700442064840521,
+      "p05_mm": 2.433396087639982,
+      "min_mm": 1.962379552133663
+    },
+    {
+      "batch": "cc_mf_imp",
+      "seed": 4,
+      "samples": 313,
+      "mean_mm": 7.985685263360872,
+      "p05_mm": 2.2901805178653056,
+      "min_mm": 1.9117825956727077
+    },
+    {
+      "batch": "cc_sf_four_methods",
+      "seed": 0,
+      "samples": 293,
+      "mean_mm": 8.538911125170753,
+      "p05_mm": 2.374376446677521,
+      "min_mm": 1.9615016183118172
+    },
+    {
+      "batch": "cc_sf_four_methods",
+      "seed": 1,
+      "samples": 290,
+      "mean_mm": 8.553947651752887,
+      "p05_mm": 2.371029958224032,
+      "min_mm": 1.9614699316423505
+    },
+    {
+      "batch": "cc_sf_four_methods",
+      "seed": 2,
+      "samples": 288,
+      "mean_mm": 8.619319422176746,
+      "p05_mm": 2.3695049045199785,
+      "min_mm": 1.9615110213911042
+    },
+    {
+      "batch": "cc_sf_four_methods",
+      "seed": 3,
+      "samples": 291,
+      "mean_mm": 7.889949880880558,
+      "p05_mm": 2.3724123519460467,
+      "min_mm": 1.961504500394859
+    },
+    {
+      "batch": "cc_sf_four_methods",
+      "seed": 4,
+      "samples": 290,
+      "mean_mm": 8.159461472433138,
+      "p05_mm": 2.371442254590728,
+      "min_mm": 1.9615071520352212
+    },
+    {
+      "batch": "cc_sf_safe_stop",
+      "seed": 0,
+      "samples": 293,
+      "mean_mm": 8.538911125170753,
+      "p05_mm": 2.374376446677521,
+      "min_mm": 1.9615016183118172
+    },
+    {
+      "batch": "cc_sf_safe_stop",
+      "seed": 1,
+      "samples": 290,
+      "mean_mm": 8.553947651752887,
+      "p05_mm": 2.371029958224032,
+      "min_mm": 1.9614699316423505
+    },
+    {
+      "batch": "cc_sf_safe_stop",
+      "seed": 2,
+      "samples": 288,
+      "mean_mm": 8.619319422176746,
+      "p05_mm": 2.3695049045199785,
+      "min_mm": 1.9615110213911042
+    },
+    {
+      "batch": "cc_sf_safe_stop",
+      "seed": 3,
+      "samples": 291,
+      "mean_mm": 7.889949880880558,
+      "p05_mm": 2.3724123519460467,
+      "min_mm": 1.961504500394859
+    },
+    {
+      "batch": "cc_sf_safe_stop",
+      "seed": 4,
+      "samples": 290,
+      "mean_mm": 8.159461472433138,
+      "p05_mm": 2.371442254590728,
+      "min_mm": 1.9615071520352212
+    },
+    {
+      "batch": "mpcc",
+      "seed": 0,
+      "samples": 263,
+      "mean_mm": 8.148949788692146,
+      "p05_mm": 1.3434824754163555,
+      "min_mm": 1.0381646252792798
+    },
+    {
+      "batch": "mpcc",
+      "seed": 1,
+      "samples": 265,
+      "mean_mm": 8.031412566357737,
+      "p05_mm": 1.3482343910711785,
+      "min_mm": 1.0385442998789778
+    },
+    {
+      "batch": "mpcc",
+      "seed": 2,
+      "samples": 262,
+      "mean_mm": 8.111133053590459,
+      "p05_mm": 1.3426493350516249,
+      "min_mm": 1.0381657654368706
+    },
+    {
+      "batch": "mpcc",
+      "seed": 3,
+      "samples": 262,
+      "mean_mm": 7.393606896776703,
+      "p05_mm": 1.3391008780363538,
+      "min_mm": 1.0375141414393394
+    },
+    {
+      "batch": "mpcc",
+      "seed": 4,
+      "samples": 261,
+      "mean_mm": 7.654534065078381,
+      "p05_mm": 1.3448710993605466,
+      "min_mm": 1.0385451555909877
+    },
+    {
+      "batch": "cc_ecs",
+      "seed": 0,
+      "samples": 289,
+      "mean_mm": 8.770524269602488,
+      "p05_mm": 2.0722098664797257,
+      "min_mm": 1.6876788127917084
+    },
+    {
+      "batch": "cc_ecs",
+      "seed": 1,
+      "samples": 290,
+      "mean_mm": 8.645068564811409,
+      "p05_mm": 2.0753454739967534,
+      "min_mm": 1.6870923517641412
+    },
+    {
+      "batch": "cc_ecs",
+      "seed": 2,
+      "samples": 289,
+      "mean_mm": 8.728740265119091,
+      "p05_mm": 2.043209924734035,
+      "min_mm": 1.6756272116775837
+    },
+    {
+      "batch": "cc_ecs",
+      "seed": 3,
+      "samples": 287,
+      "mean_mm": 7.906015178525516,
+      "p05_mm": 2.0657189032624403,
+      "min_mm": 1.6892146790543343
+    },
+    {
+      "batch": "cc_ecs",
+      "seed": 4,
+      "samples": 288,
+      "mean_mm": 8.266478485493888,
+      "p05_mm": 2.042924494288879,
+      "min_mm": 1.6757842676104246
+    }
+  ],
+  "source_history_sha256": {
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_imp_maze_rectangle_dd_5trials_20261027_180434/baseline/runs/config01/trial_0001/data/trial_history_MPC_cc_mf_imp_rectangle_maze_startseed0.csv": "9128a63c19287da632ea9735b9cd950ac893cd5b76215767fcc856816082618f",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_imp_maze_rectangle_dd_5trials_20261027_180434/baseline/runs/config01/trial_0002/data/trial_history_MPC_cc_mf_imp_rectangle_maze_startseed1.csv": "75a208af906b39b3365abefe996fa578f15137427e51bca655abd5d57bff7b36",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_imp_maze_rectangle_dd_5trials_20261027_180434/baseline/runs/config01/trial_0003/data/trial_history_MPC_cc_mf_imp_rectangle_maze_startseed2.csv": "012b2cd6958c3f225e3dc439083b28aa4c9b7b8bead3dc911a611fa543d84e55",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_imp_maze_rectangle_dd_5trials_20261027_180434/baseline/runs/config01/trial_0004/data/trial_history_MPC_cc_mf_imp_rectangle_maze_startseed3.csv": "b98ae0d283c63778ca8930b79aeb94c5a0676e5af41ef44b83302e8484b4bc23",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_imp_maze_rectangle_dd_5trials_20261027_180434/baseline/runs/config01/trial_0005/data/trial_history_MPC_cc_mf_imp_rectangle_maze_startseed4.csv": "150c726114d15feb9212e50914c032701340dcfea98f2501ebd09f590677a0df",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config02/trial_0001/data/trial_history_MPC_cc_sf_rectangle_maze_startseed0.csv": "722da5b2b0048120f7f4c418c8e58276d7a24ebed628fed65f802b2abb30a101",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config02/trial_0002/data/trial_history_MPC_cc_sf_rectangle_maze_startseed1.csv": "2aa7d18881ee74b200427755265a8924ae6948999b05c6af5854740f3d23715a",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config02/trial_0003/data/trial_history_MPC_cc_sf_rectangle_maze_startseed2.csv": "7ec646942c708cbd97867409f0fe10601d30957199c73be65427f1cfa59de2dd",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config02/trial_0004/data/trial_history_MPC_cc_sf_rectangle_maze_startseed3.csv": "cbcd87c0979c028e06a36031779674599eb13dfca53444f5595b998539b17c97",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config02/trial_0005/data/trial_history_MPC_cc_sf_rectangle_maze_startseed4.csv": "c103047ac580a64e1434a54f338b36b9713eb83e50f5c09fc7a342f66779bb35",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_sf_safe_stop_5trials_20261026_173620/runs/config01/trial_0001/data/trial_history_MPC_cc_sf_rectangle_maze_startseed0.csv": "e9b8124a972c1a56c32707ba820a984f32469e3b731f47a26c7c7db67d20893b",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_sf_safe_stop_5trials_20261026_173620/runs/config01/trial_0002/data/trial_history_MPC_cc_sf_rectangle_maze_startseed1.csv": "55cac658408742a4b707f81363856681637eb92717c3d596d8070160a91f327d",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_sf_safe_stop_5trials_20261026_173620/runs/config01/trial_0003/data/trial_history_MPC_cc_sf_rectangle_maze_startseed2.csv": "d6ca3560122bc28001d424525900245b4bf60570b87044ef503646e94dd46910",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_sf_safe_stop_5trials_20261026_173620/runs/config01/trial_0004/data/trial_history_MPC_cc_sf_rectangle_maze_startseed3.csv": "8671c1e0d0ba74c0f6c9601a06e5ff492359c7220847eda36f63d9e5b8e33c30",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_sf_safe_stop_5trials_20261026_173620/runs/config01/trial_0005/data/trial_history_MPC_cc_sf_rectangle_maze_startseed4.csv": "cc7af7d3349544def466686d87c850461accc7b37692f9fb2ff894a512011051",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config01/trial_0001/data/trial_history_MPC_mpcc_rectangle_maze_startseed0.csv": "f123530b42c0c91e914f1e31e82c5b5c2d3e45aae124b09d7149ccaeb40febf9",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config01/trial_0002/data/trial_history_MPC_mpcc_rectangle_maze_startseed1.csv": "34606ba0c6d341057df0c3d6dcdb5a881340b0cf39166aaef97b71b48897ba08",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config01/trial_0003/data/trial_history_MPC_mpcc_rectangle_maze_startseed2.csv": "251292d72e6ed20793550dda2fb44d6f4c564dc1a9cebb23873f59a9d627d900",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config01/trial_0004/data/trial_history_MPC_mpcc_rectangle_maze_startseed3.csv": "6dd6c51f77101bd7635191ee39a99ab7d9afdc86ae64758f3380f4a7ce53607d",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config01/trial_0005/data/trial_history_MPC_mpcc_rectangle_maze_startseed4.csv": "ceab1d305d628619a82a08d5a736e75a381b6184fe44c39673cff4a16acd5a37",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config04/trial_0001/data/trial_history_MPC_cc_ecs_rectangle_maze_startseed0.csv": "ff366875d17fce29864b58b1bdafe8976bd20feffcd9c04a34a5b2fe8ca5107c",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config04/trial_0002/data/trial_history_MPC_cc_ecs_rectangle_maze_startseed1.csv": "84b14a79383644541b526a640e3803b99a3e0944e2a4b4addb5cabc7bc191a61",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config04/trial_0003/data/trial_history_MPC_cc_ecs_rectangle_maze_startseed2.csv": "3728eaead20abb82fd93fb3b9d74ff9fc3ca3a946ed77e2a562281c136c767b1",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config04/trial_0004/data/trial_history_MPC_cc_ecs_rectangle_maze_startseed3.csv": "2fa6754352dd94a152d597bdcc96938567277e627497bfd6596e6ca005cd4af1",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/maze_rectangle_dd_perturb_four_methods_5trials_20261026_165452/runs/config04/trial_0005/data/trial_history_MPC_cc_ecs_rectangle_maze_startseed4.csv": "ec6ae7079228686bd30aabbbac61febb8ba17d7b855cf89c53a6d64627846a33"
+  }
+}

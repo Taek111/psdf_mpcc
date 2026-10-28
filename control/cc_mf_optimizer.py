@@ -1,7 +1,5 @@
 import copy
 import json
-import os
-import shutil
 import time
 
 import casadi as ca
@@ -28,7 +26,6 @@ from utils.cc_mf_diagnostics import CCMFDiagnosticsMixin
 from utils.spline_path import (
     normalize_path_data,
     project_progress,
-    stage_parameter,
 )
 from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
 
@@ -38,9 +35,8 @@ class CCMFOptimizerParam:
         initialize_mpcc_tracking_params(self)
 
         # Safety rows: Row G is hard; only Row M has a slack.
-        self.d_min = 0.001
-        self.d_col = 0.001
-        self.d_mf_mask = self.d_col
+        self.d_min = 0.0002
+        self.d_col = 0.0002
         self.use_row_mf = True
         self.use_obstacle_constraint = True
         self.chance_epsilon = 0.20
@@ -66,9 +62,6 @@ class CCMFOptimizerParam:
         initialize_cc_noise_params(self)
         self.risk_cov_jitter = 1e-9
 
-        # Animation diagnostics
-        self.use_risk_visualization = True
-
         # Solver and recovery
         initialize_mpcc_solver_params(self, integrator_type="DISCRETE")
         self.enable_backup_solver = False
@@ -81,6 +74,8 @@ class CCMFOptimizerParam:
 
 
 class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
+    _codegen_name = "cc_mf"
+    _model_name = "differential_drive_cc_mf"
     _path_includes_curvature = True
 
     CYCLE_LOG_FIELDS = (
@@ -107,8 +102,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         "solve_step",
         "horizon_stage",
         "phi",
-        "d_mf_mask",
-        "phi_gt_d_mf_mask",
+        "d_col",
+        "phi_gt_d_col",
         "mf_valid",
         "mf_active",
         "row_g_residual",
@@ -156,19 +151,13 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         self._cycle_log_rows = []
         self._covariance_log_rows = []
         self._last_nominal_probability_sum = None
-        self._last_boole_risk_visualization_data = None
         self._last_main_status = None
         self._solve_count = 0
         self.prints_compact_runtime_summary = True
 
-        self.json_filename = "acados_ocp_cc_mf.json"
         self.backup_solver = None
-        self.code_export_directory = "c_generated_code_cc_mf"
-        self.backup_json_filename = "acados_ocp_cc_mf_backup.json"
-        self.backup_code_export_directory = "c_generated_code_cc_mf_backup"
         self._last_solve_mode = "uninitialized"
         self._last_backup_status = None
-        self._temp_files = []
         self._reset_runtime_counters()
 
     def _reset_runtime_counters(self):
@@ -191,7 +180,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             return
 
         print(
-            "CC-MF execution summary: "
+            f"{self.diagnostics_label} execution summary: "
             f"SQP-WITH FEASIBLE QP={self._backup_feasible_qp_success_count}, "
             f"Safe stop={self._safe_stop_count}, "
             f"Plant-applied control inputs={self._plant_input_apply_count}"
@@ -200,27 +189,10 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
     def cleanup(self):
         self._print_runtime_summary()
         self._reset_runtime_counters()
-        try:
-            files = {
-                *self._temp_files,
-                self.json_filename,
-                self.backup_json_filename,
-            }
-            for file_path in files:
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-            for directory in (
-                self.code_export_directory,
-                self.backup_code_export_directory,
-            ):
-                if os.path.isdir(directory):
-                    shutil.rmtree(directory, ignore_errors=True)
-        except OSError as error:
-            print(f"Warning: Error during cleanup: {error}")
-
         self.ocp = None
         self.solver = None
         self.backup_solver = None
+        self._cleanup_codegen_workspace()
         self.solver_times = []
         self._cycle_solver_time = 0.0
         self.psdf_wrapper = None
@@ -229,7 +201,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         self.reference_path_data = None
         self._system_dynamics = None
         self._system = None
-        self._temp_files = []
         self.path_param_dim = None
         self.guard_param_dim = 4
         self.mf_param_dim = 9
@@ -248,7 +219,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         self._cycle_log_rows = []
         self._covariance_log_rows = []
         self._last_nominal_probability_sum = None
-        self._last_boole_risk_visualization_data = None
         self._last_main_status = None
         self._solve_count = 0
         self._last_solve_mode = "uninitialized"
@@ -310,39 +280,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
     def get_cycle_log_fields(self):
         return list(self.CYCLE_LOG_FIELDS)
 
-    def get_last_boole_risk_sum_trajectory(self):
-        """Return the latest nominal stage-wise Boole risk sum.
-
-        The trajectory is evaluated at the nominal linearization points used
-        for the most recent solver attempt and has ``N + 1`` entries.  ``None``
-        is returned before the first attempt or after the optimizer is reset.
-        A copy is returned so diagnostics cannot mutate the cached values.
-        """
-        if self._last_nominal_probability_sum is None:
-            return None
-        return np.asarray(
-            self._last_nominal_probability_sum,
-            dtype=float,
-        ).copy()
-
-    def get_last_boole_risk_visualization_data(self):
-        """Return source-aligned nominal data for Boole-risk visualization.
-
-        Every array comes from the same nominal linearization pass.  The
-        returned dictionary contains ``nominal_poses`` with shape
-        ``(N + 1, 3)`` and the one-dimensional ``boole_risk_sum``, ``epsilon``,
-        and ``mf_mask`` arrays.  Copies prevent animation code from mutating
-        the optimizer's latest atomic cache.  ``None`` is returned for a
-        safe-stop cycle because that fallback plan was not the trajectory on
-        which the cached MF sum was evaluated.
-        """
-        if self._last_boole_risk_visualization_data is None:
-            return None
-        return {
-            key: np.asarray(value).copy()
-            for key, value in self._last_boole_risk_visualization_data.items()
-        }
-
     def get_covariance_log_rows(self):
         return [row.copy() for row in self._covariance_log_rows]
 
@@ -371,7 +308,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         nx = 8  # [x, y, theta, s, xi_f, xi_l, xi_theta, xi_c]
         nu = 3  # [v, omega, v_s]
         # Stage-varying path parameter:
-        # [p_ref_x, p_ref_y, t_ref_x, t_ref_y, s_ref, kappa_ref]
+        # [p_ref_x, p_ref_y, t_ref_x, t_ref_y, s_ref, reserved_zero]
         self.path_param_dim = 6
 
         x = ca.MX.sym("x", nx)
@@ -399,10 +336,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         omega = u[1]
         v_s = u[2]
 
-        kappa_ref = p_ref_t_ref[5]
-
         xi_next = symbolic_log_cholesky_transition(
-            x[4:8], v, omega, kappa_ref, dt, param,
+            x[4:8], v, omega, 0.0, dt, param,
         )
         # The schedule is fixed data: i < N_R propagates, i >= N_R freezes
         # the body-frame factor while mean motion and progress continue.
@@ -417,7 +352,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         )
 
         model = AcadosModel()
-        model.name = "differential_drive_cc_mf"
+        model.name = self._model_name
         model.x = x
         model.u = u
         model.p = p_all
@@ -427,13 +362,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         return model
 
     def _build_stage_path_parameter(self, s_value):
-        return stage_parameter(
-            self.reference_path_data,
-            s_value,
-            self.param.tangent_reg_delta,
-            self.param.fd_eps,
-            include_curvature=self._path_includes_curvature,
-        )
+        return super()._build_stage_path_parameter(s_value)
 
     def _build_stage_param(self, stage_path_param, guard_affine, mf_affine, stage_idx=0):
         stage_param = np.zeros(
@@ -473,12 +402,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         for stage in range(num_stages):
             trajectory[stage] = xi
             if stage < min(robust_horizon, num_stages - 1, len(inputs)):
-                kappa = (
-                    0.0 if self.reference_path_data is None
-                    else self._build_stage_path_parameter(stage_s_values[stage])[5]
-                )
+                # Covariance uses physical inputs v/omega, not path curvature.
                 xi = propagate_log_cholesky(
-                    xi, inputs[stage, 0], inputs[stage, 1], kappa, dt, self.param,
+                    xi, inputs[stage, 0], inputs[stage, 1], 0.0, dt, self.param,
                 )
         return trajectory
 
@@ -498,6 +424,27 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         if not np.isfinite(epsilon).all() or np.any(epsilon <= 0.0) or np.any(epsilon >= 1.0):
             raise ValueError("chance_epsilon values must lie strictly between 0 and 1")
         return epsilon
+
+    def _inactive_mf_constant(self, epsilon):
+        """Positive residual for a deliberately disabled probability row."""
+        return np.asarray(epsilon, dtype=float).copy()
+
+    def _nominal_probability_sum(self, constraint_data, z_bar):
+        residual = (
+            np.einsum("ij,ij->i", constraint_data["mf_A_raw"], z_bar)
+            + constraint_data["mf_c_raw"]
+        )
+        probability = constraint_data["epsilon"] - residual
+        probability[~constraint_data["mf_valid"]] = np.nan
+        return probability
+
+    def _raise_if_fatal_evaluation_error(self, error):
+        """Variants can bypass recovery for fatal preprocessing errors."""
+        del error
+
+    def _extend_constraint_diagnostics(self, diagnostics, states, fresh):
+        """Optional variant metadata; probability CC-MF has no extra data."""
+        return diagnostics
 
     def _compute_exact_psdf(self, poses):
         """Evaluate signed PSDF directly at world-frame poses."""
@@ -690,9 +637,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             stage_available = np.zeros(num_stages, dtype=bool)
 
         d_col = float(self.param.d_col)
-        d_mf_mask = float(self.param.d_mf_mask)
-        if not np.isfinite(d_col) or not np.isfinite(d_mf_mask):
-            raise ValueError("d_col and d_mf_mask must be finite")
+        if not np.isfinite(d_col):
+            raise ValueError("d_col must be finite")
 
         guard_A = np.zeros((num_stages, 8), dtype=float)
         guard_A[:, :3] = gradient
@@ -707,10 +653,10 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 raise ValueError("MF availability must contain one value per stage")
         mf_valid = row_mf_enabled & stage_available & finite_mf
         mf_stage_mask = self._build_mf_stage_mask(num_stages)
-        mf_mask = (phi > d_mf_mask) & mf_valid & mf_stage_mask
+        mf_mask = (phi > d_col) & mf_valid & mf_stage_mask
 
         A_mf = np.zeros((num_stages, 8), dtype=float)
-        c_mf = epsilon.copy()
+        c_mf = self._inactive_mf_constant(epsilon)
         A_mf[mf_mask] = A_mf_raw[mf_mask]
         c_mf[mf_mask] = c_mf_raw[mf_mask]
 
@@ -828,17 +774,18 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             self.ocp.solver_options.regularize_method = regularize_method
 
     def create_solver(self, json_filename=None, code_export_directory=None):
-        if code_export_directory is not None:
-            self.ocp.code_export_directory = code_export_directory
+        self.ocp.code_export_directory = (
+            self.code_export_directory if code_export_directory is None else code_export_directory
+        )
 
         used_json_filename = self.json_filename if json_filename is None else json_filename
         solver = AcadosOcpSolver(self.ocp, json_file=used_json_filename)
-        if used_json_filename not in self._temp_files:
-            self._temp_files.append(used_json_filename)
         return solver
 
-    def add_obstacle_avoidance_constraint(self, param, obstacles_geo):
-        if param.use_obstacle_constraint:
+    def add_obstacle_avoidance_constraint(
+        self, param, obstacles_geo, *, update_obstacle_data=True,
+    ):
+        if param.use_obstacle_constraint and update_obstacle_data:
             self.update_obstacles(obstacles_geo)
 
         if self.ocp is None:
@@ -1024,11 +971,13 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         # Stage 0 has no safety constraint.  Keep its parameter slots trivial
         # and mirror that fact in the cached diagnostics data.
         constraint_data["mf_A"][0] = 0.0
-        constraint_data["mf_c"][0] = constraint_data["epsilon"][0]
+        constraint_data["mf_c"][0] = self._inactive_mf_constant(
+            constraint_data["epsilon"][0]
+        )
         constraint_data["mf_mask"][0] = False
         guard_stage_zero = np.array([0.0, 0.0, 0.0, 1.0])
         mf_stage_zero = np.zeros(self.mf_param_dim)
-        mf_stage_zero[-1] = constraint_data["epsilon"][0]
+        mf_stage_zero[-1] = self._inactive_mf_constant(constraint_data["epsilon"][0])
         solver.set(
             0,
             "p",
@@ -1055,10 +1004,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         if solver is None:
             raise RuntimeError("Solver is not initialized.")
 
-        # Do not let an exception in this solve attempt expose the previous
-        # cycle's risk markers as if they belonged to the current frame.
+        # Do not reuse the previous cycle's diagnostics if preparation fails.
         self._last_nominal_probability_sum = None
-        self._last_boole_risk_visualization_data = None
         self._current_psdf = None
 
         s_lower, s_upper = self._get_current_s_bounds(self.param)
@@ -1137,12 +1084,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             solver.set(stage, "x", x_guess[stage])
 
         constraint_data = self._compute_constraint_affine_data(x_guess)
-        nominal_mf_residual = (
-            np.einsum("ij,ij->i", constraint_data["mf_A_raw"], x_guess)
-            + constraint_data["mf_c_raw"]
-        )
-        nominal_probability_sum = constraint_data["epsilon"] - nominal_mf_residual
-        nominal_probability_sum[~constraint_data["mf_valid"]] = np.nan
+        nominal_probability_sum = self._nominal_probability_sum(constraint_data, x_guess)
 
         # The batch includes x_guess[0] fixed to the measured current state.
         # Its phi is the exact PSDF, not the affine guard approximation, even
@@ -1159,18 +1101,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             constraint_data,
         )
         self._last_nominal_probability_sum = nominal_probability_sum.copy()
-        self._last_boole_risk_visualization_data = {
-            "nominal_poses": x_guess[:, :3].copy(),
-            "boole_risk_sum": nominal_probability_sum.copy(),
-            "epsilon": np.asarray(
-                constraint_data["epsilon"],
-                dtype=float,
-            ).copy(),
-            "mf_mask": np.asarray(
-                constraint_data["mf_mask"],
-                dtype=bool,
-            ).copy(),
-        }
         if self.param.use_obstacle_constraint and (
             not np.isfinite(self._current_psdf)
             or self._current_psdf < float(self.param.d_col)
@@ -1200,20 +1130,11 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             if self._last_nominal_probability_sum is None
             else self._last_nominal_probability_sum.copy()
         )
-        main_visualization_data = (
-            None
-            if self._last_boole_risk_visualization_data is None
-            else {
-                key: np.asarray(value).copy()
-                for key, value in self._last_boole_risk_visualization_data.items()
-            }
-        )
 
         def restore_main_diagnostics():
             self._constraint_data = main_constraint_data
             self._current_psdf = main_current_psdf
             self._last_nominal_probability_sum = main_probability_sum
-            self._last_boole_risk_visualization_data = main_visualization_data
 
         try:
             self.backup_solver.reset(reset_qp_solver_mem=1)
@@ -1251,39 +1172,18 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 "falling back to safe stop."
             )
         except Exception as error:
+            self._raise_if_fatal_evaluation_error(error)
             restore_main_diagnostics()
             print(f"Warning: backup solver recovery failed: {error}")
         return None
 
     def _build_safe_stop_plan(self, dynamics):
-        dt = float(self.param.tf) / max(self.N, 1)
+        """Stop physical and virtual motion immediately at every stage."""
         progress = self._clamp_s(self._current_s0)
         pose = np.asarray(self.state._x, dtype=float).copy()
-        previous_input = np.asarray(
-            getattr(self.state, "_u", np.zeros(2)),
-            dtype=float,
-        ).reshape(-1)
-        previous_speed = float(previous_input[0]) if previous_input.size else 0.0
         states = np.zeros((self.N + 1, self.nx), dtype=float)
         inputs = np.zeros((self.N, self.nu), dtype=float)
-        states[0, :4] = [*pose, progress]
-
-        for stage in range(self.N):
-            next_pose, nominal_input = dynamics.nominal_safe_controller(
-                pose,
-                dt,
-                previous_speed,
-                -1.0,
-                1.0,
-            )
-            nominal_input = np.asarray(nominal_input, dtype=float).reshape(-1)
-            speed = float(nominal_input[0]) if nominal_input.size else 0.0
-            omega = float(nominal_input[1]) if nominal_input.size > 1 else 0.0
-            inputs[stage] = [speed, omega, 0.0]
-            states[stage + 1, :4] = [*next_pose, progress]
-            pose = np.asarray(next_pose, dtype=float)
-            previous_speed = speed
-
+        states[:, :4] = [*pose, progress]
         states[:, 4:8] = self._propagate_covariance_state_batch(inputs, states[:, 3])
         return states, inputs
 
@@ -1297,26 +1197,24 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 self.solver.set(stage, "x", states[stage])
                 self.solver.set(stage, "u", inputs[stage])
             self.solver.set(self.N, "x", states[-1])
+            if solver_status is not None:
+                self.solver.status = int(solver_status)
         except Exception as error:
-            if raise_on_failure:
-                # A safety veto must never fall through to a retained input.
-                raise RuntimeError("Could not install stage-0 safe-stop plan") from error
-            print(f"Warning: infeasible recovery failed: {error}")
+            # Never return a partially installed plan or a failed iterate as
+            # an applied safe stop, including the ordinary solver-failure path.
+            message = (
+                "Could not install stage-0 safe-stop plan" if raise_on_failure
+                else "Could not install zero-input safe-stop plan"
+            )
+            raise RuntimeError(message) from error
         return self.solver, solver_status, "safe_stop"
 
     def recovery_infeasible(self, solver_status):
         self._last_backup_status = None
         if self.solver is None or self.state is None:
-            return self.solver, solver_status, "safe_stop"
+            raise RuntimeError("Cannot install safe stop without a solver and current state")
 
         dynamics = self._system_dynamics
-        if dynamics is None or not hasattr(dynamics, "nominal_safe_controller"):
-            print(
-                "Warning: nominal_safe_controller is unavailable; "
-                "keeping failed solver iterate."
-            )
-            return self.solver, solver_status, "sqp_rti"
-
         print(
             f"SQP_RTI solver failed with status {solver_status}. "
             "Starting infeasible recovery."
@@ -1330,7 +1228,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         self.backup_solver = None
         if not param.enable_backup_solver:
             print(
-                "CC-MF backup SQP_WITH_FEASIBLE_QP solver disabled; "
+                f"{self.diagnostics_label} backup SQP_WITH_FEASIBLE_QP solver disabled; "
                 "using nominal safe-stop recovery."
             )
             return
@@ -1342,7 +1240,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             backup_param.hpipm_mode = "ROBUST"
             backup_param.regularize_method = "PROJECT"
             self.setup_ocp(backup_param)
-            self.add_obstacle_avoidance_constraint(backup_param, obstacles)
+            self.add_obstacle_avoidance_constraint(
+                backup_param, obstacles, update_obstacle_data=False,
+            )
             self.backup_solver = self.create_solver(
                 json_filename=self.backup_json_filename,
                 code_export_directory=self.backup_code_export_directory,
@@ -1369,14 +1269,14 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 self.update_obstacles(obstacles)
             return
 
-        print("Setting up CC-MF optimizer...")
+        print(f"Setting up {self.diagnostics_label} optimizer...")
         active_stages = np.flatnonzero(
             self._build_mf_stage_mask(int(param.horizon) + 1)
         ).tolist()
         print(
-            "CC-MF Row M configuration: "
+            f"{self.diagnostics_label} Row M configuration: "
             f"enabled={bool(param.use_row_mf)}, "
-            f"active only when phi > d_mf_mask={float(param.d_mf_mask):.8g}, "
+            f"active only when phi > d_col={float(param.d_col):.8g}, "
             f"configured stages={active_stages}"
         )
         if param.use_obstacle_constraint:
@@ -1389,7 +1289,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         else:
             self.psdf_wrapper = None
             print(
-                "CC-MF obstacle constraint disabled: "
+                f"{self.diagnostics_label} obstacle constraint disabled: "
                 "skipping augmented PSDF initialization."
             )
 
@@ -1419,7 +1319,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             if mode == "safe_stop_stage0":
                 self._stage0_guard_stop_count += 1
             if self.param.debug_mf or self.param.debug_infeasibility:
-                print(f"Applied nominal_safe_controller plan: {mode}.")
+                print(f"Applied immediate zero-input safe-stop plan: {mode}.")
 
     def _update_predicted_progress(self, solver, status):
         if status != 0:
@@ -1475,8 +1375,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                     "solve_step": int(self._solve_count),
                     "horizon_stage": stage,
                     "phi": phi,
-                    "d_mf_mask": float(diagnostics["d_mf_mask"]),
-                    "phi_gt_d_mf_mask": bool(
+                    "d_col": float(diagnostics["d_col"]),
+                    "phi_gt_d_col": bool(
                         diagnostics["mf_domain_eligible"][stage]
                     ),
                     "mf_valid": bool(diagnostics["mf_valid"][stage]),
@@ -1637,7 +1537,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             input_text = f"u=({stage_zero_input[0]:.3f},{stage_zero_input[1]:.3f})"
 
         summary = (
-            f"[CC-MF {self._solve_count:04d}] {outcome} "
+            f"[{self.diagnostics_label} {self._solve_count:04d}] {outcome} "
             f"solve={solve_time * 1e3:.1f}ms {pose_text} {input_text} "
             f"s={self._current_s0:.3f}"
         )
@@ -1692,7 +1592,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
 
     def solve_nlp(self):
         if self.solver is None:
-            raise RuntimeError("CC-MF solver is not initialized. Call setup() first.")
+            raise RuntimeError(f"{self.diagnostics_label} solver is not initialized. Call setup() first.")
 
         self._cycle_solver_time = 0.0
         self._last_backup_status = None
@@ -1734,12 +1634,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                     )
             active_solver, status, mode = self.recovery_infeasible(status)
             self._record_recovery(mode)
-
-        if mode in ("safe_stop", "safe_stop_stage0"):
-            # The safe-stop state trajectory is not the nominal trajectory on
-            # which the MF sum was evaluated.  Keep the raw experiment log, but
-            # suppress the spatial overlay for this cycle to avoid mixing them.
-            self._last_boole_risk_visualization_data = None
 
         self._update_predicted_progress(active_solver, status)
 

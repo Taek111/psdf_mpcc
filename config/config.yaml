@@ -23,10 +23,23 @@ start_perturbation:
   min_clearance: 0.001     # Whole footprint to obstacles/map bounds [m].
   max_attempts: 1000      # Fail explicitly if no safe sample can be found.
 
+# Optional post-solve risk/constraint diagnostics (disabled by default).
+# Enable per controller when inspecting predicted margins and residuals.
+cc_sf:
+  debug_mode: false
+cc_ecs:
+  debug_mode: false
+
+# Timing: solver_computation_time includes only solve() calls measured with
+# perf_counter; a recovered cycle sums main + backup calls. Skipped solves
+# record zero, and unsuccessful cycles are excluded from timing summaries.
+# Controller time includes setup/parameter updates/recovery and any enabled
+# diagnostics, so keep debug_mode false for controller latency comparisons.
+
 test_configs:
   - maze_type: "maze"
     robot_shape: "rectangle"
-    optimizer_type: "psdf"
+    optimizer_type: "cc_mf"
     dynamics_type: "differential_drive"
     path_planner: "astar"
 
@@ -46,7 +59,6 @@ defaults:
   generate_plots: true          # Whether to generate static plots (true/false)
   speed_range: [0.0, 0.30]      # Shared color scale for speed heatmaps [m/s]
   clearance_range: [0.00, 0.03] # Shared color scale for clearance/SDF heatmaps [m]
-  risk_range: [0.0, 0.045]     # Shared color scale for risk heatmaps [m]
 
 # =====================================================
 # Option descriptions:
@@ -60,7 +72,7 @@ defaults:
 #   - "parking": Parking scenario environment
 #
 # robot_shape options:
-#   - "rectangle": Rectangular robot (0.15x0.09m)
+#   - "rectangle": Rectangular robot (0.15x0.08m)
 #   - "pentagon": Pentagon robot (radius 0.05m)
 #   - "triangle": Triangle robot
 #   - "lshape": L-shaped robot

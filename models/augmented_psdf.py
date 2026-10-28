@@ -15,6 +15,18 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 
+from models.mf_implicit import (
+    MFImplicitResult,
+    compute_mf_imp,
+    evaluate_mf_imp_frozen,
+    projected_variance_and_gradient,
+)
+from models.mf_inverse_cdf import (
+    MFInverseCDFResult,
+    compute_mf_icdf,
+    evaluate_mf_icdf_frozen,
+)
+
 
 class PSDF(nn.Module):
     """Cluster-aware hard-SAT PSDF with an analytic world-frame gradient."""
@@ -90,23 +102,9 @@ class PSDF(nn.Module):
         # Invalid feature slots must not contribute NaNs through products such
         # as zero times an undefined feature gradient or distance.
         q = torch.where(feature_mask[..., None], q, torch.zeros_like(q))
-        q_f, q_l, q_theta = q.unbind(-1)
-        l_ff = z_bar[:, 4, None].exp()
-        l_ll = z_bar[:, 5, None].exp()
-        l_tt = z_bar[:, 6, None].exp()
-        l_tl = z_bar[:, 7, None]
-
         # ||L(xi)^T q||^2, evaluated directly from the factor.  The fourth
         # state is L_theta,l, not the lateral-heading covariance entry.
-        forward_projection = l_ff * q_f
-        lateral_projection = l_ll * q_l
-        heading_projection = l_tt * q_theta
-        coupled_projection = lateral_projection + l_tl * q_theta
-        sigma_sq = (
-            forward_projection.square()
-            + coupled_projection.square()
-            + heading_projection.square()
-        )
+        sigma_sq, variance_gradient = projected_variance_and_gradient(q, z_bar)
 
         # Keep detailed value validation on CPU, where scalar inspection does
         # not synchronize a device stream.  The CUDA production path relies on
@@ -148,15 +146,6 @@ class PSDF(nn.Module):
             dim=-1,
         )
 
-        variance_gradient = torch.stack(
-            [
-                2.0 * forward_projection.square(),
-                2.0 * lateral_projection * coupled_projection,
-                2.0 * heading_projection.square(),
-                2.0 * q_theta * coupled_projection,
-            ],
-            dim=-1,
-        )
         variance_gradient = torch.where(
             feature_mask[..., None],
             variance_gradient,
@@ -588,3 +577,72 @@ class PSDF(nn.Module):
         )
         c_mf = self._compute_c(A_mf, h_bar, z_bar)
         return phi, gradient, A_mf, c_mf
+
+    @torch.no_grad()
+    def forward_mf_imp(
+        self,
+        A: Tensor,
+        B: Tensor,
+        mask: Tensor,
+        z_bar: Tensor,
+        epsilon,
+        d_min: float,
+        **kwargs,
+    ) -> MFImplicitResult:
+        """Return a distance-unit implicit MF row and stage diagnostics.
+
+        Geometry uses the module's original dtype.  The original nominal
+        state is retained in float64 for risk/covariance arithmetic; it is
+        never reconstructed from a rounded geometry input.
+        """
+        if z_bar.ndim != 2 or z_bar.shape[1] != 8:
+            raise ValueError("z_bar must have shape (H, 8)")
+        if not z_bar.is_floating_point():
+            raise TypeError("z_bar must be a floating-point tensor")
+        if z_bar.device != self.V.device:
+            raise ValueError("z_bar and the PSDF module must use the same device")
+        z_risk = z_bar.to(dtype=torch.float64)
+        phi, gradient, d, q, feature_mask = self._forward_impl(
+            A, B, mask, z_risk[:, :3].to(dtype=self.V.dtype),
+            return_features=True,
+        )
+        return compute_mf_imp(
+            phi, gradient, d, q, feature_mask, z_risk, epsilon, d_min, **kwargs,
+        )
+
+    # Standalone frozen-model evaluation does not run or reselect geometry.
+    evaluate_mf_imp_frozen = staticmethod(evaluate_mf_imp_frozen)
+
+    @torch.no_grad()
+    def forward_mf_icdf(
+        self,
+        A: Tensor,
+        B: Tensor,
+        mask: Tensor,
+        z_bar: Tensor,
+        epsilon,
+        d_min: float,
+        **kwargs,
+    ) -> MFInverseCDFResult:
+        """Return inverse-CDF MF affine coefficients and stage diagnostics.
+
+        Feature geometry retains this module's dtype, while risk arithmetic
+        receives the original nominal state in float64 without rounding its
+        covariance coordinates through the geometry dtype.
+        """
+        if z_bar.ndim != 2 or z_bar.shape[1] != 8:
+            raise ValueError("z_bar must have shape (H, 8)")
+        if not z_bar.is_floating_point():
+            raise TypeError("z_bar must be a floating-point tensor")
+        if z_bar.device != self.V.device:
+            raise ValueError("z_bar and the PSDF module must use the same device")
+        z_risk = z_bar.to(dtype=torch.float64)
+        phi, gradient, d, q, feature_mask = self._forward_impl(
+            A, B, mask, z_risk[:, :3].to(dtype=self.V.dtype),
+            return_features=True,
+        )
+        return compute_mf_icdf(
+            phi, gradient, d, q, feature_mask, z_risk, epsilon, d_min, **kwargs,
+        )
+
+    evaluate_mf_icdf_frozen = staticmethod(evaluate_mf_icdf_frozen)

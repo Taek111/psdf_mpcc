@@ -1,0 +1,46 @@
+# Standalone inverse-CDF MF example; existing method settings are unchanged.
+# python test_nmpc.py -c config/config_cc_mf_icdf.yaml --trials 1 --results-dir <new-directory>
+
+start_perturbation:
+  enabled: false
+  seed: 0
+
+localization_error:
+  enabled: false
+
+defaults:
+  simulation_time: 60.0
+  generate_animation: false
+  generate_plots: false
+
+trial_failure_criteria:
+  enabled: true
+  movement_window_sec: 4.0
+  movement_threshold: 0.03
+  max_consecutive_solver_failures: 20
+
+# Only this section configures cc_mf_icdf; cc_mf overrides are not inherited.
+cc_mf_icdf:
+  augmented_psdf_device: cuda
+  chance_epsilon: 0.20  # float64 tiny < epsilon < 0.5.
+  d_min: 0.001
+  d_col: 0.001
+  d_mf_mask: 0.001
+  use_obstacle_constraint: true
+  use_row_mf: true
+  mf_active_start_step: 1
+  mf_active_end_step: null
+  mf_active_terminal: true
+  # Provisional quantile-slack penalties, not probability-unit penalties.
+  mf_slack_linear: 100.0
+  mf_slack_quadratic: 1.0
+  # Enable frozen/fresh residual diagnostics when investigating RTI error.
+  debug_mf: true
+
+test_configs:
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_mf_icdf
+    dynamics_type: differential_drive
+    path_planner: astar
+

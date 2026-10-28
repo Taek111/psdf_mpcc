@@ -1,0 +1,39 @@
+{
+  "checks": [
+    {
+      "width_m": 0.1,
+      "same_geometry_and_seed_poses_as_reference": true,
+      "solver_csv_and_summary_match": true,
+      "initial_and_final_pose_included": true,
+      "controller_first_step_excluded_per_trial": true,
+      "quantile_and_mean_independently_checked": true,
+      "solve_modes": {
+        "sqp_rti": 1559
+      }
+    },
+    {
+      "width_m": 0.08,
+      "same_geometry_and_seed_poses_as_reference": true,
+      "solver_csv_and_summary_match": true,
+      "initial_and_final_pose_included": true,
+      "controller_first_step_excluded_per_trial": true,
+      "quantile_and_mean_independently_checked": true,
+      "solve_modes": {
+        "sqp_rti": 1374
+      }
+    }
+  ],
+  "source_history_sha256": {
+    "frozen/width_010/runs/config01/trial_0001/data/trial_history_MPC_cc_mf_icdf_rectangle_maze_startseed0.csv": "0229196cd629966da22fc2aa652f1ba44a731c58dfd4afe433eeaf1b376a9fec",
+    "frozen/width_010/runs/config01/trial_0002/data/trial_history_MPC_cc_mf_icdf_rectangle_maze_startseed1.csv": "9492be7abb3e77ed5970eba2bd0dbe5c3a1fed262918d80c35c3f0db354c1c6a",
+    "frozen/width_010/runs/config01/trial_0003/data/trial_history_MPC_cc_mf_icdf_rectangle_maze_startseed2.csv": "4d07b6d5f6944d10876ec739bc597eb9c1c3690da93693c27b88790383e7cfe1",
+    "frozen/width_010/runs/config01/trial_0004/data/trial_history_MPC_cc_mf_icdf_rectangle_maze_startseed3.csv": "6c44e55c7d46e1d6939d10ab1dc5b9ec07a8e264ef53cf036416da6dc2091cc5",
+    "frozen/width_010/runs/config01/trial_0005/data/trial_history_MPC_cc_mf_icdf_rectangle_maze_startseed4.csv": "7289e7b3db2da05f971475efa23186fdced88d468c8c7fd7ca52c800d77d1151",
+    "frozen/width_008/runs/config01/trial_0001/data/trial_history_MPC_cc_mf_icdf_rectangle_maze_startseed0.csv": "402f6dad04aea84022f3bb670b26a3bb8f38ec5d651e0f93167ca62aca2bf574",
+    "frozen/width_008/runs/config01/trial_0002/data/trial_history_MPC_cc_mf_icdf_rectangle_maze_startseed1.csv": "7ca1391550e6d48df1743eb4cb300bdba991bae05906ec8f2e0dd1fcd7968b34",
+    "frozen/width_008/runs/config01/trial_0003/data/trial_history_MPC_cc_mf_icdf_rectangle_maze_startseed2.csv": "e246b333d99f6d205beb1bc3bc5e875f5df2844a7283f81f023d0f50145828b1",
+    "frozen/width_008/runs/config01/trial_0004/data/trial_history_MPC_cc_mf_icdf_rectangle_maze_startseed3.csv": "cb35e555b115976b9565efe4103f4f1009bfa44fe6b4c5abe11ed9ee09754368",
+    "frozen/width_008/runs/config01/trial_0005/data/trial_history_MPC_cc_mf_icdf_rectangle_maze_startseed4.csv": "7e2a3c845a7324ba7c5c8c72e2a6e65543a62e087b335e37dcc7b1853c88a0e5"
+  },
+  "metric_definition": "Same as benchmark_results.md: pooled exact polygon/boundary clearance at initial and every integrated pose, successful solver calls including first, controller calls excluding only each trial first, traversal over successful trials."
+}

@@ -4,7 +4,7 @@ import io
 import unittest
 from contextlib import ExitStack, redirect_stdout
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 import numpy as np
 
@@ -144,6 +144,77 @@ class MPCCIntegrationTest(unittest.TestCase):
                 if status == 0:
                     self.assertEqual(steps[0]["solver_status_code"], 0)
                     self.assertEqual(steps[0]["solver_computation_time_s"], 0.012)
+
+    def test_obstacle_snapshots_are_updated_once_per_step_by_their_owner(self):
+        for owner in ("setup", "legacy_hook", "detection"):
+            with self.subTest(owner=owner):
+                self.optimizer.updates_obstacles_in_setup = owner == "setup"
+                self.optimizer.update_obstacles = Mock()
+                self.optimizer.setup = Mock()
+                self.optimizer.solver_times = [0.012] * 3
+                if owner == "setup":
+                    self.optimizer.setup.side_effect = (
+                        lambda param, system, reference, obstacles:
+                        self.optimizer.update_obstacles(obstacles)
+                    )
+                if owner == "detection":
+                    self.optimizer.obstacle_detector = SimpleNamespace(
+                        last_detected_caps_world=[],
+                    )
+                    self.optimizer.should_update_detection = Mock(return_value=True)
+                    self.optimizer.update_obstacles_with_detection = Mock()
+                else:
+                    for name in (
+                        "obstacle_detector", "should_update_detection",
+                        "update_obstacles_with_detection",
+                    ):
+                        if hasattr(self.optimizer, name):
+                            delattr(self.optimizer, name)
+
+                solver = SimpleNamespace(
+                    status=0,
+                    get=lambda stage, field: np.zeros(4 if field == "x" else 3),
+                )
+                self.optimizer.solve_nlp = Mock(
+                    return_value=AcadosSolution(solver, 1, {"x": "x", "u": "u"}),
+                )
+                # Include a changed snapshot and obstacle removal. Reusing a
+                # previous step's data must not replace the one update.
+                snapshots = [[object()], [object(), object()], []]
+
+                def three_cycles(duration):
+                    for snapshot in snapshots:
+                        self.robot._controller.generate_control_input(
+                            self.system, None, {}, snapshot,
+                        )
+                    return {"status": "success", "final_time": 0.3}
+
+                with (
+                    patch(
+                        "sim.simulation_mpc.SingleAgentSimulation",
+                        return_value=SimpleNamespace(run_navigation=three_cycles),
+                    ),
+                    patch.object(self.simulation, "save_trial_history_to_csv"),
+                    patch.object(self.simulation, "save_pose_sdf_to_csv"),
+                    redirect_stdout(io.StringIO()),
+                ):
+                    self.simulation.mpc_test(
+                        "maze", "rectangle", optimizer_type="mpcc", config={},
+                    )
+
+                self.assertEqual(self.optimizer.setup.call_count, len(snapshots))
+                if owner == "detection":
+                    self.optimizer.update_obstacles.assert_not_called()
+                    self.assertEqual(
+                        self.optimizer.update_obstacles_with_detection.call_args_list,
+                        [call(snapshot, self.pose, force_update=False)
+                         for snapshot in snapshots],
+                    )
+                else:
+                    self.assertEqual(
+                        self.optimizer.update_obstacles.call_args_list,
+                        [call(snapshot) for snapshot in snapshots],
+                    )
 
 
 class MPCCCliRoutingTest(unittest.TestCase):

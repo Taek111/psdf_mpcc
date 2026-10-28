@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import copy
 import json
-import os
-import shutil
 import time
 
 import casadi as ca
@@ -79,6 +77,7 @@ class CCECSOptimizerParam:
         self.tol = 1e-4
         self.enable_backup_solver = False
         self.augmented_psdf_device = "cuda"
+        self.debug_mode = False
 
 
 class _ClusterAffinePSDF:
@@ -109,6 +108,8 @@ class CCECSOptimizer(CCSFOptimizer):
     Only nominal geometry is frozen. L(xi) stays symbolic in every hard row.
     """
 
+    _codegen_name = "cc_ecs"
+
     CONSTRAINT_LOG_FIELDS = (
         "time", "solve_step", "solver_status", "solve_mode", "horizon_stage",
         "obstacle_index", "active", "epsilon_horizon", "epsilon_stage", "beta",
@@ -128,11 +129,6 @@ class CCECSOptimizer(CCSFOptimizer):
 
     def __init__(self, variables=None, costs=None, dynamics_opt=None):
         super().__init__(variables, costs, dynamics_opt)
-        self.json_filename = "acados_ocp_cc_ecs.json"
-        self.code_export_directory = "c_generated_code_cc_ecs"
-        self.backup_json_filename = "acados_ocp_cc_ecs_backup.json"
-        self.backup_code_export_directory = "c_generated_code_cc_ecs_backup"
-        self._owned_codegen_directories = set()
         self.prints_compact_runtime_summary = True
         self._clear_ecs_data()
         self._configure_cluster_capacity(1)
@@ -157,16 +153,8 @@ class CCECSOptimizer(CCSFOptimizer):
     def cleanup(self):
         self._print_runtime_summary()
         self._reset_runtime_counters()
-        # An unbuilt instance (including geometry-only tests) owns no files.
-        for filename in self._temp_files:
-            if os.path.isfile(filename):
-                os.remove(filename)
-        for directory in getattr(self, "_owned_codegen_directories", ()):
-            if os.path.isdir(directory):
-                shutil.rmtree(directory)
-        self._owned_codegen_directories = set()
-        self._temp_files = []
         self.ocp = self.solver = self.backup_solver = None
+        self._cleanup_codegen_workspace()
         self.psdf_wrapper = self.ped_model = None
         self.solver_times = []
         self._is_initialized = False
@@ -181,14 +169,6 @@ class CCECSOptimizer(CCSFOptimizer):
         self._clear_ecs_data()
         self.obstacle_capacity = 1
         self.risk_tensor_param_dim = 3
-
-    def create_solver(self, json_filename=None, code_export_directory=None):
-        directory = code_export_directory or self.code_export_directory
-        filename = json_filename or self.json_filename
-        self._owned_codegen_directories.add(directory)
-        if filename not in self._temp_files:
-            self._temp_files.append(filename)
-        return super().create_solver(filename, directory)
 
     def _print_runtime_summary(self):
         if self._has_runtime_activity():
@@ -233,7 +213,7 @@ class CCECSOptimizer(CCSFOptimizer):
         # These quantities enter stage parameters or x0 rather than generated C.
         runtime_fields = {
             "chance_epsilon", "robust_horizon", "initial_pose_covariance",
-            "sigma_f0", "sigma_l0", "sigma_psi0",
+            "sigma_f0", "sigma_l0", "sigma_psi0", "debug_mode",
         }
         return json.dumps(
             {key: value for key, value in vars(param).items() if key not in runtime_fields},
@@ -271,8 +251,11 @@ class CCECSOptimizer(CCSFOptimizer):
         positive = variance > 0.0
         return ca.if_else(positive, ca.sqrt(ca.if_else(positive, variance, 1.0)), 0.0)
 
-    def add_obstacle_avoidance_constraint(self, param, system, obstacles_geo):
-        self.update_obstacles(obstacles_geo)
+    def add_obstacle_avoidance_constraint(
+        self, param, system, obstacles_geo, *, update_obstacle_data=True
+    ):
+        if update_obstacle_data:
+            self.update_obstacles(obstacles_geo)
         model = self.ocp.model
         distances = self.ped_model(model.x[:3])
         gradients = model.p[self.risk_tensor_param_slice]
@@ -328,8 +311,8 @@ class CCECSOptimizer(CCSFOptimizer):
 
     def update_obstacles(self, obstacles_geo):
         if self.psdf_wrapper is None:
-            # The simulator's PSDF logging hook runs before the first setup.
-            # setup() receives the same full snapshot and initializes capacity.
+            # Direct callers may provide an obstacle snapshot before setup()
+            # creates the geometry backend and determines its capacity.
             if not self._is_initialized:
                 return
             if obstacles_geo is not None and len(obstacles_geo):
@@ -452,9 +435,10 @@ class CCECSOptimizer(CCSFOptimizer):
         self._set_ecs_parameters(solver, stage_s, self._constraint_data)
         started = time.perf_counter()
         try:
-            status = int(solver.solve())
+            status = solver.solve()
         finally:
             self._cycle_solver_time += time.perf_counter() - started
+        status = int(status)
         solver.status = status
         return status
 
@@ -478,7 +462,9 @@ class CCECSOptimizer(CCSFOptimizer):
         else:
             self._configure_cluster_capacity(1)
         self.setup_ocp(param, reference_trajectory)
-        self.add_obstacle_avoidance_constraint(param, system, obstacles)
+        self.add_obstacle_avoidance_constraint(
+            param, system, obstacles, update_obstacle_data=False
+        )
         self.solver = self.create_solver(code_export_directory=self.code_export_directory)
         self.add_warm_start(param, system)
         if param.enable_backup_solver:
@@ -489,7 +475,9 @@ class CCECSOptimizer(CCSFOptimizer):
             backup_param.regularize_method = "PROJECT"
             try:
                 self.setup_ocp(backup_param, reference_trajectory)
-                self.add_obstacle_avoidance_constraint(backup_param, system, obstacles)
+                self.add_obstacle_avoidance_constraint(
+                    backup_param, system, obstacles, update_obstacle_data=False
+                )
                 self.backup_solver = self.create_solver(
                     json_filename=self.backup_json_filename,
                     code_export_directory=self.backup_code_export_directory,
@@ -501,21 +489,11 @@ class CCECSOptimizer(CCSFOptimizer):
         self._is_initialized = True
 
     def _apply_safe_stop(self, solver_status):
-        dynamics = self._system_dynamics
-        if dynamics is None or not hasattr(dynamics, "nominal_safe_controller"):
-            raise RuntimeError("CC-ECS solver failed and nominal_safe_controller is unavailable")
-        dt = self.param.tf / self.N
+        # DD inputs are velocities: zero control holds the measured pose from
+        # the first applied input, without a braking interval or stale command.
         states = np.zeros((self.N + 1, 8))
         inputs = np.zeros((self.N, 3))
-        states[0, :4] = np.r_[self.state._x[:3], self._current_s0]
-        previous_speed = float(self.state._u[0])
-        for stage in range(self.N):
-            next_pose, control = dynamics.nominal_safe_controller(
-                states[stage, :3], dt, previous_speed, -1.0, 1.0
-            )
-            inputs[stage, :2] = np.asarray(control, dtype=float)[:2]
-            states[stage + 1, :4] = np.r_[next_pose, self._current_s0]
-            previous_speed = inputs[stage, 0]
+        states[:, :4] = np.r_[self.state._x[:3], self._current_s0]
         states[:, 4:8] = self._propagate_covariance_state_batch(inputs, states[:, 3])
         if not np.isfinite(states).all() or not np.isfinite(inputs).all():
             raise ValueError("Non-finite nominal safe-stop plan")
@@ -567,6 +545,20 @@ class CCECSOptimizer(CCSFOptimizer):
         return margins
 
     def _record_experiment_logs(self, solver, status, mode):
+        cycle = {
+            "time": (self._solve_count - 1) * self.param.tf / self.N,
+            "solve_step": self._solve_count, "solve_mode": mode,
+            "solver_status": int(status), "main_status": self._last_main_status,
+            "backup_status": self._last_backup_status,
+            "solver_time_s": self._cycle_solver_time, "path_s": self._current_s0,
+            "minimum_psdf": None, "minimum_fixed_row_residual": None,
+            "minimum_reevaluated_ecs_residual": None,
+        }
+        self._cycle_log_rows.append(cycle)
+        self._last_constraint_diagnostics = None
+        if not getattr(self.param, "debug_mode", False):
+            return
+
         states = np.stack([solver.get(k, "x") for k in range(self.N + 1)])
         inputs = np.stack([solver.get(k, "u") for k in range(self.N)])
         covariance = covariance_from_log_cholesky(states[:, 4:8])
@@ -592,7 +584,7 @@ class CCECSOptimizer(CCSFOptimizer):
             "covariance": covariance, "epsilon_stage": data["epsilon_stage"],
             "beta": data["beta"],
         }
-        log_time = (self._solve_count - 1) * self.param.tf / self.N
+        log_time = cycle["time"]
         for stage in range(self.N + 1):
             p = covariance[stage]
             common = {"P_ff": p[0, 0], "P_ll": p[1, 1],
@@ -621,11 +613,7 @@ class CCECSOptimizer(CCSFOptimizer):
                     "reevaluated_ecs_residual": exact_residuals[stage, obstacle] if is_active else None,
                     **common,
                 })
-        self._cycle_log_rows.append({
-            "time": log_time, "solve_step": self._solve_count, "solve_mode": mode,
-            "solver_status": int(status), "main_status": self._last_main_status,
-            "backup_status": self._last_backup_status, "solver_time_s": self._cycle_solver_time,
-            "path_s": self._current_s0,
+        cycle.update({
             "minimum_psdf": float(exact_distances.min()) if exact_distances.size else None,
             "minimum_fixed_row_residual": float(fixed_residuals[active].min()) if active.any() else None,
             "minimum_reevaluated_ecs_residual": float(exact_residuals[active].min()) if active.any() else None,
@@ -642,7 +630,8 @@ class CCECSOptimizer(CCSFOptimizer):
         self._last_main_status = status
         active_solver, mode = self.solver, "sqp_rti"
         if status != 0:
-            report_solver_failure(self.solver, status)
+            if getattr(self.param, "debug_mode", False):
+                report_solver_failure(self.solver, status)
             active_solver, status, mode = self.recovery_infeasible(status)
             if mode == "backup_feasible_qp":
                 self._backup_feasible_qp_success_count += 1
@@ -656,10 +645,11 @@ class CCECSOptimizer(CCSFOptimizer):
         self._last_solve_mode = mode
         self.solver_times.append(self._cycle_solver_time)
         self._record_experiment_logs(active_solver, status, mode)
-        print(
-            f"[CC-ECS {self._solve_count:04d}] {mode} status={status} "
-            f"solve={1e3 * self._cycle_solver_time:.1f}ms s={self._current_s0:.3f}"
-        )
+        if getattr(self.param, "debug_mode", False):
+            print(
+                f"[CC-ECS {self._solve_count:04d}] {mode} status={status} "
+                f"solve={1e3 * self._cycle_solver_time:.1f}ms s={self._current_s0:.3f}"
+            )
         return AcadosSolution(active_solver, self.N, self.variables)
 
     def get_last_constraint_diagnostics(self):

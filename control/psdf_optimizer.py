@@ -14,6 +14,7 @@ from models.dd import DifferentialDriveRectangleGeometry
 import l4casadi as l4c
 from models.geometry_utils import polygon_to_edges
 from l4casadi.realtime import RealTimeL4CasADi
+from utils.acados_codegen import AcadosCodegenMixin
 
 class PSDFOptimizerParam:
     def __init__(self):
@@ -54,12 +55,14 @@ class PSDFOptimizerParam:
         self.detection_safety_margin = 0.05 # safety margin for obstacle caps [m]
         self.detection_frequency = 10.0     # obstacle detection frequency [Hz]
 
-        # Reuse generated acados code when possible.
-        # If relevant code/config changes are detected, solver is rebuilt automatically.
+        # Reuse code only within this optimizer's temporary workspace.
+        # Cleanup removes it; separate experiments never share build artifacts.
         self.reuse_acados_codegen = True
 
 
-class PSDFOptimizer:
+class PSDFOptimizer(AcadosCodegenMixin):
+    _codegen_name = "psdf"
+
     def __init__(self, variables=None, costs=None, dynamics_opt=None):
         self.ocp = None
         self.solver = None
@@ -78,40 +81,15 @@ class PSDFOptimizer:
         # Local window obstacle detector
         self.obstacle_detector = None
         
-        # Use common JSON filename - will be cleaned up after each test
-        self.json_filename = "acados_ocp.json"
-        self.codegen_meta_filename = "acados_psdf_codegen_meta.json"
-        self._default_code_export_dir = "c_generated_code"
-        
-        # Store files to cleanup
-        self._temp_files = []
-
     def cleanup(self, purge_codegen=False):
-        """Clean up temporary files and reset state"""
-        try:
-            # Clean up temporary files
-            for file_path in self._temp_files:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            
-            if purge_codegen:
-                if os.path.exists(self.json_filename):
-                    os.remove(self.json_filename)
-                if os.path.exists(self.codegen_meta_filename):
-                    os.remove(self.codegen_meta_filename)
+        """Release the solver and its temporary build, then reset state.
 
-                cleanup_dirs = [self._default_code_export_dir]
-                for dir_name in cleanup_dirs:
-                    if os.path.exists(dir_name) and os.path.isdir(dir_name):
-                        import shutil
-                        shutil.rmtree(dir_name, ignore_errors=True)
-            
-        except Exception as e:
-            print(f"Warning: Error during cleanup: {e}")
-        
-        # Reset internal state
+        The legacy purge_codegen argument is accepted for compatibility;
+        temporary build artifacts are now always removed.
+        """
         self.ocp = None
         self.solver = None
+        self._cleanup_codegen_workspace()
         self.solver_times = []
         self.psdf_wrapper = None
         self.ped_model = None
@@ -267,6 +245,7 @@ class PSDFOptimizer:
         """Create the acados solver"""
         self.variables["x"] = "x"
         self.variables["u"] = "u"
+        self.ocp.code_export_directory = self.code_export_directory
         reuse_codegen = bool(getattr(self.param, "reuse_acados_codegen", True))
         build_signature = self._compute_build_signature()
 
@@ -320,7 +299,7 @@ class PSDFOptimizer:
     def _get_code_export_dir(self):
         if self.ocp is not None and getattr(self.ocp, "code_export_directory", None):
             return self.ocp.code_export_directory
-        return self._default_code_export_dir
+        return self.code_export_directory
 
     def _get_solver_shared_lib_path(self):
         model_name = "differential_drive_psdf"

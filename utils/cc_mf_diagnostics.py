@@ -195,7 +195,6 @@ class CCMFDiagnosticsMixin(AcadosDiagnosticsMixin):
         if constraint_data is None:
             raise RuntimeError("constraint linearization is unavailable")
         d_col = float(self.param.d_col)
-        d_mf_mask = float(self.param.d_mf_mask)
         phi_exact, _ = self._compute_exact_psdf(states[:, :3])
         phi_exact = np.asarray(phi_exact, dtype=float)
 
@@ -208,6 +207,7 @@ class CCMFDiagnosticsMixin(AcadosDiagnosticsMixin):
             np.einsum("ij,ij->i", constraint_data["mf_A"], states)
             + constraint_data["mf_c"]
         )
+        fresh = None
         try:
             fresh = self._compute_constraint_affine_data(states)
             mf_fresh_raw_residual = (
@@ -223,7 +223,8 @@ class CCMFDiagnosticsMixin(AcadosDiagnosticsMixin):
             )
             mf_fresh_mask = fresh["mf_mask"].copy()
             mf_fresh_mask[0] = False
-        except Exception:
+        except Exception as error:
+            self._raise_if_fatal_evaluation_error(error)
             mf_fresh_raw_residual = np.full(self.N + 1, np.nan)
             mf_fresh_effective_residual = np.full(self.N + 1, np.nan)
             mf_fresh_mask = np.zeros(self.N + 1, dtype=bool)
@@ -280,7 +281,7 @@ class CCMFDiagnosticsMixin(AcadosDiagnosticsMixin):
         diagnostics = {
             "row_g_enabled": True,
             "row_mf_enabled": bool(constraint_data["row_mf_enabled"]),
-            "d_mf_mask": d_mf_mask,
+            "d_col": d_col,
             "constraint_row_order": {0: "guard/recovery", 1: "MF"},
             "constraint_stages": np.arange(1, self.N + 1, dtype=int),
             "exact_current_psdf": float(constraint_data["exact_current_phi"]),
@@ -301,7 +302,7 @@ class CCMFDiagnosticsMixin(AcadosDiagnosticsMixin):
             # This is the nominal/linearization PSDF value that actually
             # decides whether Row M is installed in the OCP at each stage.
             "mf_activation_phi": constraint_data["phi"].copy(),
-            "mf_domain_eligible": constraint_data["phi"] > d_mf_mask,
+            "mf_domain_eligible": constraint_data["phi"] > d_col,
             "mf_mask": constraint_data["mf_mask"].copy(),
             "mf_fresh_mask": mf_fresh_mask,
             "exact_psdf_predicted_nodes": phi_exact,
@@ -318,7 +319,7 @@ class CCMFDiagnosticsMixin(AcadosDiagnosticsMixin):
         diagnostics["infeasibility"] = self._classify_infeasibility_candidates(
             diagnostics
         )
-        return diagnostics
+        return self._extend_constraint_diagnostics(diagnostics, states, fresh)
 
     def _print_constraint_diagnostics(self, diagnostics):
         future = slice(1, None)
@@ -332,8 +333,8 @@ class CCMFDiagnosticsMixin(AcadosDiagnosticsMixin):
         )
         print(f"CC-MF Row M: {row_m_status}")
         print(
-            "CC-MF Row M domain rule: phi > d_mf_mask "
-            f"({diagnostics['d_mf_mask']:.8g})"
+            "CC-MF Row M domain rule: phi > d_col "
+            f"({diagnostics['d_col']:.8g})"
         )
         print(f"CC-MF exact current PSDF: {diagnostics['exact_current_psdf']:.8g}")
         self._print_pair(

@@ -5,6 +5,7 @@ import csv
 import json
 import yaml
 import signal
+import time
 from pathlib import Path
 
 try:
@@ -23,7 +24,12 @@ import statistics as st
 import numpy as np
 import torch
 
-from control import DEFAULT_OPTIMIZER_TYPE, SUPPORTED_OPTIMIZER_TYPES
+from control import (
+    DEFAULT_OPTIMIZER_TYPE,
+    SUPPORTED_OPTIMIZER_TYPES,
+    normalize_optimizer_type,
+)
+from control.cc_mf_imp_errors import MFImplicitRootError
 from control.controller import BaseController
 
 from models.geometry_utils import PolytopeRegion, RectangleRegion
@@ -221,7 +227,7 @@ class simulation_mpc:
             if not isinstance(source, dict):
                 continue
 
-            for metric_name in ("speed", "clearance", "risk"):
+            for metric_name in ("speed", "clearance"):
                 parsed_scale = cls._parse_profile_heatmap_scale(
                     metric_name,
                     source.get(f"{metric_name}_range"),
@@ -440,94 +446,6 @@ class simulation_mpc:
             seed=seed,
         )
         
-    @staticmethod
-    def _prepare_boole_risk_visual_data(risk_frame):
-        """Build screen-space marker data for one nominal MF horizon."""
-
-        empty = {
-            "offsets": np.empty((0, 2), dtype=float),
-            "sizes": np.empty((0,), dtype=float),
-            "normalized_risk": np.empty((0,), dtype=float),
-            "budget_exceeded": np.empty((0,), dtype=bool),
-        }
-        if not isinstance(risk_frame, dict):
-            return empty
-
-        try:
-            poses = np.asarray(risk_frame["nominal_poses"], dtype=float)
-            risk_sum = np.asarray(
-                risk_frame["boole_risk_sum"], dtype=float
-            ).reshape(-1)
-            epsilon = np.asarray(risk_frame["epsilon"], dtype=float).reshape(-1)
-            mf_mask = np.asarray(risk_frame["mf_mask"], dtype=bool).reshape(-1)
-        except (KeyError, TypeError, ValueError):
-            return empty
-
-        if poses.ndim != 2 or poses.shape[1] < 2:
-            return empty
-
-        num_stages = min(
-            poses.shape[0],
-            risk_sum.size,
-            epsilon.size,
-            mf_mask.size,
-        )
-        if num_stages <= 1:
-            return empty
-
-        stage_indices = np.arange(num_stages)
-        risk_roundoff_tolerance = 1e-7
-        valid = (
-            (stage_indices > 0)
-            & mf_mask[:num_stages]
-            & np.all(np.isfinite(poses[:num_stages, :2]), axis=1)
-            & np.isfinite(risk_sum[:num_stages])
-            & (risk_sum[:num_stages] >= -risk_roundoff_tolerance)
-            & np.isfinite(epsilon[:num_stages])
-            & (epsilon[:num_stages] > 0.0)
-        )
-        if not np.any(valid):
-            return empty
-
-        # Roundoff in the float32 MF graph can produce tiny negative values.
-        # Clamp only that numerical noise; materially negative sums are filtered
-        # above instead of being rendered as reassuring zero-risk markers.
-        displayed_risk = np.maximum(risk_sum[:num_stages][valid], 0.0)
-        normalized_risk = displayed_risk / epsilon[:num_stages][valid]
-        clipped_risk = np.clip(normalized_risk, 0.0, 1.0)
-
-        # Matplotlib scatter sizes are screen-space areas in points squared.
-        # Keep the glyph diameter between 4 and 10 points so a dimensionless
-        # risk value is never mistaken for a distance in world coordinates.
-        min_radius_pt = 2.0
-        max_radius_pt = 5.0
-        radius_pt = np.sqrt(
-            min_radius_pt**2
-            + (max_radius_pt**2 - min_radius_pt**2) * clipped_risk
-        )
-
-        return {
-            "offsets": poses[:num_stages, :2][valid].copy(),
-            "sizes": np.square(2.0 * radius_pt),
-            "normalized_risk": clipped_risk,
-            "budget_exceeded": normalized_risk >= 1.0,
-        }
-
-    @staticmethod
-    def _resolve_use_risk_visualization(simulation, override=None):
-        """Resolve an explicit override or the CC-MF optimizer parameter."""
-
-        if override is not None:
-            return bool(override)
-
-        robot = getattr(simulation, "_robot", None)
-        controller = getattr(robot, "_controller", None)
-        opt_param = getattr(controller, "_param", None)
-        if opt_param is None:
-            optimizer = getattr(controller, "_optimizer", None)
-            opt_param = getattr(optimizer, "param", None)
-        return bool(getattr(opt_param, "use_risk_visualization", False))
-
     @staticmethod
     def _style_map_patch(patch):
         try:
@@ -875,7 +793,6 @@ class simulation_mpc:
         simulation,
         figure_name="world",
         maze_type=None,
-        include_risk_profile=False,
         metric_scales=None,
     ):
         robot = getattr(simulation, "_robot", None)
@@ -886,7 +803,6 @@ class simulation_mpc:
             metric_scales = dict(getattr(self, "profile_heatmap_scales", {}) or {})
         speed_heatmap_cmap = "inferno"
         clearance_heatmap_cmap = "RdYlGn"
-        risk_heatmap_cmap = "RdYlGn_r"
 
         logged_inputs = getattr(getattr(robot, "_system_logger", None), "_us", [])
         logged_states = getattr(getattr(robot, "_system_logger", None), "_xs", [])
@@ -951,51 +867,12 @@ class simulation_mpc:
             value_range=metric_scales.get("clearance"),
         )
 
-        if include_risk_profile and self.pose_sdf_data:
-            risk_path_xy = np.asarray(
-                [[entry.get("x", float("nan")), entry.get("y", float("nan"))] for entry in self.pose_sdf_data],
-                dtype=float,
-            )
-            risk_metric_key = "risk_margin_max"
-            if not any(
-                entry.get("risk_margin_max", None) not in (None, "")
-                for entry in self.pose_sdf_data
-            ):
-                risk_metric_key = "risk_margin_5"
-
-            risk_values = np.asarray(
-                [entry.get(risk_metric_key, float("nan")) for entry in self.pose_sdf_data],
-                dtype=float,
-            )
-            finite_pose_mask = np.all(np.isfinite(risk_path_xy), axis=1)
-            risk_path_xy = risk_path_xy[finite_pose_mask]
-            risk_values = risk_values[finite_pose_mask]
-
-            if np.any(np.isfinite(risk_values)):
-                colorbar_label = "risk margin max [m]"
-                if risk_metric_key == "risk_margin_5":
-                    colorbar_label = "risk margin step 5 [m]"
-                self._plot_metric_heatmap(
-                    simulation=simulation,
-                    path_xy=risk_path_xy,
-                    metric_values=risk_values,
-                    figure_name=figure_name,
-                    output_subdirs=("profile", "risk"),
-                    output_suffix="_risk_profile",
-                    title="Risk heatmap along trajectory",
-                    colorbar_label=colorbar_label,
-                    cmap=risk_heatmap_cmap,
-                    maze_type=maze_type,
-                    center=0.0,
-                    value_range=metric_scales.get("risk"),
-                )
-
     def _normalize_animation_method(self, animation_name, method_name=None):
         if method_name:
-            return method_name.lower()
+            return normalize_optimizer_type(method_name.lower())
 
         normalized_name = animation_name.lower()
-        for known_method in SUPPORTED_OPTIMIZER_TYPES:
+        for known_method in sorted(SUPPORTED_OPTIMIZER_TYPES, key=len, reverse=True):
             if f"mpc_{known_method}_" in normalized_name:
                 return known_method
 
@@ -1011,6 +888,7 @@ class simulation_mpc:
 
     @staticmethod
     def build_output_name(robot_shape, maze_type, optimizer_type, interrupted=False, extra_suffix=None):
+        optimizer_type = normalize_optimizer_type(optimizer_type)
         prefix_map = {
             "obca": "MPC_OBCA_",
             "uobca": "MPC_UOBCA_",
@@ -1019,6 +897,8 @@ class simulation_mpc:
             "mpcc": "MPC_mpcc_",
             "cc_sf": "MPC_cc_sf_",
             "cc_mf": "MPC_cc_mf_",
+            "cc_mf_imp": "MPC_cc_mf_imp_",
+            "cc_mf_icdf": "MPC_cc_mf_icdf_",
             "cc_ecs": "MPC_cc_ecs_",
             "dcbf": "MPC_DCBF_",
         }
@@ -1057,6 +937,7 @@ class simulation_mpc:
 
     @staticmethod
     def _resolve_optimizer_variant(optimizer_type):
+        optimizer_type = normalize_optimizer_type(optimizer_type)
         if optimizer_type not in SUPPORTED_OPTIMIZER_TYPES:
             raise ValueError(
                 f"Unsupported optimizer_type {optimizer_type!r}. "
@@ -1071,14 +952,9 @@ class simulation_mpc:
         maze_type=None,
         frame_skip=1,
         method_name=None,
-        use_risk_visualization=None,
         return_html=True,
         include_initial_pose=False,
     ):
-        use_risk_visualization = self._resolve_use_risk_visualization(
-            simulation,
-            use_risk_visualization,
-        )
         robot = simulation._robot
         logged_states = getattr(getattr(robot, "_system_logger", None), "_xs", [])
         if logged_states:
@@ -1092,16 +968,6 @@ class simulation_mpc:
 
         local_paths = getattr(getattr(robot, "_local_planner_logger", None), "_trajs", [])
         optimized_trajs = getattr(getattr(robot, "_controller_logger", None), "_xtrajs", [])
-        risk_margin_trajs = getattr(
-            getattr(robot, "_controller_logger", None),
-            "_risk_margin_trajs",
-            [],
-        )
-        boole_risk_frames = getattr(
-            getattr(robot, "_controller_logger", None),
-            "_boole_risk_visualization_data",
-            [],
-        )
         logged_detected_caps = self.detected_obstacles_logger
 
         # Set figure size based on maze type
@@ -1151,108 +1017,6 @@ class simulation_mpc:
             optimized_traj = optimized_trajs[0]
             optimized_traj_line.set_data(optimized_traj[:, 0], optimized_traj[:, 1])
 
-        def build_risk_margin_patches(frame_idx):
-            if (
-                frame_idx >= len(optimized_trajs)
-                or frame_idx >= len(risk_margin_trajs)
-            ):
-                return []
-
-            optimized_traj = np.asarray(optimized_trajs[frame_idx], dtype=float)
-            risk_margin_traj = risk_margin_trajs[frame_idx]
-            if risk_margin_traj is None:
-                return []
-
-            risk_margin_traj = np.asarray(
-                risk_margin_traj,
-                dtype=float,
-            ).reshape(-1)
-            num_stages = min(len(optimized_traj), risk_margin_traj.size)
-            patches_out = []
-            for stage_idx in range(num_stages):
-                radius = float(risk_margin_traj[stage_idx])
-                if not np.isfinite(radius) or radius <= 0.0:
-                    continue
-                patch = patches.Circle(
-                    (
-                        float(optimized_traj[stage_idx, 0]),
-                        float(optimized_traj[stage_idx, 1]),
-                    ),
-                    radius=radius,
-                    facecolor="limegreen",
-                    edgecolor="forestgreen",
-                    alpha=0.22,
-                    linewidth=1.0,
-                    zorder=1.5,
-                )
-                ax.add_patch(patch)
-                patches_out.append(patch)
-            return patches_out
-
-        risk_scatter = None
-        has_boole_risk = use_risk_visualization and any(
-            self._prepare_boole_risk_visual_data(risk_frame)[
-                "normalized_risk"
-            ].size > 0
-            for risk_frame in boole_risk_frames
-        )
-        if has_boole_risk:
-            risk_norm = mpl.colors.Normalize(vmin=0.0, vmax=1.0, clip=True)
-            risk_cmap = plt.get_cmap("YlOrRd")
-            risk_scatter = ax.scatter(
-                [],
-                [],
-                s=[],
-                c=[],
-                cmap=risk_cmap,
-                norm=risk_norm,
-                zorder=3.1,
-            )
-            risk_mappable = mpl.cm.ScalarMappable(norm=risk_norm, cmap=risk_cmap)
-            risk_mappable.set_array([])
-            risk_colorbar = fig.colorbar(
-                risk_mappable,
-                ax=ax,
-                fraction=0.045,
-                pad=0.025,
-                extend="max",
-            )
-            risk_colorbar.set_ticks([0.0, 0.5, 1.0])
-            risk_colorbar.set_ticklabels(["0", "0.5", "≥1"])
-            risk_colorbar.set_label(
-                r"Nominal Boole risk utilization $B_i / \varepsilon_i$ "
-                r"(black ring: $\geq 1$)"
-            )
-
-        def update_risk_scatter(frame_idx):
-            if risk_scatter is None:
-                return
-
-            risk_frame = (
-                boole_risk_frames[frame_idx]
-                if frame_idx < len(boole_risk_frames)
-                else None
-            )
-            visual_data = self._prepare_boole_risk_visual_data(risk_frame)
-            risk_scatter.set_offsets(visual_data["offsets"])
-            risk_scatter.set_sizes(visual_data["sizes"])
-            risk_scatter.set_array(visual_data["normalized_risk"])
-
-            num_points = visual_data["normalized_risk"].size
-            edge_colors = np.tile(
-                mpl.colors.to_rgba("dimgray", alpha=0.55),
-                (num_points, 1),
-            )
-            edge_widths = np.full((num_points,), 0.45, dtype=float)
-            exceeded = visual_data["budget_exceeded"]
-            edge_colors[exceeded] = mpl.colors.to_rgba("black", alpha=1.0)
-            edge_widths[exceeded] = 1.2
-            risk_scatter.set_edgecolors(edge_colors)
-            risk_scatter.set_linewidths(edge_widths)
-
-        risk_margin_patches = build_risk_margin_patches(0)
-        update_risk_scatter(0)
-
         # Initialize robot patches
         robot_patches = []
         for i in range(robot._system._geometry._num_geometry):
@@ -1301,13 +1065,6 @@ class simulation_mpc:
                 optimized_traj = optimized_trajs[index]
                 optimized_traj_line.set_data(optimized_traj[:, 0], optimized_traj[:, 1])
 
-            for patch in risk_margin_patches:
-                patch.remove()
-            risk_margin_patches.clear()
-            risk_margin_patches.extend(build_risk_margin_patches(index))
-
-            update_risk_scatter(index)
-
             # Efficiently update robot patches
             for i in range(robot._system._geometry._num_geometry):
                 new_patch = robot._system._geometry.get_plot_patch(closedloop_traj[index, :], i)
@@ -1346,8 +1103,6 @@ class simulation_mpc:
 
             return (
                 [reference_traj_line, optimized_traj_line]
-                + risk_margin_patches
-                + ([risk_scatter] if risk_scatter is not None else [])
                 + robot_patches
                 + detected_obstacle_patches
                 + ([final_traj_line] if final_traj_line else [])
@@ -1620,6 +1375,67 @@ class simulation_mpc:
                 f"CC-ECS {log_name} history",
             )
 
+    def save_cc_mf_imp_history_to_csv(self):
+        """Keep implicit probability, distance, root and timing records distinct."""
+        for log_name, getter_name in (
+            ("constraints", "constraint"),
+            ("covariance", "covariance"),
+            ("cycle", "cycle"),
+            ("roots", "implicit"),
+        ):
+            self._save_optimizer_log_csv(
+                f"cc_mf_imp_{log_name}_{self.current_name}",
+                f"get_{getter_name}_log_rows",
+                f"get_{getter_name}_log_fields",
+                f"CC-MF-IMP {log_name} history",
+            )
+
+    def save_cc_mf_icdf_history_to_csv(self):
+        """Export inverse-CDF residuals separately from probability/slack data."""
+        for log_name, getter_name in (
+            ("constraints", "constraint"),
+            ("covariance", "covariance"),
+            ("cycle", "cycle"),
+        ):
+            self._save_optimizer_log_csv(
+                f"cc_mf_icdf_{log_name}_{self.current_name}",
+                f"get_{getter_name}_log_rows",
+                f"get_{getter_name}_log_fields",
+                f"CC-MF-ICDF {log_name} history",
+            )
+
+    def _preserve_implicit_failure(self, exc):
+        """Persist partial-run evidence before cleanup without hiding the cause."""
+        system = getattr(self.robot, "_system", None)
+        self.last_run_outcome = {
+            "status": "error",
+            "failure_reason": f"implicit_root_failure: {exc}",
+            "error": f"{type(exc).__name__}: {exc}",
+            "implicit_evaluation_context": exc.context,
+            "final_time": float(system._time) if system is not None else None,
+        }
+        optimizer = getattr(getattr(self.robot, "_controller", None), "_optimizer", None)
+        snapshot_writer = getattr(optimizer, "save_implicit_failure_snapshot", None)
+        exports = [
+            ("root failure snapshot", lambda: snapshot_writer(self._get_output_dir("data"))),
+            ("implicit histories", self.save_cc_mf_imp_history_to_csv),
+            ("trial history", lambda: self.save_trial_history_to_csv(f"trial_history_{self.current_name}")),
+            ("pose history", lambda: self.save_pose_sdf_to_csv(f"pose_sdf_{self.current_name}")),
+        ]
+        if not callable(snapshot_writer):
+            exports.pop(0)
+        for label, export in exports:
+            try:
+                export()
+            except Exception as output_error:
+                print(f"Warning: saving {label} failed: {output_error}")
+        try:
+            filepath = Path(self._get_output_dir("data")) / f"cc_mf_imp_run_failure_{self.current_name}.json"
+            with filepath.open("w", encoding="utf-8") as output_file:
+                json.dump(self.last_run_outcome, output_file, indent=2)
+        except Exception as output_error:
+            print(f"Warning: saving implicit run failure failed: {output_error}")
+
     def mpc_test(
         self,
         maze_type,
@@ -1636,7 +1452,7 @@ class simulation_mpc:
         Args:
             maze_type: Type of maze environment ("s_path", "straight_corridor", "maze", "oblique_maze", "parking")
             robot_shape: Shape of robot ("rectangle", "pentagon", "triangle", "lshape")
-            optimizer_type: Type of optimizer ("obca", "psdf", "mpcc", "cc_mf",
+            optimizer_type: Type of optimizer ("obca", "psdf", "mpcc", "cc_mf", "cc_mf_imp",
                 "cc_sf", "dcbf", "cc_ecs", "sipoc", "uobca")
             dynamics_type: Type of dynamics ("differential_drive")
             path_planner: Type of path planner.
@@ -1675,10 +1491,8 @@ class simulation_mpc:
         traj_indexes = [0, 24, 33, 48, 66, 92, 112]
         
         if robot_shape == "rectangle":
-            # vehicle_length = 0.15
-            # vehicle_width = 0.06
             vehicle_length = 0.15
-            vehicle_width = 0.07 #0.09
+            vehicle_width = 0.08
             geometry_regions.add_geometry(
                 DifferentialDriveRectangleGeometry(length=vehicle_length, width=vehicle_width, rear_dist=0.0)
             )
@@ -1857,19 +1671,34 @@ class simulation_mpc:
             )
             optimizer = MPCCOptimizer()
             optimizer_name = "mpcc"
-        elif optimizer_type == "cc_mf":
-            from control.cc_mf_optimizer import CCMFOptimizer, CCMFOptimizerParam
+        elif optimizer_type in ("cc_mf", "cc_mf_imp", "cc_mf_icdf"):
+            if optimizer_type == "cc_mf_icdf":
+                from control.cc_mf_icdf_optimizer import (
+                    CCMFICDFOptimizer as CCMFOptimizer,
+                    CCMFICDFOptimizerParam as CCMFOptimizerParam,
+                )
+                optimizer_label = "CC-MF-ICDF"
+            elif optimizer_type == "cc_mf_imp":
+                from control.cc_mf_imp_optimizer import (
+                    CCMFImpOptimizer as CCMFOptimizer,
+                    CCMFImpOptimizerParam as CCMFOptimizerParam,
+                )
+                optimizer_label = "CC-MF-IMP"
+            else:
+                from control.cc_mf_optimizer import CCMFOptimizer, CCMFOptimizerParam
+                optimizer_label = "CC-MF"
 
             opt_param = CCMFOptimizerParam()
 
-            if config and 'cc_mf' in config:
-                self._apply_param_overrides(opt_param, config['cc_mf'], "CC-MF")
+            # Each mode owns its overrides; probability-unit slack is not inherited.
+            if config and optimizer_type in config:
+                self._apply_param_overrides(opt_param, config[optimizer_type], optimizer_label)
 
             # Keep legacy configs loadable even though CC-MF does not use
             # local-window detection parameters.
             if config and 'psdf_detection' in config:
                 print(
-                    "CC-MF ignores legacy 'psdf_detection' settings; "
+                    f"{optimizer_label} ignores legacy 'psdf_detection' settings; "
                     "detection parameters are unused."
                 )
 
@@ -1895,7 +1724,7 @@ class simulation_mpc:
             )
 
             optimizer = CCMFOptimizer()
-            optimizer_name = "cc_mf"
+            optimizer_name = optimizer_type
         elif optimizer_type == "cc_sf":
             from control.cc_sf_optimizer import (
                 CCSFOptimizer,
@@ -1905,9 +1734,7 @@ class simulation_mpc:
             opt_param = CCSFOptimizerParam()
             sf_config = {}
             if config:
-                shared_cc_mf_config = dict(config.get("cc_mf", {}))
-                shared_cc_mf_config.pop("use_risk_visualization", None)
-                sf_config.update(shared_cc_mf_config)
+                sf_config.update(config.get("cc_mf", {}))
                 sf_config.update(config.get("cc_sf", {}))
             if sf_config:
                 self._apply_param_overrides(opt_param, sf_config, "CC-SF")
@@ -2044,11 +1871,14 @@ class simulation_mpc:
         )
         
         # If using PSDF-family optimizer, set up data logging and obstacle update hooks
-        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs", "dcbf"):
+        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_mf_imp", "cc_mf_icdf", "cc_sf", "cc_ecs", "dcbf"):
             # Monkey patch the controller to log pose-SDF data and perform obstacle detection
             original_generate_control = controller.generate_control_input
             
             def enhanced_generate_control(system, global_path, local_trajectory, obstacles):
+                control_cycle_start = (
+                    time.perf_counter() if optimizer_type == "cc_mf_imp" else None
+                )
                 optimizer_obj = controller._optimizer
 
                 # Perform obstacle detection if available
@@ -2063,7 +1893,12 @@ class simulation_mpc:
                     else:
                         optimizer_obj.update_obstacles_with_detection(obstacles, current_pose, force_update=True)
 
-                elif hasattr(optimizer_obj, "update_obstacles"):
+                elif (
+                    hasattr(optimizer_obj, "update_obstacles")
+                    and not getattr(optimizer_obj, "updates_obstacles_in_setup", False)
+                ):
+                    # MPCC-family setup owns the full obstacle snapshot. Legacy
+                    # PSDF optimizers still rely on this control-loop update.
                     optimizer_obj.update_obstacles(obstacles)
 
                 if (hasattr(optimizer_obj, 'obstacle_detector') and 
@@ -2078,7 +1913,16 @@ class simulation_mpc:
                 self.detected_obstacles_logger.append(detected_caps)
 
                 # Call original method
-                u_opt = original_generate_control(system, global_path, local_trajectory, obstacles)
+                try:
+                    u_opt = original_generate_control(
+                        system, global_path, local_trajectory, obstacles
+                    )
+                except MFImplicitRootError:
+                    if control_cycle_start is not None:
+                        optimizer_obj.record_control_cycle_time(
+                            time.perf_counter() - control_cycle_start
+                        )
+                    raise
                 
                 # Collect values for CSV logging.
                 sdf_value = self._get_current_psdf_for_logging(
@@ -2158,12 +2002,23 @@ class simulation_mpc:
                     slice_end_idx=slice_end_idx,
                     slice_n_segments=slice_n_segments,
                 )
+                if control_cycle_start is not None:
+                    optimizer_obj.record_control_cycle_time(
+                        time.perf_counter() - control_cycle_start
+                    )
                 
                 return u_opt
             
             controller.generate_control_input = enhanced_generate_control
         
-        self.last_run_outcome = self.sim.run_navigation(simulation_time)
+        try:
+            self.last_run_outcome = self.sim.run_navigation(simulation_time)
+        except MFImplicitRootError as exc:
+            try:
+                self._preserve_implicit_failure(exc)
+            except Exception as output_error:
+                print(f"Warning: preserving implicit failure logs failed: {output_error}")
+            raise
         optimizer_runtime_stats = self._collect_optimizer_runtime_stats(self.robot._controller._optimizer)
         if self.last_run_outcome is None:
             self.last_run_outcome = {}
@@ -2212,7 +2067,11 @@ class simulation_mpc:
 
         self.save_trial_history_to_csv(f"trial_history_{self.current_name}")
 
-        if optimizer_type == "cc_mf":
+        if optimizer_type == "cc_mf_icdf":
+            self.save_cc_mf_icdf_history_to_csv()
+        elif optimizer_type == "cc_mf_imp":
+            self.save_cc_mf_imp_history_to_csv()
+        elif optimizer_type == "cc_mf":
             self.save_cc_mf_constraint_history_to_csv(
                 f"cc_mf_constraints_{self.current_name}"
             )
@@ -2221,7 +2080,7 @@ class simulation_mpc:
             self.save_cc_ecs_history_to_csv()
 
         # Save pose-SDF data to CSV for PSDF-family optimizers
-        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs"):
+        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_mf_imp", "cc_mf_icdf", "cc_sf", "cc_ecs"):
             csv_filename = f"pose_sdf_{self.current_name}"
             self.save_pose_sdf_to_csv(csv_filename)
         
@@ -2420,7 +2279,6 @@ class simulation_mpc:
                 'simulation_time': 15.0,
                 'generate_animation': True,
                 'generate_plots': True,
-                'generate_risk_profile': False,
             },
         }
 
@@ -2447,7 +2305,9 @@ class simulation_mpc:
         for i, test_config in enumerate(test_configs, 1):
             maze_type = test_config.get('maze_type', 's_path')
             robot_shape = test_config.get('robot_shape', 'pentagon')
-            optimizer_type = test_config.get('optimizer_type', DEFAULT_OPTIMIZER_TYPE)
+            optimizer_type = normalize_optimizer_type(
+                test_config.get('optimizer_type', DEFAULT_OPTIMIZER_TYPE)
+            )
             dynamics_type = test_config.get('dynamics_type', 'differential_drive')
             path_planner = test_config.get('path_planner', 'astar')
             
@@ -2462,14 +2322,6 @@ class simulation_mpc:
             frame_skip = defaults.get('frame_skip', 5)
             generate_animation = defaults.get('generate_animation', True)
             generate_plots = defaults.get('generate_plots', True)
-            use_risk_visualization = test_config.get(
-                'use_risk_visualization',
-                defaults.get('use_risk_visualization', None),
-            )
-            generate_risk_profile = test_config.get(
-                'generate_risk_profile',
-                defaults.get('generate_risk_profile', False),
-            )
             interrupt_requested = False
             interrupted = False
             previous_sigint_handler = signal.getsignal(signal.SIGINT)
@@ -2512,7 +2364,6 @@ class simulation_mpc:
                         maze_type=maze_type,
                         frame_skip=frame_skip,
                         method_name=optimizer_type,
-                        use_risk_visualization=use_risk_visualization,
                     )
 
                 if generate_plots:
@@ -2528,7 +2379,6 @@ class simulation_mpc:
                         test_sim.sim,
                         figure_name=test_sim.current_name.lower(),
                         maze_type=maze_type,
-                        include_risk_profile=generate_risk_profile,
                     )
 
                 print(f"✓ Test {test_name} completed successfully")
@@ -2567,11 +2417,20 @@ class simulation_mpc:
                             maze_type=maze_type,
                             frame_skip=frame_skip,
                             method_name=optimizer_type,
-                            use_risk_visualization=use_risk_visualization,
                         )
                     else:
                         print("Interrupted before any trajectory state was available; skipping animation generation.")
 
+            except MFImplicitRootError:
+                # This numerical failure ends the batch, even when other trial
+                # errors normally continue with the next configuration.
+                try:
+                    optimizer = test_sim.robot._controller._optimizer
+                    if hasattr(optimizer, "cleanup"):
+                        optimizer.cleanup()
+                except Exception as cleanup_error:
+                    print(f"Warning: Error during cleanup: {cleanup_error}")
+                raise
             except RuntimeError as e:
                 if not self.is_interrupt_runtime_error(e, interrupt_requested):
                     print(f"✗ Test {test_name} failed with error: {e}")
@@ -2610,7 +2469,6 @@ class simulation_mpc:
                             maze_type=maze_type,
                             frame_skip=frame_skip,
                             method_name=optimizer_type,
-                            use_risk_visualization=use_risk_visualization,
                         )
                     else:
                         print("Interrupted before any trajectory state was available; skipping animation generation.")

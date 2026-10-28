@@ -1,0 +1,34 @@
+# Nominal post-refactor smoke run. Each method uses its own Python defaults.
+start_perturbation:
+  enabled: false
+  seed: 0
+localization_error:
+  enabled: false
+
+defaults:
+  simulation_time: 60.0
+  generate_animation: false
+  generate_plots: false
+
+trial_failure_criteria:
+  enabled: true
+  movement_window_sec: 4.0
+  movement_threshold: 0.03
+  max_consecutive_solver_failures: 20
+
+test_configs:
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: mpcc
+    dynamics_type: differential_drive
+    path_planner: astar
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_mf
+    dynamics_type: differential_drive
+    path_planner: astar
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_sf
+    dynamics_type: differential_drive
+    path_planner: astar

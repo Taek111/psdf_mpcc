@@ -8,6 +8,10 @@ import torch
 from torch import Tensor, nn
 
 from models.augmented_psdf import PSDF as AugmentedPSDF
+from models.mf_implicit import MFImplicitResult, compute_mf_imp, evaluate_mf_imp_frozen
+from models.mf_inverse_cdf import (
+    MFInverseCDFResult, compute_mf_icdf, evaluate_mf_icdf_frozen,
+)
 
 
 class AugmentedPSDFWrapper(nn.Module):
@@ -302,6 +306,86 @@ class AugmentedPSDFWrapper(nn.Module):
 
     def clear_clusters(self) -> None:
         self._reset_buffers()
+
+    @torch.no_grad()
+    def forward_mf_imp(
+        self,
+        z_bar: Tensor,
+        epsilon,
+        d_min: float,
+        **kwargs,
+    ) -> MFImplicitResult:
+        """Evaluate implicit MF without a float32 round trip of covariance.
+
+        ``stage_requested`` supplies obstacle/MF switches and the stage
+        window.  The kernel then applies the strict signed-PSDF domain gate
+        before solving any required roots.  Failure statuses are returned to
+        the optimizer; they are never converted to inactive rows here.
+        """
+        z_risk = torch.as_tensor(z_bar, dtype=torch.float64, device=self.A.device)
+        if z_risk.ndim != 2 or z_risk.shape[1] != 8:
+            raise ValueError("expected z_bar shape (H, 8)")
+        if self.active_clusters == 0:
+            H = z_risk.shape[0]
+            phi = torch.full((H,), 1000.0, dtype=self.A.dtype, device=self.A.device)
+            gradient = torch.zeros((H, 3), dtype=self.A.dtype, device=self.A.device)
+            d = z_risk.new_empty((H, 0))
+            q = z_risk.new_empty((H, 0, 3))
+            feature_mask = torch.zeros((H, 0), dtype=torch.bool, device=self.A.device)
+            return compute_mf_imp(
+                phi, gradient, d, q, feature_mask, z_risk, epsilon, d_min,
+                no_obstacles=True, **kwargs,
+            )
+        return self.psdf.forward_mf_imp(
+            self.A[: self.active_clusters], self.B[: self.active_clusters],
+            self.mask[: self.active_clusters], z_risk, epsilon, d_min, **kwargs,
+        )
+
+    @torch.no_grad()
+    def evaluate_mf_imp_frozen(
+        self, snapshot: dict, z_star, epsilon, d_min: float, **kwargs,
+    ) -> MFImplicitResult:
+        """Evaluate a debug snapshot with its nominal geometry and frame."""
+        return evaluate_mf_imp_frozen(snapshot, z_star, epsilon, d_min, **kwargs)
+
+    @torch.no_grad()
+    def forward_mf_icdf(
+        self,
+        z_bar: Tensor,
+        epsilon,
+        d_min: float,
+        **kwargs,
+    ) -> MFInverseCDFResult:
+        """Evaluate inverse-CDF MF with the original float64 risk state.
+
+        ``stage_requested`` and ``d_col`` select required rows.  Invalid
+        required rows are reported explicitly and never disabled here.
+        """
+        z_risk = torch.as_tensor(z_bar, dtype=torch.float64, device=self.A.device)
+        if z_risk.ndim != 2 or z_risk.shape[1] != 8:
+            raise ValueError("expected z_bar shape (H, 8)")
+        if self.active_clusters == 0:
+            H = z_risk.shape[0]
+            phi = torch.full((H,), 1000.0, dtype=self.A.dtype, device=self.A.device)
+            gradient = torch.zeros((H, 3), dtype=self.A.dtype, device=self.A.device)
+            d = z_risk.new_empty((H, 0))
+            q = z_risk.new_empty((H, 0, 3))
+            feature_mask = torch.zeros((H, 0), dtype=torch.bool, device=self.A.device)
+            return compute_mf_icdf(
+                phi, gradient, d, q, feature_mask, z_risk, epsilon, d_min,
+                no_obstacles=True, **kwargs,
+            )
+        return self.psdf.forward_mf_icdf(
+            self.A[: self.active_clusters], self.B[: self.active_clusters],
+            self.mask[: self.active_clusters], z_risk, epsilon, d_min, **kwargs,
+        )
+
+    @torch.no_grad()
+    def evaluate_mf_icdf_frozen(
+        self, snapshot: dict, z_star, epsilon, d_min: float, **kwargs,
+    ) -> MFInverseCDFResult:
+        """Evaluate a candidate with the snapshot's nominal geometry."""
+        return evaluate_mf_icdf_frozen(snapshot, z_star, epsilon, d_min, **kwargs)
 
     def get_cluster_info(self) -> dict:
         info = {

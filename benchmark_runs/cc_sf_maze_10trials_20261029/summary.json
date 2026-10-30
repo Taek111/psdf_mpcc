@@ -1,0 +1,41 @@
+{
+  "controller": "cc_sf",
+  "environment": "maze",
+  "footprint": "rectangle",
+  "rectangle_length_m": 0.15,
+  "rectangle_width_m": 0.12,
+  "dynamics": "differential_drive",
+  "planner": "astar",
+  "baseline_config": "config/config_benchmark.yaml",
+  "simulation_limit_s": 60,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "completed_trials": 10,
+  "successful_trials": 7,
+  "success_rate": 0.7,
+  "status_counts": {
+    "success": 7,
+    "failure": 3
+  },
+  "safe_stop_count": 60,
+  "trials_with_safe_stop": 10,
+  "safe_stop_definition": "Zero-input fallback control steps; consecutive steps each count once.",
+  "safe_stop_events_verified_against_zero_control_history": true,
+  "animation_count": 10,
+  "animation_metadata_verified": true,
+  "source_changes_during_batch": [
+    "config/config_benchmark.yaml"
+  ],
+  "control_code_unchanged_during_batch": true,
+  "saved_config_matches_run_manifest": true
+}

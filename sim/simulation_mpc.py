@@ -27,9 +27,7 @@ import torch
 from control import (
     DEFAULT_OPTIMIZER_TYPE,
     SUPPORTED_OPTIMIZER_TYPES,
-    normalize_optimizer_type,
 )
-from control.cc_mf_imp_errors import MFImplicitRootError
 from control.controller import BaseController
 
 from models.geometry_utils import PolytopeRegion, RectangleRegion
@@ -869,7 +867,7 @@ class simulation_mpc:
 
     def _normalize_animation_method(self, animation_name, method_name=None):
         if method_name:
-            return normalize_optimizer_type(method_name.lower())
+            return method_name.lower()
 
         normalized_name = animation_name.lower()
         for known_method in sorted(SUPPORTED_OPTIMIZER_TYPES, key=len, reverse=True):
@@ -879,16 +877,16 @@ class simulation_mpc:
         return None
 
     def _get_animation_output_path(self, animation_name, method_name=None):
+        """Keep videos in the project animation folder, outside trial data roots."""
         normalized_method = self._normalize_animation_method(animation_name, method_name)
-        output_dir = self._get_output_dir("animations")
+        output_dir = Path(__file__).resolve().parent.parent / "animations"
         if normalized_method:
-            output_dir = os.path.join(output_dir, normalized_method)
-            os.makedirs(output_dir, exist_ok=True)
-        return os.path.join(output_dir, f"{animation_name}.mp4")
+            output_dir /= normalized_method
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return str(output_dir / f"{animation_name}.mp4")
 
     @staticmethod
     def build_output_name(robot_shape, maze_type, optimizer_type, interrupted=False, extra_suffix=None):
-        optimizer_type = normalize_optimizer_type(optimizer_type)
         prefix_map = {
             "obca": "MPC_OBCA_",
             "uobca": "MPC_UOBCA_",
@@ -897,8 +895,6 @@ class simulation_mpc:
             "mpcc": "MPC_mpcc_",
             "cc_sf": "MPC_cc_sf_",
             "cc_mf": "MPC_cc_mf_",
-            "cc_mf_imp": "MPC_cc_mf_imp_",
-            "cc_mf_icdf": "MPC_cc_mf_icdf_",
             "cc_ecs": "MPC_cc_ecs_",
             "dcbf": "MPC_DCBF_",
         }
@@ -937,7 +933,6 @@ class simulation_mpc:
 
     @staticmethod
     def _resolve_optimizer_variant(optimizer_type):
-        optimizer_type = normalize_optimizer_type(optimizer_type)
         if optimizer_type not in SUPPORTED_OPTIMIZER_TYPES:
             raise ValueError(
                 f"Unsupported optimizer_type {optimizer_type!r}. "
@@ -952,9 +947,10 @@ class simulation_mpc:
         maze_type=None,
         frame_skip=1,
         method_name=None,
-        return_html=True,
+        return_html=False,
         include_initial_pose=False,
     ):
+        """Save a lightweight MP4; render notebook HTML only when requested."""
         robot = simulation._robot
         logged_states = getattr(getattr(robot, "_system_logger", None), "_xs", [])
         if logged_states:
@@ -1111,14 +1107,26 @@ class simulation_mpc:
         frames = list(range(0, len(closedloop_traj), max(1, frame_skip)))
         if frames[-1] != len(closedloop_traj) - 1:
             frames.append(len(closedloop_traj) - 1)
-        anim = animation.FuncAnimation(fig, update, frames=frames, interval=100, blit=True, repeat=False)
+        anim = animation.FuncAnimation(
+            fig, update, frames=frames, interval=100, blit=True,
+            repeat=False, cache_frame_data=False,
+        )
 
-        writer = animation.FFMpegWriter(fps=10, bitrate=1800)
+        # Encode once at display resolution, using the fastest H.264 preset.
+        writer = animation.FFMpegWriter(
+            fps=10,
+            codec="libx264",
+            bitrate=-1,
+            extra_args=["-preset", "ultrafast", "-crf", "28", "-pix_fmt", "yuv420p"],
+        )
         output_path = self._get_animation_output_path(animation_name, method_name)
-        anim.save(output_path, dpi=300, writer=writer)
-
-        plt.close(fig)
-        return HTML(anim.to_jshtml()) if return_html else output_path
+        print(f"Saving animation: {output_path} ({len(frames)} frames, 10 fps, 100 DPI)")
+        try:
+            anim.save(output_path, dpi=100, writer=writer)
+            print(f"Animation saved: {output_path}")
+            return HTML(anim.to_jshtml()) if return_html else output_path
+        finally:
+            plt.close(fig)
 
     def log_pose_sdf_data(
         self,
@@ -1283,64 +1291,6 @@ class simulation_mpc:
 
         print(f"Trial history saved to {filepath}")
 
-    def save_cc_mf_constraint_history_to_csv(self, filename):
-        """Save only the values needed to assess Row G/Row M feasibility."""
-        controller = getattr(self.robot, "_controller", None)
-        optimizer = getattr(controller, "_optimizer", None)
-        if optimizer is None or not hasattr(optimizer, "get_constraint_log_rows"):
-            return
-
-        rows = optimizer.get_constraint_log_rows()
-        if not rows:
-            return
-
-        fieldnames = optimizer.get_constraint_log_fields()
-        output_dir = self._get_output_dir("data")
-        filepath = os.path.join(output_dir, f"{filename}.csv")
-        with open(filepath, "w", newline="", encoding="utf-8") as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(rows)
-        print(f"CC-MF constraint history saved to {filepath}")
-
-    def save_cc_mf_debug_history_to_csv(self):
-        """Save the compact tuning records in the current run directory."""
-        controller = getattr(self.robot, "_controller", None)
-        optimizer = getattr(controller, "_optimizer", None)
-        if optimizer is None:
-            return
-
-        output_dir = self._get_output_dir("data")
-        exports = (
-            (
-                "cycle_raw.csv",
-                "get_cycle_log_rows",
-                "get_cycle_log_fields",
-            ),
-            (
-                "covariance_trajectory.csv",
-                "get_covariance_log_rows",
-                "get_covariance_log_fields",
-            ),
-        )
-        for filename, rows_method, fields_method in exports:
-            if not hasattr(optimizer, rows_method) or not hasattr(
-                optimizer, fields_method
-            ):
-                continue
-            rows = getattr(optimizer, rows_method)()
-            if not rows:
-                continue
-            filepath = os.path.join(output_dir, filename)
-            with open(filepath, "w", newline="", encoding="utf-8") as csv_file:
-                writer = csv.DictWriter(
-                    csv_file,
-                    fieldnames=getattr(optimizer, fields_method)(),
-                )
-                writer.writeheader()
-                writer.writerows(rows)
-            print(f"CC-MF debug history saved to {filepath}")
-
     def _save_optimizer_log_csv(self, filename, rows_method, fields_method, label):
         """Export an optimizer-provided log without assuming its row schema."""
         controller = getattr(self.robot, "_controller", None)
@@ -1375,66 +1325,19 @@ class simulation_mpc:
                 f"CC-ECS {log_name} history",
             )
 
-    def save_cc_mf_imp_history_to_csv(self):
-        """Keep implicit probability, distance, root and timing records distinct."""
-        for log_name, getter_name in (
-            ("constraints", "constraint"),
-            ("covariance", "covariance"),
-            ("cycle", "cycle"),
-            ("roots", "implicit"),
-        ):
-            self._save_optimizer_log_csv(
-                f"cc_mf_imp_{log_name}_{self.current_name}",
-                f"get_{getter_name}_log_rows",
-                f"get_{getter_name}_log_fields",
-                f"CC-MF-IMP {log_name} history",
-            )
-
-    def save_cc_mf_icdf_history_to_csv(self):
-        """Export inverse-CDF residuals separately from probability/slack data."""
+    def save_cc_mf_history_to_csv(self):
+        """Export CC-MF probability sums, quantile residuals, and covariance."""
         for log_name, getter_name in (
             ("constraints", "constraint"),
             ("covariance", "covariance"),
             ("cycle", "cycle"),
         ):
             self._save_optimizer_log_csv(
-                f"cc_mf_icdf_{log_name}_{self.current_name}",
+                f"cc_mf_{log_name}_{self.current_name}",
                 f"get_{getter_name}_log_rows",
                 f"get_{getter_name}_log_fields",
-                f"CC-MF-ICDF {log_name} history",
+                f"CC-MF {log_name} history",
             )
-
-    def _preserve_implicit_failure(self, exc):
-        """Persist partial-run evidence before cleanup without hiding the cause."""
-        system = getattr(self.robot, "_system", None)
-        self.last_run_outcome = {
-            "status": "error",
-            "failure_reason": f"implicit_root_failure: {exc}",
-            "error": f"{type(exc).__name__}: {exc}",
-            "implicit_evaluation_context": exc.context,
-            "final_time": float(system._time) if system is not None else None,
-        }
-        optimizer = getattr(getattr(self.robot, "_controller", None), "_optimizer", None)
-        snapshot_writer = getattr(optimizer, "save_implicit_failure_snapshot", None)
-        exports = [
-            ("root failure snapshot", lambda: snapshot_writer(self._get_output_dir("data"))),
-            ("implicit histories", self.save_cc_mf_imp_history_to_csv),
-            ("trial history", lambda: self.save_trial_history_to_csv(f"trial_history_{self.current_name}")),
-            ("pose history", lambda: self.save_pose_sdf_to_csv(f"pose_sdf_{self.current_name}")),
-        ]
-        if not callable(snapshot_writer):
-            exports.pop(0)
-        for label, export in exports:
-            try:
-                export()
-            except Exception as output_error:
-                print(f"Warning: saving {label} failed: {output_error}")
-        try:
-            filepath = Path(self._get_output_dir("data")) / f"cc_mf_imp_run_failure_{self.current_name}.json"
-            with filepath.open("w", encoding="utf-8") as output_file:
-                json.dump(self.last_run_outcome, output_file, indent=2)
-        except Exception as output_error:
-            print(f"Warning: saving implicit run failure failed: {output_error}")
 
     def mpc_test(
         self,
@@ -1452,7 +1355,7 @@ class simulation_mpc:
         Args:
             maze_type: Type of maze environment ("s_path", "straight_corridor", "maze", "oblique_maze", "parking")
             robot_shape: Shape of robot ("rectangle", "pentagon", "triangle", "lshape")
-            optimizer_type: Type of optimizer ("obca", "psdf", "mpcc", "cc_mf", "cc_mf_imp",
+            optimizer_type: Type of optimizer ("obca", "psdf", "mpcc", "cc_mf",
                 "cc_sf", "dcbf", "cc_ecs", "sipoc", "uobca")
             dynamics_type: Type of dynamics ("differential_drive")
             path_planner: Type of path planner.
@@ -1492,7 +1395,16 @@ class simulation_mpc:
         
         if robot_shape == "rectangle":
             vehicle_length = 0.15
-            vehicle_width = 0.08
+            vehicle_width = 0.12
+            rectangle_geometry = (config or {}).get("rectangle_geometry", {})
+            if not isinstance(rectangle_geometry, dict):
+                raise ValueError("rectangle_geometry must be a mapping")
+            vehicle_length = float(rectangle_geometry.get("length", vehicle_length))
+            vehicle_width = float(rectangle_geometry.get("width", vehicle_width))
+            if not np.isfinite([vehicle_length, vehicle_width]).all() or min(
+                vehicle_length, vehicle_width
+            ) <= 0.0:
+                raise ValueError("Rectangle length and width must be finite and positive")
             geometry_regions.add_geometry(
                 DifferentialDriveRectangleGeometry(length=vehicle_length, width=vehicle_width, rear_dist=0.0)
             )
@@ -1671,34 +1583,20 @@ class simulation_mpc:
             )
             optimizer = MPCCOptimizer()
             optimizer_name = "mpcc"
-        elif optimizer_type in ("cc_mf", "cc_mf_imp", "cc_mf_icdf"):
-            if optimizer_type == "cc_mf_icdf":
-                from control.cc_mf_icdf_optimizer import (
-                    CCMFICDFOptimizer as CCMFOptimizer,
-                    CCMFICDFOptimizerParam as CCMFOptimizerParam,
-                )
-                optimizer_label = "CC-MF-ICDF"
-            elif optimizer_type == "cc_mf_imp":
-                from control.cc_mf_imp_optimizer import (
-                    CCMFImpOptimizer as CCMFOptimizer,
-                    CCMFImpOptimizerParam as CCMFOptimizerParam,
-                )
-                optimizer_label = "CC-MF-IMP"
-            else:
-                from control.cc_mf_optimizer import CCMFOptimizer, CCMFOptimizerParam
-                optimizer_label = "CC-MF"
+        elif optimizer_type == "cc_mf":
+            from control.cc_mf_optimizer import CCMFOptimizer, CCMFOptimizerParam
 
             opt_param = CCMFOptimizerParam()
-
-            # Each mode owns its overrides; probability-unit slack is not inherited.
-            if config and optimizer_type in config:
-                self._apply_param_overrides(opt_param, config[optimizer_type], optimizer_label)
+            # CC-MF slack penalties use quantile units.
+            self._apply_param_overrides(
+                opt_param, self._get_config_block(config, "cc_mf"), "CC-MF",
+            )
 
             # Keep legacy configs loadable even though CC-MF does not use
             # local-window detection parameters.
             if config and 'psdf_detection' in config:
                 print(
-                    f"{optimizer_label} ignores legacy 'psdf_detection' settings; "
+                    "CC-MF ignores legacy 'psdf_detection' settings; "
                     "detection parameters are unused."
                 )
 
@@ -1732,12 +1630,9 @@ class simulation_mpc:
             )
 
             opt_param = CCSFOptimizerParam()
-            sf_config = {}
-            if config:
-                sf_config.update(config.get("cc_mf", {}))
-                sf_config.update(config.get("cc_sf", {}))
-            if sf_config:
-                self._apply_param_overrides(opt_param, sf_config, "CC-SF")
+            self._apply_param_overrides(
+                opt_param, self._get_config_block(config, "cc_sf"), "CC-SF",
+            )
 
             if config and "psdf_detection" in config:
                 print(
@@ -1871,14 +1766,11 @@ class simulation_mpc:
         )
         
         # If using PSDF-family optimizer, set up data logging and obstacle update hooks
-        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_mf_imp", "cc_mf_icdf", "cc_sf", "cc_ecs", "dcbf"):
+        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs", "dcbf"):
             # Monkey patch the controller to log pose-SDF data and perform obstacle detection
             original_generate_control = controller.generate_control_input
             
             def enhanced_generate_control(system, global_path, local_trajectory, obstacles):
-                control_cycle_start = (
-                    time.perf_counter() if optimizer_type == "cc_mf_imp" else None
-                )
                 optimizer_obj = controller._optimizer
 
                 # Perform obstacle detection if available
@@ -1913,17 +1805,10 @@ class simulation_mpc:
                 self.detected_obstacles_logger.append(detected_caps)
 
                 # Call original method
-                try:
-                    u_opt = original_generate_control(
-                        system, global_path, local_trajectory, obstacles
-                    )
-                except MFImplicitRootError:
-                    if control_cycle_start is not None:
-                        optimizer_obj.record_control_cycle_time(
-                            time.perf_counter() - control_cycle_start
-                        )
-                    raise
-                
+                u_opt = original_generate_control(
+                    system, global_path, local_trajectory, obstacles
+                )
+
                 # Collect values for CSV logging.
                 sdf_value = self._get_current_psdf_for_logging(
                     optimizer_obj, current_pose,
@@ -2002,23 +1887,12 @@ class simulation_mpc:
                     slice_end_idx=slice_end_idx,
                     slice_n_segments=slice_n_segments,
                 )
-                if control_cycle_start is not None:
-                    optimizer_obj.record_control_cycle_time(
-                        time.perf_counter() - control_cycle_start
-                    )
                 
                 return u_opt
             
             controller.generate_control_input = enhanced_generate_control
         
-        try:
-            self.last_run_outcome = self.sim.run_navigation(simulation_time)
-        except MFImplicitRootError as exc:
-            try:
-                self._preserve_implicit_failure(exc)
-            except Exception as output_error:
-                print(f"Warning: preserving implicit failure logs failed: {output_error}")
-            raise
+        self.last_run_outcome = self.sim.run_navigation(simulation_time)
         optimizer_runtime_stats = self._collect_optimizer_runtime_stats(self.robot._controller._optimizer)
         if self.last_run_outcome is None:
             self.last_run_outcome = {}
@@ -2067,20 +1941,13 @@ class simulation_mpc:
 
         self.save_trial_history_to_csv(f"trial_history_{self.current_name}")
 
-        if optimizer_type == "cc_mf_icdf":
-            self.save_cc_mf_icdf_history_to_csv()
-        elif optimizer_type == "cc_mf_imp":
-            self.save_cc_mf_imp_history_to_csv()
-        elif optimizer_type == "cc_mf":
-            self.save_cc_mf_constraint_history_to_csv(
-                f"cc_mf_constraints_{self.current_name}"
-            )
-            self.save_cc_mf_debug_history_to_csv()
+        if optimizer_type == "cc_mf":
+            self.save_cc_mf_history_to_csv()
         elif optimizer_type == "cc_ecs":
             self.save_cc_ecs_history_to_csv()
 
         # Save pose-SDF data to CSV for PSDF-family optimizers
-        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_mf_imp", "cc_mf_icdf", "cc_sf", "cc_ecs"):
+        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs"):
             csv_filename = f"pose_sdf_{self.current_name}"
             self.save_pose_sdf_to_csv(csv_filename)
         
@@ -2305,9 +2172,7 @@ class simulation_mpc:
         for i, test_config in enumerate(test_configs, 1):
             maze_type = test_config.get('maze_type', 's_path')
             robot_shape = test_config.get('robot_shape', 'pentagon')
-            optimizer_type = normalize_optimizer_type(
-                test_config.get('optimizer_type', DEFAULT_OPTIMIZER_TYPE)
-            )
+            optimizer_type = test_config.get('optimizer_type', DEFAULT_OPTIMIZER_TYPE)
             dynamics_type = test_config.get('dynamics_type', 'differential_drive')
             path_planner = test_config.get('path_planner', 'astar')
             
@@ -2421,16 +2286,6 @@ class simulation_mpc:
                     else:
                         print("Interrupted before any trajectory state was available; skipping animation generation.")
 
-            except MFImplicitRootError:
-                # This numerical failure ends the batch, even when other trial
-                # errors normally continue with the next configuration.
-                try:
-                    optimizer = test_sim.robot._controller._optimizer
-                    if hasattr(optimizer, "cleanup"):
-                        optimizer.cleanup()
-                except Exception as cleanup_error:
-                    print(f"Warning: Error during cleanup: {cleanup_error}")
-                raise
             except RuntimeError as e:
                 if not self.is_interrupt_runtime_error(e, interrupt_requested):
                     print(f"✗ Test {test_name} failed with error: {e}")

@@ -28,9 +28,9 @@ class _CountingPSDF(AugmentedPSDFWrapper):
         self.mf_batches = []
         self.pose_batches = []
 
-    def forward_mf(self, z_bar, epsilon, d_min):
-        self.mf_batches.append(z_bar.detach().clone())
-        return super().forward_mf(z_bar, epsilon, d_min)
+    def forward_mf_icdf(self, z_bar, epsilon, d_min, **kwargs):
+        self.mf_batches.append(torch.as_tensor(z_bar).detach().clone())
+        return super().forward_mf_icdf(z_bar, epsilon, d_min, **kwargs)
 
     def forward(self, poses):
         self.pose_batches.append(poses.detach().clone())

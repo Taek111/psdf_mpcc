@@ -634,48 +634,33 @@ At each control cycle, the controller performs the following operations.
 
 Offline validation should compare analytic feature and MF derivatives with finite differences and automatic differentiation. These checks are separate from the online computation; the document revisions do not establish that code-level validation has been completed.
 
-### 5.6 Optional CC-MF-IMP: Implicit Clearance Margin
+### 5.6 CC-MF: Inverse-CDF Residual
 
-`cc_mf_imp` (input alias `cc-mf-imp`) retains the CC-MF feature model, eight-dimensional state, covariance dynamics, hard guard, and stage policy. It replaces the probability residual by a common clearance-threshold margin $r(z)$ defined outside the OCP:
+The canonical `cc_mf` controller in `control/cc_mf_optimizer.py` uses the finalized inverse-CDF formulation. The earlier probability-residual controller and implicit-clearance optimizer have been removed. Sections 4 and 5.3 define the underlying MF probability sum $R(z)$; the implemented Row M linearizes the transformed residual below instead of $\varepsilon-R(z)$.
 
-$$
-F(z,r)=\sum_{\ell\in\bar{\mathcal F}}
-\Phi\!\left(\frac{d_{\min}+r-\widehat d_\ell(x_p)}{\sigma_\ell(\xi)}\right),
-\qquad F(z,r(z))=\varepsilon.
-$$
-
-With at least one valid feature and positive feature standard deviations, $F$ is strictly increasing in $r$. Thus $F(z,0)\le\varepsilon$ is equivalent to $r(z)\ge0$ for this same frozen-geometry Gaussian feature model before slack relaxation. The margin is measured in meters of common threshold shift; it is not a robot-motion radius or an exact nonlinear collision certificate.
-
-At the nominal root $\bar r$, define $\zeta_\ell=(\bar d_\ell-d_{\min}-\bar r)/\bar\sigma_\ell$ and normalized weights $w_\ell\propto\varphi_{\mathcal N}(\zeta_\ell)/\bar\sigma_\ell$. Implicit differentiation gives
+For $\gamma=-\Phi^{-1}(\varepsilon)$, define
 
 $$
-\nabla_z r(\bar z)=\sum_\ell w_\ell
-\left(\nabla_z\widehat d_\ell-\zeta_\ell\nabla_z\sigma_\ell\right),
-\qquad
-A_{\mathrm{imp}}=\nabla_z r(\bar z),\quad
-c_{\mathrm{imp}}=\bar r-A_{\mathrm{imp}}^\top\bar z.
+\psi(R)=
+\begin{cases}
+-\Phi^{-1}(R)-\gamma, & R\le\tfrac12,\\
+-\sqrt{2\pi}(R-\tfrac12)-\gamma, & R>\tfrac12.
+\end{cases}
 $$
 
-The solver receives the same nine MF parameters and enforces $A_{\mathrm{imp}}^\top z+c_{\mathrm{imp}}+\delta\ge0$, with only Row M softened. The root adds no OCP state or feature-specific decision variable. Its derivative is evaluated at $\bar r$, including the Log-Cholesky covariance derivatives; normalizing the old probability gradient at $r=0$ would not give this row. A single feature yields $r=d-d_{\min}-\Phi^{-1}(1-\varepsilon)\sigma$, matching the corresponding CC-SF residual under the same feature/covariance model. Opposing feature gradients can still cancel, and satisfying the affine row does not certify its nonlinear counterpart.
+The numerical kernel clips the lower inverse-CDF tail at `float64.tiny` with zero derivative on the clipped branch, and reports that branch in diagnostics. It requires `float64.tiny < chance_epsilon < 0.5`. The solver receives $A=\nabla_z\psi(\bar z)$ and $c=\psi(\bar z)-A^\top\bar z$, then enforces $A^\top z+c+\delta\ge0$. The hard PSDF guard, covariance propagation, stage window and nine-parameter MF row layout are retained. Slack and residuals are in standard-normal quantile units; their penalty defaults remain `mf_slack_linear=100.0` and `mf_slack_quadratic=1.0`.
 
-The implementation uses stage-batched PyTorch eager FP64 risk calculations over the existing FP32 geometry. For $b_\ell=\bar d_\ell-d_{\min}$ and $M=|\bar{\mathcal F}|$, initialize upper-bound Newton at $r_{\mathrm{hi}}=\min_\ell\{b_\ell+\bar\sigma_\ell\Phi^{-1}(\varepsilon)\}$, with lower bracket $r_{\mathrm{lo}}=\min_\ell\{b_\ell+\bar\sigma_\ell\Phi^{-1}(\varepsilon/M)\}$. This numerical method supports $0<\varepsilon<0.5$; $M=1$ uses the closed form. Acceptance requires both the probability residual tolerance and a signed local bracket around the final candidate. No bisection retry, sigma floor, probability clipping, CUDA Graph, or `torch.compile` is used.
-
-Required-stage root or coefficient failures raise `MFImplicitRootError`, preserve failure diagnostics, and stop the current run and batch before another control cycle or trial. They do not disable the row or invoke guard-only recovery. Ordinary QP recovery remains available after valid coefficients are obtained. Normally inactive rows use $A=0,c=1\,\mathrm m$; their undefined margin is logged as missing. Negative valid margins remain soft-constraint deficits, not numerical errors.
-
-Lower slack is now in meters. `mf_slack_linear` and `mf_slack_quadratic` therefore have cost/m and cost/m² units, and their provisional defaults $100$ and $1$ require retuning. The `cc_mf_imp` YAML block is independent of `cc_mf`. Logs distinguish nominal $F(z,0)$, nominal implicit margin, affine residual, distance slack, root status/iterations/error bound, preprocessing time, and total cycle time; existing solver time continues to cover only solver calls. In debug mode, returned-state evaluation distinguishes frozen nominal features from fresh geometry. See [config/config_cc_mf_imp.yaml](config/config_cc_mf_imp.yaml) for a separate example; numerical tests, simulations, and benchmark validation require an explicit execution request.
-
-In the simulation, `control_cycle_time_s` starts on entry to the enhanced control callback, before obstacle updates, and ends after setup, solver processing, input selection, and pose logging. It excludes path planning, plant integration (`run_system`), and failure snapshot export. On an implicit evaluation error it ends before the exception reaches the failure exporter. Direct `solve_nlp()` callers retain the narrower optimizer-only elapsed time as a fallback for this field.
+Required-stage evaluation failures raise `MFInverseCDFEvaluationError` before solving. Probability sums are logged separately from quantile residuals and slack. The controller exposes fresh and frozen diagnostic evaluations through `debug_mf` and `debug_infeasibility`. Simulation exports use the `cc_mf_constraints_`, `cc_mf_covariance_`, and `cc_mf_cycle_` prefixes.
 
 ## 6. Controller Variants and Scope
 
-The four baseline controllers in the evaluation plan follow Section 6-1 of [cc_paper_outline.md](cc_paper_outline.md). The implementation also provides the optional CC-MF-IMP variant for comparison. All use the same local-tangent MPCC formulation.
+The four baseline controllers in the evaluation plan follow Section 6-1 of [cc_paper_outline.md](cc_paper_outline.md). All use the same local-tangent MPCC formulation.
 
 | Short label | Controller    | Safety formulation                                                                               |
 | ----------- | ------------- | ------------------------------------------------------------------------------------------------ |
 | **Det**     | PSDF-MPCC-Det | Affine deterministic constraint on the PSDF value                                                |
 | **CC-SF**   | PSDF-MPCC-SF  | RTI-linearized Gaussian margin using the PSDF value and PSDF gradient for the minimizing feature |
-| **CC-MF**   | PSDF-MPCC-MF  | Hard PSDF-based safety guard plus one slack-relaxed affine MF row per stage                      |
-| **CC-MF-IMP** | PSDF-MPCC-MF-IMP | Same guard and stage policy as CC-MF, with a slack-relaxed affine implicit clearance margin |
+| **CC-MF**   | PSDF-MPCC-MF  | Hard PSDF-based safety guard plus one slack-relaxed affine inverse-CDF MF row per stage                      |
 | **CC-ECS**  | PSDF-MPCC-ECS | Per-polygon PSDF adaptation of an ellipsoidal-confidence-set constraint                          |
 
 Covariance-dependent variants use the same initialization, log-Cholesky formulation, selected robust horizon, and stage-wise violation-probability bounds. Setting $N_R=N$ provides the untruncated configuration. Fixed-time MPC and MF-Trace are not part of the current evaluation plan.
@@ -729,6 +714,35 @@ This document retains its independent detailed structure, including valid Sectio
 [^robust-horizon]: E. Bradford and L. Imsland, "Economic Stochastic Model Predictive Control Using the Unscented Kalman Filter," *IFAC-PapersOnLine*, vol. 51, no. 18, pp. 417–422, 2018. DOI: 10.1016/j.ifacol.2018.09.336. Section 3.2 and Algorithm 1, Eq. (10e), hold the covariance square root constant beyond the robust horizon. Eq. (15) states the covariance freeze for untransformed variables. The present method adapts this strategy to its reduced body-fixed covariance without adopting the paper's UKF propagation or state-variable log transformation.
 
 
+### Controller parameter inheritance (2026-10-28)
+
+`MPCCOptimizerParam.__init__()` owns the common tracking, cost, input-bound and solver defaults. `CCSFOptimizerParam`, `CCECSOptimizerParam`, and `CCMFOptimizerParam` each directly inherit it, call `super().__init__()`, then set method-specific overrides and safety/covariance fields in their own initializer. The former `initialize_mpcc_tracking_params`, `initialize_mpcc_solver_params`, and `initialize_cc_noise_params` mutation helpers have been removed. CC covariance models override the base integrator with `DISCRETE`; ECS keeps its process-noise coefficients at zero. Each simulation applies only its own YAML block (`mpcc`, `cc_sf`, `cc_ecs`, or `cc_mf`).
+
 ### Shared geometric threshold (2026-10-28)
 
-The CC-MF, CC-MF-IMP and CC-MF-ICDF implementations use `d_col` for the strict nominal MF activation gate ($\bar\phi_i>d_{\mathrm{col}}$), the hard affine PSDF guard clearance, and the stage-0 pre-solve stop criterion ($\phi(x_0)<d_{\mathrm{col}}$). Stage 0 OCP safety rows remain inactive. The separate `d_mf_mask` parameter has been removed. Defaults are `d_col = d_min = 0.0002 m` (0.2 mm); `d_min` remains the chance-model distance threshold. At equality, the MF row is inactive and the stage-0 check permits solving. Earlier benchmark records retain their original thresholds.
+The CC-MF implementation uses `d_col` for the strict nominal MF activation gate ($\bar\phi_i>d_{\mathrm{col}}$), the hard affine PSDF guard clearance, and the stage-0 pre-solve stop criterion ($\phi(x_0)<d_{\mathrm{col}}$). Stage 0 OCP safety rows remain inactive. The separate `d_mf_mask` parameter has been removed. Defaults are `d_col = d_min = 0.0002 m` (0.2 mm); `d_min` remains the chance-model distance threshold. At equality, the MF row is inactive and the stage-0 check permits solving. Earlier benchmark records retain their original thresholds.
+
+### Optional input-rate constraints (2026-10-28)
+
+`MPCCOptimizerParam`, `CCSFOptimizerParam`, `CCMFOptimizerParam`, and `CCECSOptimizerParam` expose `a_max` [m/s²] and `alpha_max` [rad/s²]. All four inherit the shared deadlock tuning: `a_max=0.5`, `alpha_max=5.0`, `vmin=-1.0`, `vmax=1.0`, `v_s_target=1.0`, `omegamin=-1.0`, and `omegamax=1.0`. Setting either rate-limit parameter to `None` disables that axis's rate limit. A finite nonnegative value enables a symmetric hard bound; zero holds the corresponding input constant. Configure these before solver setup; changing them afterward requires `reset()` and setup again.
+
+When either limit is enabled, append the deterministic input-memory state $r_i=[v_{i-1},\omega_{i-1}]^\top$ to the existing state. Initialize $r_0$ from the last input actually applied to the plant (`state._u[:2]`), and use $r_{i+1}=[v_i,\omega_i]^\top$. For every interval $i=0,\ldots,N-1$, enforce the configured rows
+
+$$
+-a_{\max}\Delta t\le v_i-r_{i,v}\le a_{\max}\Delta t,
+\qquad
+-\alpha_{\max}\Delta t\le\omega_i-r_{i,\omega}\le\alpha_{\max}\Delta t,
+\qquad \Delta t=t_f/N.
+$$
+
+These are hard general linear acados constraints, independent of obstacle slacks. The physical input remains $[v,\omega]$; virtual progress speed $v_s$ has no added rate constraint. State dimension becomes 6 for MPCC and 10 for the CC variants. Covariance and MF calculations retain their existing four log-Cholesky coordinates and eight-state risk interface. With memory enabled, MPCC uses the equivalent four-stage RK4 discrete map to support the exact memory shift; CC models already use discrete dynamics.
+
+For example, set the following under the chosen controller's YAML key (`mpcc`, `cc_sf`, `cc_mf`, or `cc_ecs`), or assign the same fields on its Parameter instance:
+
+```yaml
+cc_mf:
+  a_max: 0.2       # m/s²; example tuning value
+  alpha_max: 3.0   # rad/s²; example tuning value
+```
+
+At $\Delta t=0.1$ s these values allow changes of at most 0.02 m/s and 0.3 rad/s per interval. They constrain changes between held velocity commands, rather than introducing continuous acceleration dynamics. Existing emergency zero-input safe stops remain immediate and bypass these rate limits; the next solve initializes memory from the resulting actual input.

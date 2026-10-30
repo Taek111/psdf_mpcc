@@ -1,0 +1,155 @@
+CC-MF covariance 접선과 주행 정지: 기록에서 확인한 메커니즘
+
+대상: 이 폴더의 2026-10-29 10-trial batch. controller 수정/추가 주행 없음.
+설정은 resolved_cc_mf_parameters.json과 diagnostic_config.yaml에 보존되어 있다.
+수치 집계는 analyze_covariance.py를 실행해 covariance_analysis.json 및
+covariance_cycle_metrics.csv에서 갱신한다. 아래 예시는 완료된 trial 1과 3이다.
+
+1. 코드가 실제로 수행하는 일
+
+매 제어 주기 초기 covariance는 설정된 초기값으로 다시 시작한다. 현재 설정은
+sigma_f0=0.0002m, sigma_l0=0.00025m, sigma_psi0=0rad, baseline q_*0=0이다.
+log(0)을 피하기 위해 sigma_psi0=0만 수치적으로 1e-12rad로 표현한다.
+따라서 초기 heading variance는 1e-24rad^2이며, 양의 물리적 불확실성 하한을
+설정한 것이 아니다. 이 바닥값을 risk_cov_jitter=1e-9와 혼동하면 안 된다.
+saved covariance transition은 risk_cov_jitter를 더하지 않는다.
+
+이전 주기의 retained 입력으로 covariance를 정확히 재전파한 nominal을 만들고,
+그 nominal에서 covariance dynamics와 MF 제약을 선형화한 SQP_RTI를 한 번 푼다.
+solve_nlp는 결과의 nonlinear covariance residual을 줄이기 위한 추가 SQP 반복이나
+step acceptance 검사를 수행하지 않는다. 다음 주기의 준비 단계가 retained 입력에
+대해 covariance를 다시 정확히 계산한다.
+
+소스 위치 (모두 source_snapshot/ 아래 당시 소스):
+- control/cc_covariance.py:15-17,83-105: zero-initial sigma의 1e-12 표현.
+- control/cc_covariance.py:178-185: v^2, abs(v*omega), omega^2 process noise.
+- control/cc_covariance.py:187-237: reduced log-Cholesky 전이와 lateral/heading block.
+- control/cc_mf_optimizer.py:62-88: 초기 sigma 및 noise coefficients.
+- control/cc_mf_optimizer.py:457-474: 초기 covariance에서 매 주기 exact rollout.
+- control/cc_mf_optimizer.py:1091-1097: retained controls의 exact covariance와 MF 선형화.
+- control/cc_mf_optimizer.py:1644-1648: retained nominal로 단일 RTI 호출.
+
+2. 입력 반전이 정확한 모델에서는 위험을 줄이지 않는데 접선에서는 줄이는 이유
+
+현재 첫 prediction interval의 heading process noise rate를 q(u)라고 두면
+
+  u = [v, omega]
+  q(u) = 0.012*v^2 + 0.0048*abs(v*omega) + 0.0048*omega^2
+  dt = 0.1s
+
+이다. q(c*u)=c^2*q(u)이므로 q는 degree-2 homogeneous이고 q(-u)=q(u)이다.
+초기 heading variance와 초기 lateral/heading cross covariance가 무시될 만큼
+작은 첫 interval에서는 heading log standard deviation을
+
+  f(u) ~= 0.5*log(dt*q(u))
+
+로 쓸 수 있다. u가 0이 아니고 해당 piecewise derivative가 존재하면 Euler
+identity에 의해 gradient(f,u) dot u ~= 1이다. nominal u에서 -u로 동시에
+v와 omega를 반전시키는 후보의 접선 예측은
+
+  f_linear(-u) = f(u) + gradient(f,u) dot (-2*u) ~= f(u)-2
+
+이다. 반면 exact f(-u)=f(u)이다. 따라서 접선이 예측한 표준편차는 exact보다
+
+  sigma_linear / sigma_exact ~= exp(-2) = 0.1353352832
+  sigma_exact / sigma_linear ~= exp(2)  = 7.3890560989
+
+배가 된다. 이 효과는 omega가 0.07rad/s인 경우뿐 아니라 0.007rad/s처럼 작은
+회전 반전에서도 나타날 수 있다. 반전이 작다는 이유만으로 covariance 접선
+오차가 작아지는 것은 아니다. 두 입력이 정확히 동시 반전하지 않으면 7.389와
+다른 비율이 나올 수 있으며, transient에서 매우 큰 비율도 관측된다.
+
+이 설명은 첫 interval에 대한 근사다. solver의 xi_psi는 marginal heading sigma의
+log가 아니라 lateral에 조건부인 Cholesky factor의 log이다. 현재 초기 heading
+variance=1e-24, 초기 cross covariance=0에서는 둘의 차이가 무시될 만큼 작다.
+후속 interval에서는 초기 variance, lateral/heading cross terms, exact propagation,
+단계별 동역학 선형화가 함께 작용하므로 같은 단순식을 적용하지 않았다.
+analyze_covariance.py는 이 근사를 사용하지 않고 저장된 전체 exact 전이를
+그대로 평가하고 CasADi의 실제 Jacobian으로 first-stage 접선을 재현한다.
+
+3. 완료된 trial에서 확인한 서로 다른 진폭의 반복
+
+Trial 1 (seed0): 40.4s, 최근20s 순변위27.0mm로 stuck 종료. 전체404주기 모두
+status0/sqp_rti였다. 마지막4s 평균 |v|=0.104197mm/s, median |omega|=0.070300rad/s.
+omega와 v가 40개 제어 cycle에서 계속 부호를 바꾸었다. 마지막4s heading sigma
+exact/predicted 중앙값=7.389171, covariance log-factor dynamics 최대오차의
+cycle 중앙값=2.029623이다. first-stage XY dynamics 오차 최대값은 1.2411e-7m였다.
+
+time[s]  v[m/s]        omega[rad/s]  solver sigma_psi  exact sigma_psi  exact/solver
+40.1     -0.000104160  +0.070303339  0.0002085647      0.0015414138     7.390579
+40.2     +0.000104129  -0.070296818  0.0002086271      0.0015412706     7.387683
+40.3     -0.000104145  +0.070296740  0.0002085885      0.0015412691     7.389041
+
+Trial 3 (seed2): 55.8s, 최근20s 순변위28.6mm로 stuck 종료. 전체558주기 모두
+status0/sqp_rti였다. 마지막4s 평균 |v|=1.014690mm/s, median |omega|=0.007459rad/s.
+이 역시 v와 omega가 매 cycle 부호를 바꾸는 저진폭 왕복이다. >0.05rad/s 부호반전
+기준으로는 이 반복이 보이지 않는다. >0.005rad/s 기준으로 마지막4s 40회가 보인다.
+마지막4s heading sigma exact/predicted 중앙값=7.389612, covariance log-factor
+dynamics 최대오차의 cycle 중앙값=3.201810이다. first-stage XY dynamics 오차
+최대값은 1.2243e-7m였다.
+
+time[s]  v[m/s]        omega[rad/s]  solver sigma_psi  exact sigma_psi  exact/solver
+55.5     +0.001014533  -0.007462573  0.0000240268      0.0001777651     7.398610
+55.6     -0.001014727  +0.007464300  0.0000240524      0.0001778055     7.392420
+55.7     +0.001014619  -0.007455753  0.0000240885      0.0001776198     7.373629
+
+전체 first-stage covariance와 nominal-input Jacobian 접선의 차이는 trial1 최대
+2.6646e-14, trial3 최대4.7518e-14이다. nominal covariance와 저장된 exact 전이의
+차이는 두 trial 모두 0이었다. solver NLP equality residual은 직접 계산한 covariance
+dynamics 최대오차와 두 trial 모든 주기에서 일치했다. 즉 solver covariance의
+작은 값은 로그 단위의 해석 착오가 아니라 실제 RTI tangent 결과임을 재현했다.
+
+3b. Trial 7 (seed6): 완전히 정착한 2-cycle과 구분해야 하는 사례
+
+이 trial은 26.9s에 20s 순변위 기준으로 종료되었다. status4 safe_stop은
+6.9s와 7.7s에 각각 한 번 있었고, 마지막4s의40개 주기는 모두 status0/sqp_rti다.
+따라서 종료 직전의 지속 정지를 연속 solver 실패 또는 stage0 veto로 설명하면
+안 된다. 마지막4s(기록된 precontrol time22.9-26.8s)의 평균 |v|는4.64349mm/s,
+평균 |omega|는0.00496312rad/s였다.
+
+마지막40개 입력의 내부39개 인접쌍에서는 v와 omega가 모두39회 부호를 바꾼다.
+다만 작은 양의 omega는0.005rad/s보다 작아서 양쪽 입력 모두 >0.005라는 amplitude
+조건을 적용한 부호반전 count는0이다. 이런 amplitude threshold count만 보면
+존재하는 왕복이 사라진다. 전체 command와 lag-2 변화량을 함께 보아야 한다.
+
+v 범위는[-0.00471310,+0.00468910]m/s, omega 범위는[-0.00706261,+0.00505078]rad/s.
+lag-2 상관계수는 v=0.99999882, omega=0.99997463이고, 두 step 간 입력 차이의
+중앙값은 |v[k]-v[k-2]|=5.12117e-6m/s,
+|omega[k]-omega[k-2]|=1.26224e-4rad/s다. 이는 거의 두 주기마다 같은 입력으로
+돌아오는 반복이지만, omega envelope에 느린 변화가 남아 있어 정확히 정착한
+주기2라고 단정하면 안 된다. 마지막4s 평균 signed v=-0.0370176mm/s,
+평균 signed omega=-0.00108259rad/s이고, 기록된 precontrol heading은 약
+-0.00384269rad 변했다. 작은 병진·회전 drift가 남아 있는 상태의 왕복이다.
+
+종료 직전에도 다음처럼 동시 입력 반전이 계속된다.
+time[s]  v[m/s]        omega[rad/s]  solver sigma_psi  exact sigma_psi  exact/solver
+26.6     -0.004699870  -0.004960616  0.0000291588      0.0002225063     7.630848
+26.7     +0.004584633  +0.005050776  0.0000304006      0.0002204143     7.250317
+26.8     -0.004697604  -0.004876509  0.0000297414      0.0002211139     7.434547
+
+마지막4s first-stage heading sigma exact/predicted의 중앙값은7.342432,
+범위는4.21208-12.87754로 정착한 trial1/3보다 변화가 크다. first-stage covariance는
+실제 nominal Jacobian 접선과 최대1.77636e-15 차이로 일치하며, nonlinear
+covariance log-factor defect의 cycle 중앙값은2.217605다. 따라서 이 사례에서도
+covariance 접선 오차와 거의 주기2인 왕복은 관측된다. 다만 '모든 실패가 정확히
+같은 고정2-cycle로 완전히 수렴했다' 또는 '추가 시간 후 반드시 같은 상태로
+정착한다'는 결론은 기록이 뒷받침하지 않는다. 20s 순변위 gate는 유한 시간 내
+진행 부족을 판정하며 무한 시간의 동작·수렴을 검사하지 않는다.
+
+4. 해석 범위
+
+기록은 'retained 입력의 exact nominal -> 반전 후보의 작은 tangent covariance ->
+다음 주기의 exact 재전파로 복원'이라는 반복을 직접 확인한다. 첫-stage 접선
+오차가 machine precision 수준이고 exact nonlinear covariance 오차가 크다는 점은
+이 covariance surrogate가 반복 제어에 관여하는 구체적인 수치 증거다.
+
+그러나 제약/MF 위험, geometry feature, 경로 reference, 입력 비용도 후보 선택에
+함께 작용한다. covariance artifact를 제거하는 수정이 정지를 모두 해소하는지,
+어떤 수정이 가장 적절한지는 이번 읽기 전용 replay로 검증하지 않았다.
+성공 trial에서도 transient covariance 오차가 발생할 수 있으므로 이것의 존재만을
+실패 충분조건으로 해석하지 않는다. 성공/실패 tail의 지속성과 진폭을 비교한다.
+
+sigma는 모델이 예측한 표준편차다. 실제 측정된 localization covariance가 아니다.
+미래 horizon candidate의 PSDF 음수/잔차를 실제 실행 충돌로 해석하지 않는다.
+본 notes의 heading 예시는 covariance correction 전후 비교이며, MF collision
+probability를 covariance correction 후 재평가했다는 뜻이 아니다.

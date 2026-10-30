@@ -9,7 +9,6 @@ from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 from control.analytic_psdf_casadi import AnalyticPSDFCasADi
 from control.cc_covariance import (
     covariance_from_log_cholesky,
-    initialize_cc_noise_params,
     initial_local_covariance,
     log_cholesky_from_covariance,
     propagate_log_cholesky,
@@ -17,29 +16,21 @@ from control.cc_covariance import (
     symbolic_dd_step,
     symbolic_log_cholesky_transition,
 )
-from control.mpcc_optimizer import (
-    MPCCOptimizer,
-    initialize_mpcc_solver_params,
-    initialize_mpcc_tracking_params,
-)
+from control.mpcc_optimizer import MPCCOptimizer, MPCCOptimizerParam
 from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
 from utils.acados_diagnostics import report_solver_failure
 
 
-class CCSFOptimizerParam:
+class CCSFOptimizerParam(MPCCOptimizerParam):
     def __init__(self):
-        initialize_mpcc_tracking_params(self)
-        initialize_mpcc_solver_params(self, integrator_type="DISCRETE")
+        super().__init__()
+        self.integrator_type = "DISCRETE"
         # None selects min(10, horizon); set horizon for full propagation.
         self.robust_horizon = None
         # Optional estimator covariance in world coordinates; otherwise use sigma_*0.
         self.initial_pose_covariance = None
 
-        # Safety constraints (PSDF style)
-        self.d_min = 0.001
-        self.use_obstacle_constraint = True
-        self.use_risk_margin = True
-        self.use_projected_variance_margin = True
+        # Safety constraints always include the projected-variance risk margin.
         self.chance_epsilon = 0.20 # 0.05
         self.chance_gamma = float(NormalDist().inv_cdf(1.0 - self.chance_epsilon))
         self.risk_margin_floor = 0.0
@@ -50,14 +41,39 @@ class CCSFOptimizerParam:
         self.debug_print_nominal_risk_heads = False
         self.debug_print_nominal_risk_head_only_active = True
 
-        # Topic 2 risk/covariance parameters.
-        self.sigma_f0 = 0.0002 #0.0002
-        self.sigma_l0 = 0.00025 #0.00025
-        self.sigma_psi0 = 0.00025 #0.00025
+        # Risk and covariance
+        # None selects min(10, horizon); set to horizon for full propagation.
+        self.robust_horizon = 10
+        self.initial_pose_covariance = None  # Optional world-frame estimator covariance.
+        # Initial body-frame covariance [forward f, lateral l, heading psi]:
+        # Sigma_0 = diag([sigma_f0**2, sigma_l0**2, sigma_psi0**2]) when
+        # initial_pose_covariance is None. Std units are [m, m, rad].
+        self.sigma_f0 = 0.0002
+        self.sigma_l0 = 0.00025
+        self.sigma_psi0 = 0.000025 #  0.00025
+
+        # Per-step process covariance: Q_k = dt * diag([q_f, q_l, q_psi]),
+        # dt = tf / horizon, v = linear speed, omega = angular speed.
+        # q_f   = q_f0   + alpha_f * v**2
+        # q_l   = q_l0   + alpha_v * v**2 + alpha_kappa * abs(v * omega)
+        # q_psi = q_psi0 + beta_v * v**2 + beta_kappa * abs(v * omega)
+        #               + beta_omega * omega**2
+        # q_*0 are baseline variance rates [m**2/s, m**2/s, rad**2/s].
+        # The *_kappa terms use physical turning, not spline curvature.
+        # Propagation keeps the reduced blocks of A_k Sigma_k A_k.T + Q_k;
+        # forward/lateral and forward/heading cross-covariances are discarded.
         self.q_f0 = 0 #1e-5
         self.q_l0 = 0 #2.5e-5
         self.q_psi0 = 0 #2.5e-5
-        initialize_cc_noise_params(self)
+        # Coefficients include the scale at initialization; propagation uses
+        # these resolved values directly. Preserve the preceding 0.6 baseline.
+        self.covariance_growth_scale = 0.8
+        self.alpha_f = 0.002 * self.covariance_growth_scale
+        self.alpha_v = 0.0004 * self.covariance_growth_scale
+        self.alpha_kappa = 0.0005 * self.covariance_growth_scale
+        self.beta_v = 0.02 * self.covariance_growth_scale
+        self.beta_kappa = 0.008 * self.covariance_growth_scale
+        self.beta_omega = 0.008 * self.covariance_growth_scale
         self.risk_cov_jitter = 1e-9
 
 
@@ -279,7 +295,7 @@ class CCSFOptimizer(MPCCOptimizer):
         model.disc_dyn_expr = discrete_dynamics
         model.cost_expr_ext_cost = cost_stage
         model.cost_expr_ext_cost_e = cost_terminal
-        return model
+        return self._augment_input_memory(model, param)
 
     def _build_stage_param(
         self, stage_path_param, risk_terms, risk_margin_scale, psdf_stage=None, stage_idx=0
@@ -417,10 +433,7 @@ class CCSFOptimizer(MPCCOptimizer):
         return np.ones((num_stages,), dtype=float)
 
     def _risk_margin_enabled(self, param):
-        return bool(
-            getattr(param, "use_obstacle_constraint", True)
-            and getattr(param, "use_risk_margin", True)
-        )
+        return bool(getattr(param, "use_obstacle_constraint", True))
 
     def _log_stage_risk_margins(self, risk_margin_batch, param):
         if not self._debug_risk_enabled(param):
@@ -496,8 +509,6 @@ class CCSFOptimizer(MPCCOptimizer):
                 poses,
                 psdf_params_batch,
             )
-            if not getattr(self.param, "use_risk_margin", True):
-                return phi_np, R_np, zero_terms
             return phi_np, R_np, risk_terms
 
         poses_t = torch.as_tensor(
@@ -512,9 +523,6 @@ class CCSFOptimizer(MPCCOptimizer):
             grad_world_t.detach().cpu().numpy(),
         )
         R_np = self._build_projected_variance_heads(grad_local_np)
-        if not getattr(self.param, "use_risk_margin", True):
-            return phi_np, R_np, zero_terms
-
         risk_terms = self._extract_projected_variance_terms(grad_local_np)
         return phi_np, R_np, risk_terms
 
@@ -544,6 +552,7 @@ class CCSFOptimizer(MPCCOptimizer):
         if stage_s_values is None:
             stage_s_values = states[:, 3]
         states[:, 4:8] = self._propagate_covariance_state_batch(inputs, stage_s_values)
+        self._set_input_memory_trajectory(states, inputs)
         for i, state in enumerate(states):
             solver.set(i, "x", state)
         return states
@@ -555,7 +564,6 @@ class CCSFOptimizer(MPCCOptimizer):
         if (
             self.psdf_wrapper is None
             or not getattr(self.param, "use_obstacle_constraint", True)
-            or not getattr(self.param, "use_risk_margin", True)
         ):
             return zero_margin
 
@@ -606,6 +614,7 @@ class CCSFOptimizer(MPCCOptimizer):
         )
 
         # Stage-0 equality on full augmented state.
+        x0_full = self._with_input_memory(x0_full)
         self.ocp.constraints.idxbx_0 = np.arange(self.nx, dtype=np.int64)
         self.ocp.constraints.lbx_0 = x0_full.copy()
         self.ocp.constraints.ubx_0 = x0_full.copy()
@@ -670,34 +679,31 @@ class CCSFOptimizer(MPCCOptimizer):
 
         x = self.ocp.model.x
         d_min = float(param.d_min)
-        if getattr(param, "use_risk_margin", True):
-            risk_terms = self.ocp.model.p[self.risk_tensor_param_slice]
-            risk_margin_scale = self.ocp.model.p[self.risk_margin_scale_param_slice][0]
-            q_l = ca.sqrt(ca.fmax(risk_terms[1], 0.0))
-            q_theta = ca.if_else(risk_terms[3] < 0.0, -1.0, 1.0) * ca.sqrt(
-                ca.fmax(risk_terms[2], 0.0)
-            )
-            risk_var = (
-                ca.exp(2.0 * x[4]) * risk_terms[0]
-                + (ca.exp(x[5]) * q_l + x[7] * q_theta) ** 2
-                + ca.exp(2.0 * x[6]) * risk_terms[2]
-            )
-            # Zero-gradient stages have zero margin and derivative; keep the
-            # unselected square-root branch finite without adding variance.
-            positive_variance = risk_var > 0.0
-            safe_variance = ca.if_else(positive_variance, risk_var, 1.0)
-            risk_margin = self._get_chance_gamma(param) * ca.if_else(
-                positive_variance, ca.sqrt(safe_variance), 0.0
-            )
-            floor = float(getattr(param, "risk_margin_floor", 0.0))
-            cap = float(getattr(param, "risk_margin_cap", np.inf))
-            if floor > 0.0:
-                risk_margin = ca.fmax(risk_margin, floor)
-            if np.isfinite(cap):
-                risk_margin = ca.fmin(risk_margin, cap)
-            risk_margin = risk_margin_scale * risk_margin
-        else:
-            risk_margin = 0.0
+        risk_terms = self.ocp.model.p[self.risk_tensor_param_slice]
+        risk_margin_scale = self.ocp.model.p[self.risk_margin_scale_param_slice][0]
+        q_l = ca.sqrt(ca.fmax(risk_terms[1], 0.0))
+        q_theta = ca.if_else(risk_terms[3] < 0.0, -1.0, 1.0) * ca.sqrt(
+            ca.fmax(risk_terms[2], 0.0)
+        )
+        risk_var = (
+            ca.exp(2.0 * x[4]) * risk_terms[0]
+            + (ca.exp(x[5]) * q_l + x[7] * q_theta) ** 2
+            + ca.exp(2.0 * x[6]) * risk_terms[2]
+        )
+        # Zero-gradient stages have zero margin and derivative; keep the
+        # unselected square-root branch finite without adding variance.
+        positive_variance = risk_var > 0.0
+        safe_variance = ca.if_else(positive_variance, risk_var, 1.0)
+        risk_margin = self._get_chance_gamma(param) * ca.if_else(
+            positive_variance, ca.sqrt(safe_variance), 0.0
+        )
+        floor = float(getattr(param, "risk_margin_floor", 0.0))
+        cap = float(getattr(param, "risk_margin_cap", np.inf))
+        if floor > 0.0:
+            risk_margin = ca.fmax(risk_margin, floor)
+        if np.isfinite(cap):
+            risk_margin = ca.fmin(risk_margin, cap)
+        risk_margin = risk_margin_scale * risk_margin
 
         # The active PSDF bridge injects first-order Taylor parameters through model.p.
         sdf_value = self.ped_model(x[:3])
@@ -741,13 +747,13 @@ class CCSFOptimizer(MPCCOptimizer):
                 solver.set(
                     i,
                     "x",
-                    np.array([x_ws[0], x_ws[1], x_ws[2], s_ws, cov0[0], cov0[1], cov0[2], cov0[3]], dtype=float),
+                    self._with_input_memory([x_ws[0], x_ws[1], x_ws[2], s_ws, cov0[0], cov0[1], cov0[2], cov0[3]]),
                 )
                 solver.set(i, "u", np.array([u_ws[0], u_ws[1], v_s_ws], dtype=float))
             solver.set(
                 self.N,
                 "x",
-                np.array(
+                self._with_input_memory(
                     [
                         x_ws[0],
                         x_ws[1],
@@ -758,7 +764,6 @@ class CCSFOptimizer(MPCCOptimizer):
                         cov0[2],
                         cov0[3],
                     ],
-                    dtype=float,
                 ),
             )
         except Exception as e:
@@ -823,10 +828,13 @@ class CCSFOptimizer(MPCCOptimizer):
                 ],
                 dtype=float,
             )
+            x0 = self._with_input_memory(x0)
             try:
                 solver.set(0, "lbx", x0)
                 solver.set(0, "ubx", x0)
             except Exception:
+                if getattr(self, "_input_memory_slice", None) is not None:
+                    raise
                 print("Warning: stage-0 full-state bounds update failed; keeping previous equality bounds.")
             solver.set(0, "x", x0)
 
@@ -950,6 +958,7 @@ class CCSFOptimizer(MPCCOptimizer):
             states[:, 4:8] = self._propagate_covariance_state_batch(
                 inputs, states[:, 3]
             )
+            self._set_input_memory_trajectory(states, inputs)
             if not np.isfinite(states).all():
                 raise ValueError("CC-SF safe-stop trajectory must be finite")
 
@@ -1067,10 +1076,8 @@ class CCSFOptimizer(MPCCOptimizer):
                 psdf_params_batch=psdf_params_sol,
             )
             covariance_sol = x_sol[:, 4:8]
-            risk_margin_batch = (
-                self._compute_margin_from_risk_terms(covariance_sol, risk_terms_sol, self.param)
-                if getattr(self.param, "use_risk_margin", True)
-                else np.zeros((x_sol.shape[0],), dtype=float)
+            risk_margin_batch = self._compute_margin_from_risk_terms(
+                covariance_sol, risk_terms_sol, self.param
             )
             risk_margin_batch *= self._build_risk_margin_scale_batch(x_sol.shape[0], self.param)
 
@@ -1133,7 +1140,7 @@ class AcadosSolution:
         raise NotImplementedError("Only 'x' and 'u' supported in AcadosSolution.value")
 
     def get_state_trajectory(self):
-        """Return rows [x, y, theta, s, xi_f, xi_l, xi_theta, xi_c]."""
+        """Return pose/progress/covariance rows, then optional input memory."""
         return self.value("x")
 
     def get_input_trajectory(self):

@@ -1,0 +1,108 @@
+CC-MF 각속도 변화량 비용 추가 및 튜닝 비교
+2026-10-29 KST
+
+결론
+현재 기본값 r_delta_omega=0.1은 큰 진동을 줄였으나 목표 도달이 0/3으로 악화됐다.
+0.03으로 낮춘 후 목표 도달은 비용 추가 전 1/3에서 2/3으로 늘었으며,
+같은 seed의 같은 길이 구간에서 큰 각속도 반전 빈도는 42.30%, RMS 입력 변화량은
+24.23% 감소했다. 정지 현상은 일부 개선됐지만 seed 1에서는 남았다.
+검증한 값 0.1/0.03 중 0.03을 이번 rectangle/DD/maze 조건의 권장값으로 선택했다.
+
+실행 및 비교 조건
+- 새 실행: r=0.1로 3회, r=0.03으로 3회, 총 6회 순차 실행.
+- 기준: 이전 비용 추가 전 실험에서 동일 seed 0/1/2의 3회만 사용.
+  이전 5회 전체의 성공률 1/5와 섞어 비교하지 않았다.
+- rectangle 0.15 x 0.12 m, differential_drive, maze, A*.
+- true 시작 pose perturbation: x/y std 0.02 m, heading std 0.05 rad,
+  +/-3 sigma 제한, 초기 footprint clearance >=0.01 m. 시작 pose가 정확히 일치한다.
+- localization error off, dt=0.1 s, horizon=20(2 s), 최대 simulation 60 s.
+- stuck 판정은 최근 4초 endpoint 순변위 <=0.03 m; 연속 solver 실패 20회.
+- 기존 debug_mf/debug_infeasibility와 telemetry를 유지하고 animation/plot 생성은 끔.
+- 동일 pp Python/CUDA/acados 환경과 torch 6 threads 사용.
+- 두 batch는 이전 source와 비교하여 control/mpcc_optimizer.py 비용 추가만 달랐다.
+  각 batch 실행 중 production/config source 변경이 없고 snapshot hash가 유효하다.
+
+Seed별 결과 (초는 simulation time)
+Seed  비용 전 r=0       r=0.1              r=0.03
+0     목표 도달 54.5    stuck 13.0         목표 도달 50.5
+1     stuck 19.4        stuck 20.9         stuck 19.3
+2     stuck 48.0        stuck 48.6         목표 도달 54.4
+
+최종 목표 도달: 1/3 -> r=0.1에서 0/3 -> r=0.03에서 2/3.
+stuck은 위 4초 순변위 기준에 따른 종료이며, 영구적인 정지를 증명하지 않는다.
+동일한 3개 seed를 튜닝에도 사용했으므로 일반적인 성공률 향상으로 확정할 수 없다.
+
+Oscillation 수치
+큰 반전: 인접 omega의 부호가 반대이고 양쪽 |omega|>=0.05 rad/s.
+작은 반전: 같은 정의에서 threshold를 0.005 rad/s로 낮춘 값.
+RMS deltaomega는 주기 사이 명령 변화량의 RMS이며 rad/s 단위다.
+
+전체 기록 구간 집계:
+조건        기록시간[s] 큰 반전[/s] 작은 반전[/s] RMS deltaomega
+비용 전     121.9       2.510       3.519         0.28054
+r=0.1        82.5       0.836       2.861         0.15563
+r=0.03      124.2       1.417       2.480         0.21066
+
+종료 시각 차이의 영향을 줄이기 위해 seed별 min(기준 길이, 새 실행 길이)까지만
+비교했다. r=0.03은 seed 0/1/2 각각 50.5/19.3/48.0초, 총 117.8초다.
+같은 길이의 비교에서:
+- 큰 반전 빈도: 2.58913 -> 1.49406 회/s, 42.30% 감소.
+- RMS deltaomega: 0.285206 -> 0.216104 rad/s, 24.23% 감소.
+- 작은 반전 빈도도 감소하여 단순 threshold 아래로 진폭만 숨은 효과와 구분된다.
+
+정체/저속 현상
+저속: |v|<0.01 m/s. 목표 10 cm(L1) 밖의 저속을 중간 정체 지표로 분리했다.
+목표는 A*의 최종 goal cell [1.81875,0.09375]를 사용하며 outcome 거리와 일치한다.
+전체 기록에서 목표 밖 저속 시간은:
+- 비용 전: 11.8 s, 전체의 9.68%.
+- r=0.1: 10.8 s, 전체의 13.09%.
+- r=0.03: 7.4 s, 전체의 5.96%.
+0.5초 이상 이어지는 저속 episode 총 길이는 비용 전 9.2초에서 r=0.03의 6.3초로
+줄었다. 다만 seed 1은 같은 길이 비교에서도 저속 시간이 3.4 -> 4.2초로 늘었다.
+모든 seed가 고르게 개선된 것은 아니다.
+
+r=0.1의 한계
+큰 반전 빈도가 감소했어도 마지막 구간에 omega 약 +/-0.04 rad/s의 작은 교대가
+남았다. 비용은 진폭을 줄였지만 limit cycle과 전후진 정체를 제거하지 못했다.
+seed 0은 기존에 통과하던 구간에서 더 일찍 정체했다.
+따라서 각속도 반전 수만으로 개선을 판단하면 결론을 과장하게 된다.
+
+r=0.03에서 남은 원인
+seed 1은 9.7초에 status4 fallback이 한 번 있었다. 종료 직전에는 solver가 계속
+성공했지만 v가 대략 +0.0039/-0.0061 m/s로 번갈아 나오는 작은 전후진이 남았다.
+마지막 4초 heading sigma 과소예측 중앙값은 1.65배, NLP equality residual 중앙값은
+2.1176이었다. 각속도 비용이 직접 억제하지 않는 v 변화와 covariance 비선형 전이
+오차가 남아 있는 점과 일관된다.
+성공한 seed 0/2의 마지막 구간은 heading sigma가 정확한 전파와 거의 같고,
+NLP equality residual 중앙값도 각각 약 0.00142로 줄었다.
+비용은 입력 변화를 줄이는 데 효과가 있지만, 단일 RTI의 covariance 접선 오차
+자체를 제거하는 변경은 아니다.
+
+Clearance 및 검증
+저장된 실제 초기/적용 후 pose에 대해 rectangle polygon과 장애물/경계 거리를
+독립 계산했다. 두 새 batch의 기록된 pose에서 충돌은 없었다. 연속시간 전체에
+대한 충돌 보장으로 해석하지 않는다.
+r=0.03의 최소 polygon clearance는 0.25562 mm였고, 비용 전 최소는 약 0.40472 mm였다.
+로그 PSDF 최소는 각각 0.25555/0.40472 mm이다. d_col=0.2 mm 이상이지만 최소 여유는
+줄었으므로 안전 여유까지 개선됐다는 결론은 내리지 않는다.
+
+반영한 설정
+config/config.yaml 및 config/config_benchmark.yaml의 cc_mf 블록에
+    r_delta_omega: 0.03
+을 저장했다. 공통 Python 기본값 0.1 및 다른 제어기 가중치는 유지한다.
+위 두 설정 파일 변경은 모든 batch가 완료된 뒤 적용했다.
+실험 재현에는 batches/r0p03/diagnostic_config.yaml과 저장된 run manifest를 사용한다.
+기존 config/config_benchmark.yaml의 movement_window_sec=20.0 등 다른 설정은
+수정하지 않았다. 이번 비교 실행은 분리된 diagnostic_config의 4.0초를 사용했다.
+
+주요 산출물
+batch_summary.csv: 조건별 집계
+comparison_metrics.csv: seed별 전체 지표
+paired_common_window_metrics.csv: 같은 seed/같은 길이 비교
+comparison.json: 상세 정의와 수치
+comparison.png: 목표 도달과 oscillation/저속 지표
+terminal_controls.png: 각 seed 종료 구간의 각속도/병진 명령
+validation.json: 시작 pose/설정/소스 보존/실제 polygon clearance 검증
+batches/r0p1/, batches/r0p03/: 각 3회 trial CSV, telemetry, source snapshot
+r0p1.log, r0p03.log: compiler/solver를 포함한 전체 실행 로그
+run_batch.py, compare_runs.py, validate_comparison.py: 재현용 실행/분석 코드

@@ -1,0 +1,320 @@
+Start perturbation: seed=4, pose=[0.07846395632863756, 0.7946077329325099, -1.5549723998309166], delta=[0.0034639563286375614, -0.0003922670674901255, 0.015823926963980023], clearance=0.010357 m, attempts=22
+Start pose saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_deadlock_10trials_20261030_0116/width_120mm/mpcc/seed_4/data/start_pose_MPC_mpcc_rectangle_maze_width120mm_seed4_widthbench_20261030_011517_startseed4.json
+Resetting mpcc optimizer for clean state...
+Trial failure criteria enabled: movement_window_sec=4.0, movement_threshold=0.03, max_consecutive_solver_failures=20
+generating global path with A* + Line of Sight
+시작 위치: [0.07846 0.79461]
+목적지: [1.8  0.09]
+도착 판정 기준: position L1 <= 0.02m
+Setting up MPCC optimizer...
+/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_deadlock_10trials_20261030_0116/source_snapshot/models/geometry_utils.py:246: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at /opt/conda/conda-bld/pytorch_1724789122112/work/torch/csrc/utils/tensor_new.cpp:278.)
+  edgesA = torch.tensor(edgesA, dtype=torch.float32)
+Added HARD obstacle avoidance constraint with d_min = 0.001
+field AcadosOcpDims.N has been migrated to AcadosOcpOptions.N_horizon. setting AcadosOcpOptions.N_horizon = N. For future comppatibility, please use AcadosOcpOptions.N_horizon directly.
+
+WARNING: Gauss-Newton Hessian approximation with EXTERNAL cost type not well defined!
+got cost_type EXTERNAL for cost_type_0, cost_type, cost_type_e, hessian_approx: 'GAUSS_NEWTON'.
+With this setting, acados will proceed computing the exact Hessian for the cost term and no Hessian contribution from constraints and dynamics.
+If the external cost is a linear least squares cost, this coincides with the Gauss-Newton Hessian.
+Note: There is also the option to use the external cost module with a numerical Hessian approximation (see `ext_cost_num_hess`).
+OR the option to provide a symbolic custom Hessian approximation (see `cost_expr_ext_cost_custom_hess`).
+
+rm -f libacados_ocp_solver_differential_drive_mpcc.so
+rm -f differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun_jac_uxt_zt.o differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac.o acados_solver_differential_drive_mpcc.o
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun_jac_uxt_zt.o differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun_jac_uxt_zt.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun.o differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o acados_solver_differential_drive_mpcc.o acados_solver_differential_drive_mpcc.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun.o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun_jac.o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun_jac_hess.o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun_jac_hess.c
+cc -shared differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun_jac_uxt_zt.o differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac.o acados_solver_differential_drive_mpcc.o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun.o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun_jac.o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun_jac_hess.o -o libacados_ocp_solver_differential_drive_mpcc.so -L/home/taek111/projects/acados/lib -lacados -lhpipm -lblasfeo -lm  \
+-L -l
+acados was compiled without OpenMP.
+solver time: 0.0006549999961862341, path_s: 0.011642267067490164
+plant_input_stage0: full=[ 0.05    -0.       0.07208], pose=[ 0.07846  0.79461 -1.55497]
+solver time: 0.0006192000000737607, path_s: 0.01664164108874289
+plant_input_stage0: full=[ 0.1     -0.10411  0.08428], pose=[ 0.07854  0.78961 -1.55497]
+solver time: 0.0006473000030382536, path_s: 0.026253484055442623
+plant_input_stage0: full=[ 0.1177  -0.06658  0.08276], pose=[ 0.07865  0.77961 -1.56538]
+solver time: 0.0006664000029559247, path_s: 0.026726479560131515
+plant_input_stage0: full=[ 0.11159 -0.17032  0.11623], pose=[ 0.07867  0.76784 -1.57204]
+solver time: 0.0005493999997270294, path_s: 0.040376190573298026
+plant_input_stage0: full=[ 0.117   -0.09062  0.10163], pose=[ 0.07856  0.75668 -1.58907]
+solver time: 0.0007035000016912818, path_s: 0.05505390166970305
+plant_input_stage0: full=[ 0.13046 -0.19243  0.09094], pose=[ 0.0783   0.74498 -1.59814]
+solver time: 0.0005702999987988733, path_s: 0.05641475360183964
+plant_input_stage0: full=[ 0.11558 -0.08068  0.12085], pose=[ 0.07782  0.73195 -1.61738]
+solver time: 0.0007461999994120561, path_s: 0.07106243073979726
+plant_input_stage0: full=[ 0.13901 -0.12834  0.12037], pose=[ 0.07723  0.7204  -1.62545]
+solver time: 0.000688398999045603, path_s: 0.08746493747735537
+plant_input_stage0: full=[0.13448 0.04731 0.10268], pose=[ 0.07638  0.70653 -1.63828]
+solver time: 0.0006073000040487386, path_s: 0.08965990901600279
+plant_input_stage0: full=[0.13929 0.15162 0.14909], pose=[ 0.07551  0.69311 -1.63355]
+solver time: 0.0006550999969476834, path_s: 0.10579961454779246
+plant_input_stage0: full=[0.14303 0.25839 0.14171], pose=[ 0.07474  0.6792  -1.61839]
+solver time: 0.0007244000007631257, path_s: 0.12399411737440984
+plant_input_stage0: full=[0.14601 0.39821 0.12999], pose=[ 0.07424  0.66491 -1.59255]
+solver time: 0.0007387000005110167, path_s: 0.14332343279388715
+plant_input_stage0: full=[0.14676 0.55033 0.11629], pose=[ 0.07422  0.65031 -1.55273]
+solver time: 0.0007294000024558045, path_s: 0.14736423921209796
+plant_input_stage0: full=[0.13349 0.686   0.15345], pose=[ 0.07489  0.63565 -1.4977 ]
+solver time: 0.0007515000033890828, path_s: 0.16567722860186612
+plant_input_stage0: full=[0.12992 0.81196 0.13688], pose=[ 0.07632  0.62238 -1.4291 ]
+solver time: 0.000672800000756979, path_s: 0.18682541181855883
+plant_input_stage0: full=[0.12617 0.91902 0.1104 ], pose=[ 0.07867  0.60961 -1.3479 ]
+solver time: 0.0006492999964393675, path_s: 0.19191305870931086
+plant_input_stage0: full=[0.12217 0.96412 0.13665], pose=[ 0.08202  0.59745 -1.256  ]
+solver time: 0.0006561000045621768, path_s: 0.21167338456733537
+plant_input_stage0: full=[0.10188 1.      0.10285], pose=[ 0.08636  0.58603 -1.15959]
+solver time: 0.0006949000016902573, path_s: 0.2250000000000001
+plant_input_stage0: full=[0.09608 1.      0.09104], pose=[ 0.09089  0.57691 -1.05959]
+solver time: 0.0006957000005058944, path_s: 0.23772759589748163
+plant_input_stage0: full=[0.08755 1.      0.07722], pose=[ 0.096    0.56878 -0.95959]
+solver time: 0.0007852999988244846, path_s: 0.23836149543537127
+plant_input_stage0: full=[0.07519 1.      0.10699], pose=[ 0.10137  0.56187 -0.85959]
+solver time: 0.0006950999959371984, path_s: 0.2512030147579398
+plant_input_stage0: full=[0.07158 1.      0.09468], pose=[ 0.10656  0.55643 -0.75959]
+solver time: 0.0006949000016902573, path_s: 0.2517835647941261
+plant_input_stage0: full=[0.07334 0.98367 0.12932], pose=[ 0.11199  0.55177 -0.65959]
+solver time: 0.00067299999500392, path_s: 0.26547863412563066
+plant_input_stage0: full=[0.10446 0.9506  0.12163], pose=[ 0.11799  0.54757 -0.56122]
+solver time: 0.0006006999974488281, path_s: 0.2689015499966401
+plant_input_stage0: full=[0.14949 0.88868 0.16107], pose=[ 0.12709  0.54244 -0.46616]
+solver time: 0.0006633000011788681, path_s: 0.2837709791100225
+plant_input_stage0: full=[0.15853 0.78341 0.15997], pose=[ 0.14072  0.53632 -0.37729]
+solver time: 0.0006503999975393526, path_s: 0.29961760268143584
+plant_input_stage0: full=[0.16221 0.6701  0.15607], pose=[ 0.15567  0.53106 -0.29895]
+solver time: 0.0006494000044767745, path_s: 0.31581018390160837
+plant_input_stage0: full=[0.16929 0.5504  0.15277], pose=[ 0.17132  0.52681 -0.23194]
+solver time: 0.0007086999976309016, path_s: 0.33106528306786626
+plant_input_stage0: full=[0.16655 0.4276  0.14714], pose=[ 0.1879   0.52337 -0.1769 ]
+solver time: 0.0006481000018538907, path_s: 0.3435854122563143
+plant_input_stage0: full=[0.15614 0.32902 0.14738], pose=[ 0.20435  0.52079 -0.13414]
+solver time: 0.000717100003384985, path_s: 0.3571927360151239
+plant_input_stage0: full=[0.1477  0.25461 0.14108], pose=[ 0.21986  0.51896 -0.10124]
+solver time: 0.0009215000027325004, path_s: 0.3719042246941769
+plant_input_stage0: full=[0.14176 0.20117 0.12921], pose=[ 0.23457  0.51765 -0.07578]
+solver time: 0.0006966000000829808, path_s: 0.3860495253913604
+plant_input_stage0: full=[0.1362  0.1651  0.11804], pose=[ 0.24871  0.51672 -0.05566]
+solver time: 0.0007432999991578981, path_s: 0.3990122027353068
+plant_input_stage0: full=[0.13013 0.14138 0.10964], pose=[ 0.26232  0.51608 -0.03915]
+solver time: 0.0007160000022849999, path_s: 0.4126608197957376
+plant_input_stage0: full=[0.12548 0.12648 0.09765], pose=[ 0.27533  0.51566 -0.02501]
+solver time: 0.0007006000014371239, path_s: 0.4159404724232874
+plant_input_stage0: full=[0.11079 0.11499 0.1192 ], pose=[ 0.28787  0.51542 -0.01236]
+solver time: 0.0007651999985682778, path_s: 0.4312267062128004
+plant_input_stage0: full=[0.10954 0.10906 0.09658], pose=[ 0.29895  0.51535 -0.00086]
+solver time: 0.0007190999967860989, path_s: 0.44723926914136863
+plant_input_stage0: full=[0.11034 0.10805 0.07291], pose=[0.3099  0.5154  0.01004]
+solver time: 0.0006973999988986179, path_s: 0.45050083888750764
+plant_input_stage0: full=[0.09813 0.10586 0.09204], pose=[0.32094 0.51557 0.02085]
+solver time: 0.0006962000043131411, path_s: 0.46680935714742877
+plant_input_stage0: full=[0.09975 0.10662 0.06419], pose=[0.33075 0.51583 0.03143]
+solver time: 0.0007104999967850745, path_s: 0.4695139207407842
+plant_input_stage0: full=[0.08855 0.10469 0.08313], pose=[0.34071 0.51619 0.0421 ]
+solver time: 0.0007809999951859936, path_s: 0.47043363743239075
+plant_input_stage0: full=[0.07623 0.09928 0.1038 ], pose=[0.34956 0.51661 0.05256]
+solver time: 0.0007670000049984083, path_s: 0.48696179852964216
+plant_input_stage0: full=[0.08146 0.0977  0.07053], pose=[0.35717 0.51705 0.06249]
+solver time: 0.0008012000034796074, path_s: 0.48993203183825573
+plant_input_stage0: full=[0.07403 0.09816 0.08532], pose=[0.3653  0.5176  0.07226]
+solver time: 0.0008060000036493875, path_s: 0.5073051584569723
+plant_input_stage0: full=[0.08219 0.09998 0.0513 ], pose=[0.37268 0.51817 0.08208]
+solver time: 0.0011019000012311153, path_s: 0.510797964908035
+plant_input_stage0: full=[0.07927 0.09941 0.06894], pose=[0.38087 0.51889 0.09208]
+solver time: 0.0006939000013517216, path_s: 0.512112053739726
+plant_input_stage0: full=[0.06885 0.20811 0.08945], pose=[0.38876 0.51965 0.10202]
+solver time: 0.0006899990039528348, path_s: 0.5298901200503138
+plant_input_stage0: full=[0.08416 0.16684 0.05661], pose=[0.3956  0.52043 0.12283]
+solver time: 0.0006561000045621768, path_s: 0.5338758902971469
+plant_input_stage0: full=[0.07916 0.24397 0.07378], pose=[0.40394 0.52153 0.13951]
+solver time: 0.0006664000029559247, path_s: 0.5354442225848698
+plant_input_stage0: full=[0.0767  0.20111 0.09618], pose=[0.41177 0.52272 0.16391]
+solver time: 0.0006976000004215166, path_s: 0.554028377542952
+plant_input_stage0: full=[0.09069 0.30769 0.06713], pose=[0.41932 0.52405 0.18402]
+solver time: 0.0006947000001673587, path_s: 0.5587320752973581
+plant_input_stage0: full=[0.09727 0.3586  0.09083], pose=[0.42821 0.52585 0.21479]
+solver time: 0.0005997999978717417, path_s: 0.5750109384325748
+plant_input_stage0: full=[0.09499 0.46335 0.06616], pose=[0.43768 0.52809 0.25065]
+solver time: 0.0006452000015997328, path_s: 0.5834488153205426
+plant_input_stage0: full=[0.08396 0.53749 0.06388], pose=[0.44682 0.53066 0.29698]
+solver time: 0.0006331999975373037, path_s: 0.5861170097407863
+plant_input_stage0: full=[0.09139 0.60099 0.08987], pose=[0.45478 0.53333 0.35073]
+solver time: 0.0006481000018538907, path_s: 0.6005969973489523
+plant_input_stage0: full=[0.07039 0.66731 0.06202], pose=[0.46326 0.53673 0.41083]
+solver time: 0.0007956999979796819, path_s: 0.6060854122563143
+plant_input_stage0: full=[0.09922 0.73457 0.08043], pose=[0.46962 0.53975 0.47756]
+solver time: 0.0007433999999193475, path_s: 0.614216144177902
+plant_input_stage0: full=[0.07712 0.73231 0.08581], pose=[0.47825 0.54463 0.55102]
+solver time: 0.0007030999986454844, path_s: 0.6219146598489012
+plant_input_stage0: full=[0.0517  0.95185 0.07152], pose=[0.48467 0.54891 0.62425]
+solver time: 0.0006987999950069934, path_s: 0.6270804548881327
+plant_input_stage0: full=[0.08686 0.71266 0.09889], pose=[0.48871 0.55212 0.71944]
+solver time: 0.0007098999994923361, path_s: 0.6357106097540369
+plant_input_stage0: full=[0.06737 0.83973 0.08477], pose=[0.49504 0.55807 0.7907 ]
+solver time: 0.0006788000027881935, path_s: 0.6423254162249199
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.49957 0.56306 0.87467]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 12.
+solver time: 0.0009225000030710362, path_s: 0.65320885007876
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60546 0.05281 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.50656 0.57188 0.92749]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 11.
+solver time: 0.0008354000019608065, path_s: 0.6639257690861075
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60545 0.10562 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.51307 0.58106 0.9803 ]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 10.
+solver time: 0.0007838999954401515, path_s: 0.677130522020964
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60543 0.15843 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.51909 0.59057 1.03311]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 9.
+solver time: 0.0007300999932340346, path_s: 0.6847410786995622
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60542 0.21125 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.52459 0.60039 1.08592]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 10.
+solver time: 0.0007560000012745149, path_s: 0.6947814282527713
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60537 0.26406 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.52957 0.61048 1.13873]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 11.
+solver time: 0.000836799998069182, path_s: 0.7045393426943698
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60529 0.31687 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.53401 0.62082 1.19154]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 14.
+solver time: 0.0011949000036111102, path_s: 0.7139876132228167
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60512 0.36968 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.5379  0.63138 1.24435]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 10.
+solver time: 0.0007285999963642098, path_s: 0.7230998944423566
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60482 0.42249 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.54123 0.64213 1.29716]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 11.
+solver time: 0.0008175999973900616, path_s: 0.73185077782407
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60426 0.4753  0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.54398 0.65305 1.34998]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 16.
+solver time: 0.001357000001007691, path_s: 0.7402158625545798
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60346 0.52811 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.54616 0.66409 1.40279]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 12.
+solver time: 0.0011251999967498705, path_s: 0.7481718235748619
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60266 0.58092 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.54775 0.67523 1.4556 ]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 12.
+solver time: 0.0009076999995158985, path_s: 0.7556964766194398
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60185 0.63374 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.54875 0.68644 1.50841]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 17.
+solver time: 0.0010767999992822297, path_s: 0.7627688400746118
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60108 0.68655 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.54915 0.69769 1.56122]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 23.
+solver time: 0.0014239000011002645, path_s: 0.7693691934832217
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.60037 0.73936 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.54896 0.70894 1.61403]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 20.
+solver time: 0.001157000006060116, path_s: 0.7734338423254471
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.59994 0.79217 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.54818 0.72017 1.66684]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 23.
+solver time: 0.0015713999964646064, path_s: 0.7748344642857506
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.5998  0.84498 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.5468  0.73134 1.71965]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 23.
+solver time: 0.0015756000066176057, path_s: 0.776104317973661
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.59967 0.89779 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.54484 0.74242 1.77247]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 24.
+solver time: 0.001448099996196106, path_s: 0.7772398625508989
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.59955 0.9506  0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.5423  0.75338 1.82528]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 29.
+solver time: 0.0016877999951248057, path_s: 0.7935854122563143
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.45443 1.00341 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.53918 0.7642  1.87809]
+
+SQP_RTI: QP solver returned error status 3 QP iteration 28.
+solver time: 0.0017984000005526468, path_s: 0.7935854122563143
+Acados solver failed with status 4
+Acados residuals [stat, eq, ineq, comp]: [1.45443 1.05623 0.00074 0.00063]
+Acados SQP iterations: 1
+plant_input_stage0: full=[0.11256 0.52811 0.10915], pose=[0.53549 0.77483 1.9309 ]
+실패 조건 충족으로 시뮬레이션 종료: consecutive_solver_failures(20): failure
+Using mpcc optimizer with differential_drive dynamics:
+median:  0.0007092999985616188
+std:  0.0002628200302365377
+min:  0.0005493999997270294
+max:  0.0017984000005526468
+Simulation finished.
+Run outcome: status=failure, reason=consecutive_solver_failures(20): failure, final_time=8.199999999999987, distance_to_goal=1.979009839757285
+Trial history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_deadlock_10trials_20261030_0116/width_120mm/mpcc/seed_4/data/trial_history_MPC_mpcc_rectangle_maze_width120mm_seed4_widthbench_20261030_011517_startseed4.csv
+Pose-SDF data saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_deadlock_10trials_20261030_0116/width_120mm/mpcc/seed_4/data/pose_sdf_MPC_mpcc_rectangle_maze_width120mm_seed4_widthbench_20261030_011517_startseed4.csv
+Total data points: 82
+SDF statistics - Min: -0.1162, Max: 0.0129, Mean: -0.0034
+Saving animation: /home/taek111/projects/psdf_mpcc/animations/mpcc/MPC_mpcc_rectangle_maze_width120mm_seed4_widthbench_20261030_011517_startseed4.mp4 (18 frames, 10 fps, 100 DPI)
+Animation saved: /home/taek111/projects/psdf_mpcc/animations/mpcc/MPC_mpcc_rectangle_maze_width120mm_seed4_widthbench_20261030_011517_startseed4.mp4
+Trial history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_deadlock_10trials_20261030_0116/width_120mm/mpcc/seed_4/data/trial_history.csv

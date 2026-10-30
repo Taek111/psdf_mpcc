@@ -25,6 +25,9 @@ start_perturbation:
 
 # Optional post-solve risk/constraint diagnostics (disabled by default).
 # Enable per controller when inspecting predicted margins and residuals.
+cc_mf:
+  # Rectangle/DD/maze comparison with matched seeds 0-2.
+  r_delta_omega: 0.03
 cc_sf:
   debug_mode: false
 cc_ecs:
@@ -72,7 +75,7 @@ defaults:
 #   - "parking": Parking scenario environment
 #
 # robot_shape options:
-#   - "rectangle": Rectangular robot (0.15x0.08m)
+#   - "rectangle": Rectangular robot (0.15x0.12m)
 #   - "pentagon": Pentagon robot (radius 0.05m)
 #   - "triangle": Triangle robot
 #   - "lshape": L-shaped robot
@@ -81,7 +84,7 @@ defaults:
 #   - "obca": OBCAOptimizer from control/obca_optimizer.py (CasADi/IPOPT)
 #   - "psdf": PSDF-based MPC with obstacle detection (acados SQP-RTI)
 #   - "mpcc": Deterministic PSDF-constrained MPCC with spline path tracking (acados SQP-RTI)
-#   - "cc_mf": Chance-constrained MPCC with signed-PSDF guard and MF affine rows (acados SQP-RTI)
+#   - "cc_mf": Chance-constrained MPCC with signed-PSDF guard and inverse-CDF MF affine rows (acados SQP-RTI)
 #   - "cc_sf": Chance-constrained MPCC with projected-variance PSDF margin (acados SQP-RTI)
 #   - "dcbf": DCBF optimizer from control/dcbf_optimizer.py (CasADi/IPOPT)
 #   - "cc_ecs": Chance-constrained MPCC with ellipsoidal confidence sets (acados SQP-RTI)

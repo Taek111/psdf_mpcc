@@ -7,6 +7,7 @@ import casadi as ca
 import numpy as np
 
 from control.cc_covariance import (
+    ZERO_INITIAL_STD,
     covariance_from_log_cholesky,
     initial_local_covariance,
     log_cholesky_from_covariance,
@@ -202,6 +203,37 @@ class CCCovarianceTest(unittest.TestCase):
         zero_motion = propagate_log_cholesky(xi, 0.0, 0.0, 0.0, 0.2, param)
         np.testing.assert_allclose(zero_motion, xi, rtol=1e-13, atol=1e-14)
 
+    def test_zero_initial_sigmas_have_only_a_numerical_floor(self):
+        self.param.sigma_f0 = 0.0002
+        self.param.sigma_l0 = 0.0
+        self.param.sigma_psi0 = 0.0
+        covariance = initial_local_covariance(self.param)
+        np.testing.assert_array_equal(
+            covariance, np.diag([0.0002**2, ZERO_INITIAL_STD**2, ZERO_INITIAL_STD**2])
+        )
+        self.assertEqual(self.param.sigma_l0, 0.0)
+        self.assertEqual(self.param.sigma_psi0, 0.0)
+        xi = log_cholesky_from_covariance(covariance)
+        np.testing.assert_allclose(covariance_from_log_cholesky(xi), covariance,
+                                   rtol=1e-14, atol=0.0)
+        xi_symbol = ca.MX.sym("zero_initial_xi", 4)
+        for noise in (SimpleNamespace(), self.param):
+            for v, omega in ((0.0, 0.0), (0.3, 0.0), (0.3, 0.8)):
+                with self.subTest(noise=noise, v=v, omega=omega):
+                    transition = ca.Function("zero_initial_transition", [xi_symbol],
+                        [symbolic_log_cholesky_transition(
+                            xi_symbol, v, omega, 0.0, 0.1, noise)])
+                    numeric = xi.copy()
+                    symbolic = xi.copy()
+                    for _ in range(20):
+                        numeric = propagate_log_cholesky(numeric, v, omega, 0.0, 0.1, noise)
+                        symbolic = np.asarray(transition(symbolic)).reshape(4)
+                    np.testing.assert_allclose(numeric, symbolic, rtol=1e-13, atol=1e-14)
+                    self.assertTrue(np.isfinite(covariance_from_log_cholesky(numeric)).all())
+        self.param.sigma_f0 = 0.0
+        np.testing.assert_array_equal(initial_local_covariance(self.param),
+                                      np.eye(3) * ZERO_INITIAL_STD**2)
+
     def test_invalid_covariance_and_numeric_range_are_rejected(self):
         for covariance in (
             np.diag([0.0, 1.0, 1.0]),
@@ -214,9 +246,10 @@ class CCCovarianceTest(unittest.TestCase):
         for xi in ([0.0, 0.0, np.nan, 0.0], [1000.0, 0.0, 0.0, 0.0], [-1000.0, 0.0, 0.0, 0.0]):
             with self.subTest(xi=xi), self.assertRaises(ValueError):
                 covariance_from_log_cholesky(xi)
-        self.param.sigma_f0 = 0.0
-        with self.assertRaises(ValueError):
-            initial_local_covariance(self.param)
+        for sigma in (-0.0002, np.inf, np.nan):
+            self.param.sigma_f0 = sigma
+            with self.subTest(sigma=sigma), self.assertRaises(ValueError):
+                initial_local_covariance(self.param)
         for coefficient in (-1.0, np.inf, np.nan):
             self.param.alpha_f = coefficient
             with self.subTest(coefficient=coefficient), self.assertRaises(ValueError):

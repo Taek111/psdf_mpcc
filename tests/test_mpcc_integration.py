@@ -82,7 +82,7 @@ class MPCCIntegrationTest(unittest.TestCase):
         })
         self.assertIsInstance(params, MPCCOptimizerParam)
         self.assertEqual((params.horizon, params.tf), (20, 2.0))
-        self.assertEqual((params.q_s, params.q_s_ref, params.vmax), (1.0, 2.0, 0.7))
+        self.assertEqual((params.q_s, params.q_s_ref, params.vmax), (1.0, 2.0, 1.0))
         np.testing.assert_array_equal(params.mat_Qe, np.diag([1.0, 10.0]))
         np.testing.assert_array_equal(params.mat_Re, np.diag([1.0, 0.01]))
         self.assertIn("MPCC ignores legacy 'psdf_detection'", output)

@@ -1,7 +1,7 @@
 # Maze benchmark: 4 methods x 5 trials, at most 60 simulation seconds per trial.
 # Run from the repository root; choose a fresh --results-dir for every batch:
 # python test_nmpc.py -c config/config_benchmark.yaml --results-dir benchmark_runs/<new_run>
-# Method-specific optimizer parameters retain their current Python defaults.
+# CC-MF uses the angular command-change weight selected on matched maze trials.
 trials: 5
 
 # Trial seeds 0-4 are shared across methods. This perturbs the true initial pose.
@@ -19,38 +19,45 @@ localization_error:
 
 defaults:
   simulation_time: 60.0
-  generate_animation: false
+  generate_animation: true
   generate_plots: false
 
 trial_failure_criteria:
   enabled: true
-  movement_window_sec: 4.0
+  movement_window_sec: 20.0
   movement_threshold: 0.03
   max_consecutive_solver_failures: 20
 
-cc_sf:
-  debug_mode: false
-cc_ecs:
-  debug_mode: false
+# cc_mf:
+#   r_delta_omega: 0.03
+# cc_sf:
+#   debug_mode: false
+# cc_ecs:
+#   debug_mode: false
 
 test_configs:
-  - maze_type: maze
-    robot_shape: rectangle
-    optimizer_type: mpcc
-    dynamics_type: differential_drive
-    path_planner: astar
-  - maze_type: maze
-    robot_shape: rectangle
-    optimizer_type: cc_sf
-    dynamics_type: differential_drive
-    path_planner: astar
   - maze_type: maze
     robot_shape: rectangle
     optimizer_type: cc_mf
     dynamics_type: differential_drive
     path_planner: astar
-  - maze_type: maze
-    robot_shape: rectangle
-    optimizer_type: cc_ecs
-    dynamics_type: differential_drive
-    path_planner: astar
+  # - maze_type: maze
+  #   robot_shape: rectangle
+  #   optimizer_type: mpcc
+  #   dynamics_type: differential_drive
+  #   path_planner: astar
+  # - maze_type: maze
+  #   robot_shape: rectangle
+  #   optimizer_type: cc_sf
+  #   dynamics_type: differential_drive
+  #   path_planner: astar
+  # - maze_type: maze
+  #   robot_shape: rectangle
+  #   optimizer_type: cc_mf
+  #   dynamics_type: differential_drive
+  #   path_planner: astar
+  # - maze_type: maze
+  #   robot_shape: rectangle
+  #   optimizer_type: cc_ecs
+  #   dynamics_type: differential_drive
+  #   path_planner: astar

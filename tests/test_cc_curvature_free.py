@@ -8,7 +8,6 @@ import numpy as np
 
 from control.cc_covariance import propagate_log_cholesky
 from control.cc_ecs_optimizer import CCECSOptimizer, CCECSOptimizerParam
-from control.cc_mf_imp_optimizer import CCMFImpOptimizer, CCMFImpOptimizerParam
 from control.cc_mf_optimizer import CCMFOptimizer, CCMFOptimizerParam
 from control.cc_sf_optimizer import CCSFOptimizer, CCSFOptimizerParam
 from utils.spline_path import (
@@ -22,7 +21,6 @@ CC_TYPES = (
     (CCSFOptimizer, CCSFOptimizerParam),
     (CCECSOptimizer, CCECSOptimizerParam),
     (CCMFOptimizer, CCMFOptimizerParam),
-    (CCMFImpOptimizer, CCMFImpOptimizerParam),
 )
 
 

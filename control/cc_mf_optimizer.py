@@ -1,6 +1,9 @@
+"""CC-MF MPCC with a hard PSDF guard and soft inverse-CDF affine rows."""
+
 import copy
 import json
 import time
+from dataclasses import fields
 
 import casadi as ca
 import numpy as np
@@ -9,18 +12,13 @@ from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 from control.cc_covariance import (
     covariance_from_log_cholesky,
     initial_local_covariance,
-    initialize_cc_noise_params,
     log_cholesky_from_covariance,
     propagate_log_cholesky,
     resolve_robust_horizon,
     symbolic_dd_step,
     symbolic_log_cholesky_transition,
 )
-from control.mpcc_optimizer import (
-    MPCCOptimizer,
-    initialize_mpcc_solver_params,
-    initialize_mpcc_tracking_params,
-)
+from control.mpcc_optimizer import MPCCOptimizer, MPCCOptimizerParam
 from utils.acados_diagnostics import report_solver_failure
 from utils.cc_mf_diagnostics import CCMFDiagnosticsMixin
 from utils.spline_path import (
@@ -28,20 +26,24 @@ from utils.spline_path import (
     project_progress,
 )
 from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
+from models.mf_inverse_cdf import ICDF_BRANCH_NAMES, ICDF_STATUS_NAMES
 
 
-class CCMFOptimizerParam:
+class MFInverseCDFEvaluationError(RuntimeError):
+    """A requested inverse-CDF row could not be evaluated safely."""
+
+
+class CCMFOptimizerParam(MPCCOptimizerParam):
     def __init__(self):
-        initialize_mpcc_tracking_params(self)
-
+        super().__init__()
         # Safety rows: Row G is hard; only Row M has a slack.
         self.d_min = 0.0002
         self.d_col = 0.0002
         self.use_row_mf = True
-        self.use_obstacle_constraint = True
         self.chance_epsilon = 0.20
-        self.mf_slack_linear = 1e2
-        self.mf_slack_quadratic = 1e0
+        # Slack and its penalties use standard-normal quantile units.
+        self.mf_slack_linear = 100.0
+        self.mf_slack_quadratic = 1.0
         self.mf_active_start_step = 1
         self.mf_active_end_step = None
         self.mf_active_terminal = True
@@ -49,21 +51,41 @@ class CCMFOptimizerParam:
 
         # Risk and covariance
         # None selects min(10, horizon); set to horizon for full propagation.
-        self.robust_horizon = None
+        self.robust_horizon = 10
         self.initial_pose_covariance = None  # Optional world-frame estimator covariance.
+        # Initial body-frame covariance [forward f, lateral l, heading psi]:
+        # Sigma_0 = diag([sigma_f0**2, sigma_l0**2, sigma_psi0**2]) when
+        # initial_pose_covariance is None. Std units are [m, m, rad].
         self.sigma_f0 = 0.0002
         self.sigma_l0 = 0.00025
-        self.sigma_psi0 = 0.00025
-        self.q_f0 = 0
-        self.q_l0 = 0
-        self.q_psi0 = 0
-        # Compatibility field: the shared coefficients already include this scale.
-        self.covariance_growth_scale = 0.6
-        initialize_cc_noise_params(self)
+        self.sigma_psi0 = 0.000025 #  0.00025
+
+        # Per-step process covariance: Q_k = dt * diag([q_f, q_l, q_psi]),
+        # dt = tf / horizon, v = linear speed, omega = angular speed.
+        # q_f   = q_f0   + alpha_f * v**2
+        # q_l   = q_l0   + alpha_v * v**2 + alpha_kappa * abs(v * omega)
+        # q_psi = q_psi0 + beta_v * v**2 + beta_kappa * abs(v * omega)
+        #               + beta_omega * omega**2
+        # q_*0 are baseline variance rates [m**2/s, m**2/s, rad**2/s].
+        # The *_kappa terms use physical turning, not spline curvature.
+        # Propagation keeps the reduced blocks of A_k Sigma_k A_k.T + Q_k;
+        # forward/lateral and forward/heading cross-covariances are discarded.
+        self.q_f0 = 0 #1e-5
+        self.q_l0 = 0 #2.5e-5
+        self.q_psi0 = 0 #2.5e-5
+        # Coefficients include the scale at initialization; propagation uses
+        # these resolved values directly. Preserve the preceding 0.6 baseline.
+        self.covariance_growth_scale = 0.8
+        self.alpha_f = 0.002 * self.covariance_growth_scale
+        self.alpha_v = 0.0004 * self.covariance_growth_scale
+        self.alpha_kappa = 0.0005 * self.covariance_growth_scale
+        self.beta_v = 0.02 * self.covariance_growth_scale
+        self.beta_kappa = 0.008 * self.covariance_growth_scale
+        self.beta_omega = 0.008 * self.covariance_growth_scale
         self.risk_cov_jitter = 1e-9
 
         # Solver and recovery
-        initialize_mpcc_solver_params(self, integrator_type="DISCRETE")
+        self.integrator_type = "DISCRETE"
         self.enable_backup_solver = False
 
         # Optional diagnostics
@@ -77,6 +99,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
     _codegen_name = "cc_mf"
     _model_name = "differential_drive_cc_mf"
     _path_includes_curvature = True
+    diagnostics_label = "CC-MF"
+    RESIDUAL_KIND = "inverse_cdf"
+    RESIDUAL_UNIT = "standard_normal_quantile"
 
     CYCLE_LOG_FIELDS = (
         "time",
@@ -87,6 +112,15 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         "psdf",
         "mf_probability_sum",
         "mf_slack",
+        "residual_kind",
+        "residual_unit",
+        "slack_unit",
+        "mf_icdf_residual_nominal",
+        "mf_status",
+        "mf_branch",
+        "mf_tail_clipped",
+        "mf_active",
+        "feature_count",
     )
     COVARIANCE_LOG_FIELDS = (
         "time",
@@ -113,6 +147,34 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         "row_m_residual_after_slack",
         "row_m_feasible_before_slack",
         "row_m_feasible_after_slack",
+        "residual_kind",
+        "residual_unit",
+        "slack_unit",
+        "mf_probability_sum_nominal",
+        "mf_icdf_residual_nominal",
+        "mf_probability_sum_frozen",
+        "mf_icdf_residual_frozen",
+        "mf_probability_sum_fresh",
+        "mf_icdf_residual_fresh",
+        "mf_icdf_affine_minus_frozen",
+        "mf_status",
+        "mf_branch",
+        "mf_tail_clipped",
+        "feature_count",
+    )
+
+    _ICDF_CONSTRAINT_LOG_FIELDS = (
+        "mf_probability_sum_nominal",
+        "mf_icdf_residual_nominal",
+        "mf_probability_sum_frozen",
+        "mf_icdf_residual_frozen",
+        "mf_probability_sum_fresh",
+        "mf_icdf_residual_fresh",
+        "mf_icdf_affine_minus_frozen",
+        "mf_status",
+        "mf_branch",
+        "mf_tail_clipped",
+        "feature_count",
     )
 
     def __init__(self):
@@ -359,7 +421,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         model.disc_dyn_expr = discrete_dynamics
         model.cost_expr_ext_cost = cost_stage
         model.cost_expr_ext_cost_e = cost_terminal
-        return model
+        return self._augment_input_memory(model, param)
 
     def _build_stage_path_parameter(self, s_value):
         return super()._build_stage_path_parameter(s_value)
@@ -423,27 +485,57 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 )
         if not np.isfinite(epsilon).all() or np.any(epsilon <= 0.0) or np.any(epsilon >= 1.0):
             raise ValueError("chance_epsilon values must lie strictly between 0 and 1")
+        if np.any(epsilon <= np.finfo(np.float64).tiny) or np.any(epsilon >= 0.5):
+            raise ValueError(
+                "CC-MF requires float64.tiny < chance_epsilon < 0.5"
+            )
         return epsilon
 
     def _inactive_mf_constant(self, epsilon):
-        """Positive residual for a deliberately disabled probability row."""
-        return np.asarray(epsilon, dtype=float).copy()
+        return np.ones_like(np.asarray(epsilon, dtype=float))
 
     def _nominal_probability_sum(self, constraint_data, z_bar):
-        residual = (
-            np.einsum("ij,ij->i", constraint_data["mf_A_raw"], z_bar)
-            + constraint_data["mf_c_raw"]
-        )
-        probability = constraint_data["epsilon"] - residual
-        probability[~constraint_data["mf_valid"]] = np.nan
-        return probability
+        del z_bar
+        return constraint_data["probability_sum"].copy()
 
     def _raise_if_fatal_evaluation_error(self, error):
-        """Variants can bypass recovery for fatal preprocessing errors."""
-        del error
+        if isinstance(error, MFInverseCDFEvaluationError):
+            raise error
 
     def _extend_constraint_diagnostics(self, diagnostics, states, fresh):
-        """Optional variant metadata; probability CC-MF has no extra data."""
+        nominal = self._constraint_data
+        diagnostics.update(
+            residual_kind=self.RESIDUAL_KIND,
+            residual_unit=self.RESIDUAL_UNIT,
+            slack_unit=self.RESIDUAL_UNIT,
+            mf_status=nominal["status"].copy(),
+            mf_branch=nominal["branch"].copy(),
+            mf_tail_clipped=nominal["tail_clipped"].copy(),
+            feature_count=nominal["feature_count"].copy(),
+        )
+        for suffix, data in (("nominal", nominal), ("fresh", fresh)):
+            for name, source in (("mf_probability_sum", "probability_sum"),
+                                 ("mf_icdf_residual", "residual")):
+                diagnostics[f"{name}_{suffix}"] = None if data is None else data[source].copy()
+        frozen = nominal.get("frozen_features")
+        if frozen is not None:
+            try:
+                result = self.psdf_wrapper.evaluate_mf_icdf_frozen(
+                    frozen, states[:, :8], nominal["epsilon"], float(self.param.d_min),
+                )
+                arrays = self._result_arrays(result)
+                self._validate_result(arrays, "CC-MF frozen diagnostics")
+            except MFInverseCDFEvaluationError:
+                raise
+            except Exception as error:
+                raise MFInverseCDFEvaluationError(
+                    f"CC-MF frozen diagnostics failed: {error}"
+                ) from error
+            diagnostics["mf_probability_sum_frozen"] = arrays["probability_sum"]
+            diagnostics["mf_icdf_residual_frozen"] = arrays["residual"]
+            error = diagnostics["mf_affine_residual"] - arrays["residual"]
+            error[~nominal["mf_mask"]] = np.nan
+            diagnostics["mf_icdf_affine_minus_frozen"] = error
         return diagnostics
 
     def _compute_exact_psdf(self, poses):
@@ -475,102 +567,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             return float(phi[0]), gradient[0].copy()
         return phi, gradient
 
-    def _compute_mf_affine_data(self, z_bar):
-        """Return raw PSDF/MF data without applying the separated-domain mask.
-
-        The normal path is one batched ``forward_mf`` call.  If a covariance
-        issue makes that call fail, stagewise calls preserve every valid MF
-        row while the pose-only PSDF path still supplies the always-active Row G.
-        """
-        z_bar_np = np.asarray(z_bar, dtype=float)
-        if z_bar_np.ndim != 2 or z_bar_np.shape[1] != 8:
-            raise ValueError("z_bar must have shape (H, 8)")
-        if not np.isfinite(z_bar_np).all():
-            raise ValueError("z_bar values must be finite")
-
-        num_stages = z_bar_np.shape[0]
-        epsilon = self._normalize_epsilon_values(num_stages)
-
-        if self.psdf_wrapper is None or not self.param.use_obstacle_constraint:
-            phi = np.full((num_stages,), 1000.0, dtype=float)
-            gradient = np.zeros((num_stages, 3), dtype=float)
-            A_mf = np.zeros((num_stages, 8), dtype=float)
-            c_mf = epsilon.copy()
-            stage_available = np.zeros(num_stages, dtype=bool)
-            return phi, gradient, A_mf, c_mf, stage_available
-
-        z_bar_t = torch.as_tensor(
-            z_bar_np,
-            dtype=self.psdf_wrapper.A.dtype,
-            device=self.psdf_wrapper.device,
-        )
-        try:
-            outputs_t = self.psdf_wrapper.forward_mf(
-                z_bar_t,
-                torch.as_tensor(
-                    epsilon,
-                    dtype=z_bar_t.dtype,
-                    device=z_bar_t.device,
-                ),
-                float(self.param.d_min),
-            )
-            phi, gradient, A_mf, c_mf = tuple(
-                output.detach().cpu().numpy() for output in outputs_t
-            )
-            stage_available = np.ones((num_stages,), dtype=bool)
-        except (RuntimeError, ValueError, FloatingPointError):
-            # Guard geometry is covariance-independent, so retain it even when
-            # one MF stage has invalid variance data.
-            phi, gradient = self._compute_exact_psdf(z_bar_np[:, :3])
-            A_mf = np.full((num_stages, 8), np.nan, dtype=float)
-            c_mf = np.full((num_stages,), np.nan, dtype=float)
-            stage_available = np.zeros((num_stages,), dtype=bool)
-
-            for i in range(num_stages):
-                try:
-                    outputs_i = self.psdf_wrapper.forward_mf(
-                        z_bar_t[i : i + 1],
-                        float(epsilon[i]),
-                        float(self.param.d_min),
-                    )
-                    phi_i, gradient_i, A_i, c_i = tuple(
-                        output.detach().cpu().numpy() for output in outputs_i
-                    )
-                    phi[i] = phi_i[0]
-                    gradient[i] = gradient_i[0]
-                    A_mf[i] = A_i[0]
-                    c_mf[i] = c_i[0]
-                    stage_available[i] = True
-                except (RuntimeError, ValueError, FloatingPointError):
-                    continue
-
-        # A failed/non-finite MF stage is maskable.  Repair guard/mask geometry
-        # through the exact pose interface, then fail loudly if even the signed
-        # PSDF itself is invalid.  Row G is repaired independently from the MF
-        # validity mask and remains active at every constrained stage.
-        guard_finite = np.isfinite(phi) & np.isfinite(gradient).all(axis=1)
-        # A non-finite PSDF/gradient returned by forward_mf also invalidates
-        # that stage's MF data, even though Row G can be repaired independently.
-        stage_available &= guard_finite
-        if not guard_finite.all():
-            phi_exact, gradient_exact = self._compute_exact_psdf(z_bar_np[:, :3])
-            phi[~guard_finite] = phi_exact[~guard_finite]
-            gradient[~guard_finite] = gradient_exact[~guard_finite]
-        if not np.isfinite(phi).all() or not np.isfinite(gradient).all():
-            raise ValueError("signed PSDF guard data must be finite at every stage")
-
-        active_clusters = getattr(self.psdf_wrapper, "active_clusters", None)
-        has_active_features = (
-            True if active_clusters is None else bool(active_clusters > 0)
-        )
-        return (
-            phi,
-            gradient,
-            A_mf,
-            c_mf,
-            stage_available & has_active_features,
-        )
-
     def _build_mf_stage_mask(self, num_stages):
         """Return the configured intermediate/terminal MF stage window."""
         if num_stages <= 0:
@@ -601,79 +597,86 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         return stage_mask
 
     def _compute_constraint_affine_data(self, z_bar):
-        """Build fixed Row G/Row M coefficients and the per-stage MF mask."""
-        z_bar_np = np.asarray(z_bar, dtype=float)
-        if z_bar_np.ndim != 2 or z_bar_np.shape[1] != 8:
-            raise ValueError("z_bar must have shape (H, 8)")
-        if not np.isfinite(z_bar_np).all():
-            raise ValueError("z_bar values must be finite")
+        z_bar = np.asarray(z_bar, dtype=float)
+        if z_bar.ndim != 2 or z_bar.shape[1] != 8 or not np.isfinite(z_bar).all():
+            raise ValueError("z_bar must have shape (H, 8) and finite values")
+        size = len(z_bar)
+        epsilon = self._normalize_epsilon_values(size)
+        stage_mask = self._build_mf_stage_mask(size)
+        stage_mask[0] = False
+        requested = (
+            stage_mask
+            & bool(self.param.use_row_mf)
+            & bool(self.param.use_obstacle_constraint)
+        )
+        try:
+            if (
+                self.psdf_wrapper is None
+                or not self.param.use_obstacle_constraint
+                or not self.param.use_row_mf
+            ):
+                if self.psdf_wrapper is not None and self.param.use_obstacle_constraint:
+                    phi, gradient = self._compute_exact_psdf(z_bar[:, :3])
+                else:
+                    phi = np.full(size, 1000.0)
+                    gradient = np.zeros((size, 3))
+                no_obstacles = self.psdf_wrapper is None or (
+                    getattr(self.psdf_wrapper, "active_clusters", None) == 0
+                )
+                missing = np.full(size, np.nan)
+                arrays = {
+                    "phi": np.asarray(phi), "gradient": np.asarray(gradient),
+                    "A": np.zeros((size, 8)), "c": np.ones(size),
+                    "residual": missing.copy(),
+                    "probability_sum": np.zeros(size) if no_obstacles else missing.copy(),
+                    "feature_count": np.zeros(size, dtype=int),
+                    "valid": np.zeros(size, dtype=bool),
+                    "required": np.zeros(size, dtype=bool),
+                    "status": np.full(size, "not_requested", dtype=object),
+                    "branch": np.full(size, "inactive", dtype=object),
+                    "tail_clipped": np.zeros(size, dtype=bool),
+                }
+                frozen = None
+            else:
+                result = self.psdf_wrapper.forward_mf_icdf(
+                    z_bar, epsilon, float(self.param.d_min),
+                    stage_requested=requested,
+                    d_col=float(self.param.d_col),
+                    return_frozen_features=bool(
+                        self.param.debug_mf or self.param.debug_infeasibility
+                    ),
+                )
+                arrays = self._result_arrays(result)
+                frozen = result.frozen_features
+            self._validate_result(arrays, "CC-MF preprocessing")
+        except MFInverseCDFEvaluationError:
+            raise
+        except Exception as error:
+            raise MFInverseCDFEvaluationError(
+                f"CC-MF preprocessing failed: {error}"
+            ) from error
 
-        num_stages = z_bar_np.shape[0]
-        epsilon = self._normalize_epsilon_values(num_stages)
-        row_mf_enabled = bool(self.param.use_row_mf)
-        obstacle_constraint_enabled = bool(self.param.use_obstacle_constraint)
-
-        if not obstacle_constraint_enabled:
-            # Preserve the master obstacle-constraint switch even if a wrapper
-            # from an earlier setup is still attached to the optimizer.
-            phi = np.full((num_stages,), 1000.0, dtype=float)
-            gradient = np.zeros((num_stages, 3), dtype=float)
-            A_mf_raw = np.full((num_stages, 8), np.nan, dtype=float)
-            c_mf_raw = np.full((num_stages,), np.nan, dtype=float)
-            stage_available = np.zeros(num_stages, dtype=bool)
-        elif row_mf_enabled:
-            mf_data = self._compute_mf_affine_data(z_bar_np)
-            phi, gradient, A_mf_raw, c_mf_raw = mf_data[:4]
-            stage_available = mf_data[4] if len(mf_data) > 4 else None
-        else:
-            # A disabled Row M must not evaluate the covariance-dependent MF
-            # model.  Retain the pose-only signed PSDF evaluation required to
-            # build hard Row G, and mark raw MF data as intentionally absent.
-            phi, gradient = self._compute_exact_psdf(z_bar_np[:, :3])
-            phi = np.asarray(phi, dtype=float)
-            gradient = np.asarray(gradient, dtype=float)
-            A_mf_raw = np.full((num_stages, 8), np.nan, dtype=float)
-            c_mf_raw = np.full((num_stages,), np.nan, dtype=float)
-            stage_available = np.zeros(num_stages, dtype=bool)
-
-        d_col = float(self.param.d_col)
-        if not np.isfinite(d_col):
-            raise ValueError("d_col must be finite")
-
-        guard_A = np.zeros((num_stages, 8), dtype=float)
-        guard_A[:, :3] = gradient
-        guard_c = phi - np.einsum("ij,ij->i", gradient, z_bar_np[:, :3]) - d_col
-
-        finite_mf = np.isfinite(A_mf_raw).all(axis=1) & np.isfinite(c_mf_raw)
-        if stage_available is None:
-            stage_available = finite_mf.copy()
-        else:
-            stage_available = np.asarray(stage_available, dtype=bool)
-            if stage_available.shape != (num_stages,):
-                raise ValueError("MF availability must contain one value per stage")
-        mf_valid = row_mf_enabled & stage_available & finite_mf
-        mf_stage_mask = self._build_mf_stage_mask(num_stages)
-        mf_mask = (phi > d_col) & mf_valid & mf_stage_mask
-
-        A_mf = np.zeros((num_stages, 8), dtype=float)
-        c_mf = self._inactive_mf_constant(epsilon)
-        A_mf[mf_mask] = A_mf_raw[mf_mask]
-        c_mf[mf_mask] = c_mf_raw[mf_mask]
-
+        required = arrays["required"]
+        A = np.zeros((size, 8))
+        c = self._inactive_mf_constant(epsilon)
+        A[required], c[required] = arrays["A"][required], arrays["c"][required]
+        guard_A = np.zeros((size, 8))
+        guard_A[:, :3] = arrays["gradient"]
         return {
-            "phi": phi,
-            "gradient": gradient,
-            "row_mf_enabled": row_mf_enabled,
+            **arrays,
+            "row_mf_enabled": bool(self.param.use_row_mf),
             "guard_A": guard_A,
-            "guard_c": guard_c,
-            "mf_A_raw": A_mf_raw,
-            "mf_c_raw": c_mf_raw,
-            "mf_valid": mf_valid,
-            "mf_stage_mask": mf_stage_mask,
-            "mf_A": A_mf,
-            "mf_c": c_mf,
-            "mf_mask": mf_mask,
-            "epsilon": epsilon,
+            "guard_c": (
+                arrays["phi"]
+                - np.einsum("ij,ij->i", arrays["gradient"], z_bar[:, :3])
+                - float(self.param.d_col)
+            ),
+            "mf_A_raw": arrays["A"], "mf_c_raw": arrays["c"],
+            "mf_valid": arrays["valid"].copy(),
+            "mf_stage_mask": stage_mask,
+            "mf_A": A, "mf_c": c, "mf_mask": required.copy(),
+            "epsilon": epsilon, "frozen_features": frozen,
+            "nominal_state": z_bar.copy(),
         }
 
     def _project_s_with_line_search(self, position_xy, param):
@@ -749,6 +752,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         )
 
         # Stage-0 equality on full augmented state.
+        x0_full = self._with_input_memory(x0_full)
         self.ocp.constraints.idxbx_0 = np.arange(self.nx, dtype=np.int64)
         self.ocp.constraints.lbx_0 = x0_full.copy()
         self.ocp.constraints.ubx_0 = x0_full.copy()
@@ -796,7 +800,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         guard_affine = self.ocp.model.p[self.guard_param_slice]
         mf_affine = self.ocp.model.p[self.mf_param_slice]
         guard_expr = ca.dot(guard_affine[:3], x[:3]) + guard_affine[3]
-        mf_expr = ca.dot(mf_affine[:8], x) + mf_affine[8]
+        mf_expr = ca.dot(mf_affine[:8], x[:8]) + mf_affine[8]
         constraint_expr = ca.vertcat(guard_expr, mf_expr)
 
         self.ocp.constraints.constr_type = "BGH"
@@ -875,7 +879,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 solver.set(
                     i,
                     "x",
-                    np.array(
+                    self._with_input_memory(
                         [
                             x_ws[0],
                             x_ws[1],
@@ -886,14 +890,13 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                             cov0[2],
                             cov0[3],
                         ],
-                        dtype=float,
                     ),
                 )
                 solver.set(i, "u", np.array([u_ws[0], u_ws[1], v_s_ws], dtype=float))
             solver.set(
                 self.N,
                 "x",
-                np.array(
+                self._with_input_memory(
                     [
                         x_ws[0],
                         x_ws[1],
@@ -904,7 +907,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                         cov0[2],
                         cov0[3],
                     ],
-                    dtype=float,
                 ),
             )
         except Exception as e:
@@ -921,6 +923,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
 
         states, inputs = self._read_solver_trajectory(solver)
         states[:, 4:8] = self._propagate_covariance_state_batch(inputs, states[:, 3])
+        self._set_input_memory_trajectory(states, inputs)
         for stage in range(self.N + 1):
             solver.set(stage, "x", states[stage])
 
@@ -1005,6 +1008,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             raise RuntimeError("Solver is not initialized.")
 
         # Do not reuse the previous cycle's diagnostics if preparation fails.
+        self._constraint_data = None
         self._last_nominal_probability_sum = None
         self._current_psdf = None
 
@@ -1027,10 +1031,13 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 ],
                 dtype=float,
             )
+            x0 = self._with_input_memory(x0)
             try:
                 solver.set(0, "lbx", x0)
                 solver.set(0, "ubx", x0)
             except Exception:
+                if getattr(self, "_input_memory_slice", None) is not None:
+                    raise
                 print(
                     "Warning: stage-0 full-state bounds update failed; "
                     "keeping previous equality bounds."
@@ -1080,11 +1087,12 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
 
         inputs = np.stack([solver.get(i, "u") for i in range(self.N)], axis=0)
         x_guess[:, 4:8] = self._propagate_covariance_state_batch(inputs, stage_s_values)
+        self._set_input_memory_trajectory(x_guess, inputs)
         for stage in range(self.N + 1):
             solver.set(stage, "x", x_guess[stage])
 
-        constraint_data = self._compute_constraint_affine_data(x_guess)
-        nominal_probability_sum = self._nominal_probability_sum(constraint_data, x_guess)
+        constraint_data = self._compute_constraint_affine_data(x_guess[:, :8])
+        nominal_probability_sum = self._nominal_probability_sum(constraint_data, x_guess[:, :8])
 
         # The batch includes x_guess[0] fixed to the measured current state.
         # Its phi is the exact PSDF, not the affine guard approximation, even
@@ -1185,6 +1193,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         inputs = np.zeros((self.N, self.nu), dtype=float)
         states[:, :4] = [*pose, progress]
         states[:, 4:8] = self._propagate_covariance_state_batch(inputs, states[:, 3])
+        self._set_input_memory_trajectory(states, inputs)
         return states, inputs
 
     def _apply_safe_stop(self, dynamics, solver_status, *, raise_on_failure=False):
@@ -1256,6 +1265,10 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
 
     def setup(self, param, system, reference_trajectory, obstacles):
         self.param = param
+        self._normalize_epsilon_values(int(param.horizon) + 1)
+        for name in ("d_min", "d_col"):
+            if not np.isfinite(float(getattr(param, name))):
+                raise ValueError(f"{name} must be finite")
         self.set_state(system._state)
         self._system = system
         self._system_dynamics = system._dynamics
@@ -1370,26 +1383,38 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                     row_m_feasible_after_slack = value >= -tolerance
 
             phi = float(diagnostics["mf_activation_phi"][stage])
-            self._constraint_log_rows.append(
-                {
-                    "solve_step": int(self._solve_count),
-                    "horizon_stage": stage,
-                    "phi": phi,
-                    "d_col": float(diagnostics["d_col"]),
-                    "phi_gt_d_col": bool(
-                        diagnostics["mf_domain_eligible"][stage]
-                    ),
-                    "mf_valid": bool(diagnostics["mf_valid"][stage]),
-                    "mf_active": mf_active,
-                    "row_g_residual": row_g_residual,
-                    "row_g_feasible": row_g_residual >= -tolerance,
-                    "row_m_residual_before_slack": row_m_residual,
-                    "row_m_lower_slack": row_m_slack,
-                    "row_m_residual_after_slack": row_m_effective_residual,
-                    "row_m_feasible_before_slack": row_m_feasible_before_slack,
-                    "row_m_feasible_after_slack": row_m_feasible_after_slack,
-                }
-            )
+            row = {
+                "solve_step": int(self._solve_count),
+                "horizon_stage": stage,
+                "phi": phi,
+                "d_col": float(diagnostics["d_col"]),
+                "phi_gt_d_col": bool(
+                    diagnostics["mf_domain_eligible"][stage]
+                ),
+                "mf_valid": bool(diagnostics["mf_valid"][stage]),
+                "mf_active": mf_active,
+                "row_g_residual": row_g_residual,
+                "row_g_feasible": row_g_residual >= -tolerance,
+                "row_m_residual_before_slack": row_m_residual,
+                "row_m_lower_slack": row_m_slack,
+                "row_m_residual_after_slack": row_m_effective_residual,
+                "row_m_feasible_before_slack": row_m_feasible_before_slack,
+                "row_m_feasible_after_slack": row_m_feasible_after_slack,
+            }
+            row.update(residual_kind=self.RESIDUAL_KIND,
+                       residual_unit=self.RESIDUAL_UNIT, slack_unit=self.RESIDUAL_UNIT)
+            for key in self._ICDF_CONSTRAINT_LOG_FIELDS:
+                values = diagnostics.get(key)
+                value = None if values is None else values[stage]
+                if key in ("mf_status", "mf_branch"):
+                    row[key] = None if value is None else str(value)
+                elif key == "mf_tail_clipped":
+                    row[key] = None if value is None else bool(value)
+                elif key == "feature_count":
+                    row[key] = None if value is None else int(value)
+                else:
+                    row[key] = self._finite_or_none(value)
+            self._constraint_log_rows.append(row)
 
     @staticmethod
     def _finite_or_none(value):
@@ -1459,6 +1484,18 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 "mf_slack": self._json_vector(mf_slack),
             }
         )
+
+        row = self._cycle_log_rows[-1]
+        row.update(residual_kind=self.RESIDUAL_KIND,
+                   residual_unit=self.RESIDUAL_UNIT, slack_unit=self.RESIDUAL_UNIT)
+        data = self._constraint_data
+        for key, source in (
+            ("mf_icdf_residual_nominal", "residual"), ("mf_active", "mf_mask"),
+            ("mf_tail_clipped", "tail_clipped"), ("feature_count", "feature_count"),
+        ):
+            row[key] = self._json_vector(None if data is None else data[source])
+        for key, source in (("mf_status", "status"), ("mf_branch", "branch")):
+            row[key] = json.dumps([] if data is None else data[source].tolist())
 
         try:
             states, inputs = self._read_solver_trajectory(solver)
@@ -1680,6 +1717,60 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             device=device,
         )
 
+    @staticmethod
+    def _result_arrays(result):
+        arrays = {
+            item.name: getattr(result, item.name).detach().cpu().numpy()
+            for item in fields(result)
+            if isinstance(getattr(result, item.name), torch.Tensor)
+        }
+        for key, names in (("status", ICDF_STATUS_NAMES), ("branch", ICDF_BRANCH_NAMES)):
+            arrays[key] = np.asarray(
+                [names[int(code)] for code in arrays[key]], dtype=object,
+            )
+        return arrays
+
+    @staticmethod
+    def _validate_result(arrays, context):
+        if not np.isfinite(arrays["phi"]).all() or not np.isfinite(
+            arrays["gradient"]
+        ).all():
+            raise MFInverseCDFEvaluationError(f"{context}: non-finite PSDF guard geometry")
+        finite = (
+            np.isfinite(arrays["A"]).all(axis=1)
+            & np.isfinite(arrays["c"])
+            & np.isfinite(arrays["residual"])
+            & np.isfinite(arrays["probability_sum"])
+        )
+        failed = arrays["required"] & (~arrays["valid"] | ~finite)
+        if failed.any():
+            reasons = ", ".join(
+                f"stage {i}: {arrays['status'][i]}" for i in np.flatnonzero(failed)
+            )
+            raise MFInverseCDFEvaluationError(f"{context}: invalid MF evaluation ({reasons})")
+
+    def compute_diagnostics(self, solver, status, mode, *, failed=False, report=False):
+        try:
+            states = self._read_diagnostic_states(solver)
+            diagnostics = self._build_constraint_diagnostics(solver, states, status, mode)
+        except MFInverseCDFEvaluationError:
+            raise
+        except Exception as error:
+            print(f"Warning: could not compute CC-MF diagnostics: {error}")
+            return None
+        name = "_last_failed_constraint_diagnostics" if failed else "_last_constraint_diagnostics"
+        setattr(self, name, copy.deepcopy(diagnostics) if failed else diagnostics)
+        if report:
+            self.report_diagnostics(diagnostics, failed=failed)
+        return diagnostics
+
+    def _print_constraint_diagnostics(self, diagnostics):
+        print("CC-MF: hard PSDF Row G; soft inverse-CDF Row M and slack in quantile units.")
+        for key in ("mf_probability_sum_nominal", "mf_icdf_residual_nominal",
+                    "mf_affine_residual", "mf_icdf_residual_frozen",
+                    "mf_icdf_residual_fresh", "mf_lower_slack"):
+            print(f"CC-MF {key}: {self._diagnostic_array_string(diagnostics.get(key))}")
+
 
 class AcadosSolution:
     def __init__(self, solver, horizon, *, status_info=None):
@@ -1695,7 +1786,7 @@ class AcadosSolution:
         raise NotImplementedError("Only 'x' and 'u' supported in AcadosSolution.value")
 
     def get_state_trajectory(self):
-        """Return [x, y, theta, s, xi_f, xi_l, xi_theta, xi_c] by stage."""
+        """Return pose/progress/covariance rows, then optional input memory."""
         return self.value("x")
 
     def get_input_trajectory(self):

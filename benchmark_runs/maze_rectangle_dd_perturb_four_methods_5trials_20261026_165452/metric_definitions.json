@@ -1,9 +1,0 @@
-{
-  "clearance_m": "Minimum exact Euclidean footprint-to-obstacle distance and signed map-boundary margin, using frozen sim/start_perturbation.py. Obstacle overlap/contact maps to zero; negative values indicate map-boundary violation. Obstacle interior overlap is recorded separately.",
-  "clearance_sampling": "Initial true pose plus every post-integration true pose, dt=0.1 s. Includes failed trials and final poses. Does not certify clearance between samples.",
-  "traversal_time_s": "Simulated time to the existing goal-reaching criterion, only for success trials. Empty for failures/timeouts; elapsed_simulation_time_s remains available.",
-  "solver_success_time_s": "perf_counter wall time inside solve() only, summed over main and recovery calls per step. Successful control cycles only, including first steps and steps from failed trials. Setup, parameter updates and planning excluded.",
-  "controller_all_time_s": "All logged controller calls, including unsuccessful cycles and each trial's first initialization/code-generation/compilation step. Local/global planning excluded.",
-  "controller_steady_time_s": "Controller calls with timestep>0 for each trial; includes failed control cycles. Only the first step of each trial is excluded.",
-  "aggregation": "Clearance and computation statistics pool individual samples/steps; traversal statistics average successful trials. std is sample standard deviation (ddof=1). All CSV times are seconds and distances are meters."
-}

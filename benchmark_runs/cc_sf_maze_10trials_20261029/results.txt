@@ -1,0 +1,22 @@
+CC-SF / rectangle (0.15 x 0.12 m) / differential drive / maze / A*
+Baseline: config/config_benchmark.yaml; current controller parameters unchanged.
+10 sequential trials, perturbed initial poses with seeds 0-9; limit 60 s/trial.
+Failure checker: movement <= 0.03 m over 20 s, or 20 consecutive solver failures.
+Success rate: 7/10 = 70%
+Safe stop: 60 control steps; 10/10 trials.
+Safe stop counts each zero-input fallback control step, including consecutive steps.
+Safe-stop events verified against applied v=omega=0 and unsuccessful solver status.
+10 animations saved using existing animate_world (H.264 ultrafast); no additional encoding.
+Original benchmark YAML changed during the batch; the run used the saved experiment config throughout.
+
+trial,seed,status,final_time_s,safe_stop_count,failure_reason
+1,0,success,49.1,6,
+2,1,success,49.5,7,
+3,2,failure,49.4,4,stuck_for_20.00s_disp_0.0260m_le_0.0300m
+4,3,success,48.8,6,
+5,4,success,50.3,10,
+6,5,failure,50.5,7,stuck_for_20.00s_disp_0.0247m_le_0.0300m
+7,6,failure,41.3,4,stuck_for_20.00s_disp_0.0270m_le_0.0300m
+8,7,success,47.8,5,
+9,8,success,48.4,6,
+10,9,success,48.7,5,

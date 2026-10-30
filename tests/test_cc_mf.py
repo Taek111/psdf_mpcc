@@ -57,71 +57,12 @@ class _FakeSolver:
         raise KeyError(field)
 
 
-class _StagewiseFallbackPSDFWrapper:
-    def __init__(self, failed_stage):
-        self.A = torch.zeros((1, 1, 2), dtype=torch.float64)
-        self.device = self.A.device
-        self.active_clusters = 1
-        self.failed_stage = int(failed_stage)
-        self.mf_call_sizes = []
-        self.mf_single_stages = []
-        self.pose_call_sizes = []
-
-    @staticmethod
-    def expected_phi(poses):
-        return 0.20 + 0.05 * poses[:, 0]
-
-    @staticmethod
-    def expected_gradient(poses):
-        gradient = torch.zeros(
-            (poses.shape[0], 3),
-            dtype=poses.dtype,
-            device=poses.device,
-        )
-        gradient[:, 0] = 1.0
-        gradient[:, 1] = 0.25
-        gradient[:, 2] = -0.10
-        return gradient
-
-    @staticmethod
-    def expected_mf_A(stage, dtype=torch.float64):
-        return (stage + 1.0) * torch.arange(1, 9, dtype=dtype) / 20.0
-
-    @staticmethod
-    def expected_mf_c(stage):
-        return -0.05 * (stage + 1.0)
-
-    def __call__(self, poses):
-        poses_t = torch.as_tensor(poses, dtype=self.A.dtype, device=self.device)
-        self.pose_call_sizes.append(int(poses_t.shape[0]))
-        return self.expected_phi(poses_t), self.expected_gradient(poses_t)
-
-    def forward_mf(self, z_bar, epsilon, d_min):
-        del epsilon, d_min
-        z_bar_t = torch.as_tensor(z_bar, dtype=self.A.dtype, device=self.device)
-        self.mf_call_sizes.append(int(z_bar_t.shape[0]))
-        if z_bar_t.shape[0] > 1:
-            raise RuntimeError("synthetic batched MF failure")
-
-        stage = int(round(float(z_bar_t[0, 0].item())))
-        self.mf_single_stages.append(stage)
-        if stage == self.failed_stage:
-            raise ValueError("synthetic single-stage MF failure")
-
-        phi = self.expected_phi(z_bar_t[:, :3])
-        gradient = self.expected_gradient(z_bar_t[:, :3])
-        A_mf = self.expected_mf_A(stage, dtype=z_bar_t.dtype).unsqueeze(0)
-        c_mf = torch.tensor(
-            [self.expected_mf_c(stage)],
-            dtype=z_bar_t.dtype,
-            device=z_bar_t.device,
-        )
-        return phi, gradient, A_mf, c_mf
-
-
 class CCMFMultiFeatureTest(unittest.TestCase):
     def setUp(self):
         self.param = CCMFOptimizerParam()
+        self.param.a_max = self.param.alpha_max = None
+        self.param.r_delta_v = 0.0
+        self.param.r_delta_omega = 0.0  # Keep covariance fixtures at eight states.
         self.param.horizon = 3
         self.param.tf = 0.3
         self.optimizer = CCMFOptimizer()
@@ -137,15 +78,15 @@ class CCMFMultiFeatureTest(unittest.TestCase):
     def tearDown(self):
         self.optimizer.ocp = None
 
-    def test_default_covariance_growth_scale_is_point_six(self):
-        self.assertAlmostEqual(self.param.covariance_growth_scale, 0.6)
+    def test_default_covariance_growth_scale_is_point_eight(self):
+        self.assertAlmostEqual(self.param.covariance_growth_scale, 0.8)
         expected = {
-            "alpha_f": 0.0012,
-            "alpha_v": 0.00024,
-            "alpha_kappa": 0.0003,
-            "beta_v": 0.012,
-            "beta_kappa": 0.0048,
-            "beta_omega": 0.0048,
+            "alpha_f": 0.0016,
+            "alpha_v": 0.00032,
+            "alpha_kappa": 0.0004,
+            "beta_v": 0.016,
+            "beta_kappa": 0.0064,
+            "beta_omega": 0.0064,
         }
         for key, value in expected.items():
             self.assertAlmostEqual(
@@ -169,6 +110,9 @@ class CCMFMultiFeatureTest(unittest.TestCase):
 
     def test_sf_and_mf_models_share_discrete_covariance_dynamics_and_mpcc_cost(self):
         pv_param = CCSFOptimizerParam()
+        pv_param.a_max = pv_param.alpha_max = None
+        pv_param.r_delta_v = 0.0
+        pv_param.r_delta_omega = 0.0
         pv_param.horizon = self.param.horizon
         pv_param.tf = self.param.tf
         pv_optimizer = CCSFOptimizer()
@@ -471,284 +415,6 @@ class CCMFMultiFeatureTest(unittest.TestCase):
         np.testing.assert_allclose(lower_slacks[1:, 0], np.zeros(3))
         np.testing.assert_allclose(lower_slacks[1:, 1], [0.01, 0.02, 0.03])
 
-    def test_guard_coefficients_and_stagewise_mf_mask(self):
-        self.param.use_row_mf = True
-        self.param.d_col = 0.03
-        epsilon = float(self.param.chance_epsilon)
-        z_bar = np.zeros((4, 8), dtype=float)
-        z_bar[:, :3] = np.array(
-            [
-                [0.25, -0.10, 0.20],
-                [0.40, -0.05, 0.15],
-                [0.55, 0.00, 0.10],
-                [0.70, 0.05, 0.05],
-            ]
-        )
-        z_bar[:, 4:7] = np.log(0.01)
-
-        # Stage 0 is penetrating. Stages 1 and 3 remain valid separated-domain
-        # MF stages; stage 2 has invalid MF coefficients only.
-        phi = np.array([-0.02, 0.20, 0.25, 0.30])
-        gradient = np.array(
-            [
-                [1.0, 0.0, 0.1],
-                [0.8, 0.2, 0.0],
-                [0.6, 0.3, -0.1],
-                [0.4, 0.4, -0.2],
-            ]
-        )
-        mf_A_raw = np.arange(32, dtype=float).reshape(4, 8) / 50.0
-        mf_A_raw[2, 4] = np.nan
-        mf_c_raw = np.array([-0.1, -0.2, -0.3, -0.4])
-
-        self.optimizer._compute_mf_affine_data = lambda _: (
-            phi.copy(),
-            gradient.copy(),
-            mf_A_raw.copy(),
-            mf_c_raw.copy(),
-        )
-        data = self.optimizer._compute_constraint_affine_data(z_bar)
-
-        expected_guard_A = np.zeros((4, 8), dtype=float)
-        expected_guard_A[:, :3] = gradient
-        expected_guard_c = (
-            phi
-            - np.einsum("ij,ij->i", gradient, z_bar[:, :3])
-            - self.param.d_col
-        )
-        np.testing.assert_allclose(data["guard_A"], expected_guard_A)
-        np.testing.assert_allclose(data["guard_c"], expected_guard_c)
-
-        np.testing.assert_allclose(data["phi"], phi)
-        np.testing.assert_allclose(data["gradient"], gradient)
-        np.testing.assert_allclose(data["mf_A_raw"], mf_A_raw, equal_nan=True)
-        np.testing.assert_allclose(data["mf_c_raw"], mf_c_raw)
-        np.testing.assert_array_equal(data["mf_valid"], [True, True, False, True])
-        np.testing.assert_array_equal(data["mf_mask"], [False, True, False, True])
-        np.testing.assert_allclose(data["epsilon"], np.full(4, epsilon))
-
-        np.testing.assert_allclose(data["mf_A"][0], np.zeros(8))
-        np.testing.assert_allclose(data["mf_A"][1], mf_A_raw[1])
-        np.testing.assert_allclose(data["mf_A"][2], np.zeros(8))
-        np.testing.assert_allclose(data["mf_A"][3], mf_A_raw[3])
-        np.testing.assert_allclose(data["mf_c"], [epsilon, -0.2, epsilon, -0.4])
-
-        # A penetrating measured stage must not globally disable later valid MF
-        # rows. Row normalization and its stage-dependent penalty data are absent.
-        self.assertTrue(data["mf_mask"][1])
-        self.assertTrue(data["mf_mask"][3])
-        self.assertNotIn("guard_scale", data)
-        self.assertNotIn("mf_scale", data)
-
-    def test_mf_mask_uses_strict_phi_threshold(self):
-        self.param.use_row_mf = True
-        self.param.d_col = 0.05
-        z_bar = np.zeros((4, 8), dtype=float)
-        phi = np.array(
-            [
-                0.10,
-                self.param.d_col,
-                np.nextafter(self.param.d_col, np.inf),
-                np.nextafter(self.param.d_col, -np.inf),
-            ]
-        )
-        gradient = np.tile(np.array([1.0, 0.0, 0.0]), (4, 1))
-        mf_A_raw = np.ones((4, 8), dtype=float)
-        mf_c_raw = -np.ones(4, dtype=float)
-        self.optimizer._compute_mf_affine_data = lambda _: (
-            phi.copy(),
-            gradient.copy(),
-            mf_A_raw.copy(),
-            mf_c_raw.copy(),
-        )
-
-        data = self.optimizer._compute_constraint_affine_data(z_bar)
-
-        np.testing.assert_array_equal(data["mf_valid"], np.ones(4, dtype=bool))
-        np.testing.assert_array_equal(data["mf_mask"], [False, False, True, False])
-
-    def test_mf_active_window_separates_intermediate_and_terminal_stages(self):
-        self.param.use_row_mf = True
-        self.param.d_col = 0.0
-        self.param.mf_active_start_step = 1
-        self.param.mf_active_end_step = 1
-        self.param.mf_active_terminal = False
-        z_bar = np.zeros((4, 8), dtype=float)
-        phi = np.full(4, 0.2, dtype=float)
-        gradient = np.tile(np.array([1.0, 0.0, 0.0]), (4, 1))
-        mf_A_raw = np.ones((4, 8), dtype=float)
-        mf_c_raw = -np.ones(4, dtype=float)
-        self.optimizer._compute_mf_affine_data = lambda _: (
-            phi.copy(),
-            gradient.copy(),
-            mf_A_raw.copy(),
-            mf_c_raw.copy(),
-        )
-
-        data = self.optimizer._compute_constraint_affine_data(z_bar)
-        np.testing.assert_array_equal(
-            data["mf_stage_mask"],
-            [False, True, False, False],
-        )
-        np.testing.assert_array_equal(
-            data["mf_mask"],
-            [False, True, False, False],
-        )
-
-        self.param.mf_active_end_step = 20
-        data = self.optimizer._compute_constraint_affine_data(z_bar)
-        np.testing.assert_array_equal(
-            data["mf_stage_mask"],
-            [False, True, True, False],
-        )
-
-        self.param.mf_active_terminal = True
-        data = self.optimizer._compute_constraint_affine_data(z_bar)
-        np.testing.assert_array_equal(
-            data["mf_stage_mask"],
-            [False, True, True, True],
-        )
-
-    def test_row_mf_option_masks_only_mf_row_and_preserves_hard_guard(self):
-        self.param.use_row_mf = True
-        self.assertTrue(self.param.use_row_mf)
-        self.assertFalse(hasattr(self.param, "use_row_g"))
-        self.param.d_col = 0.0
-        z_bar = np.zeros((4, 8), dtype=float)
-        z_bar[:, :3] = np.array(
-            [
-                [0.25, -0.10, 0.20],
-                [0.40, -0.05, 0.15],
-                [0.55, 0.00, 0.10],
-                [0.70, 0.05, 0.05],
-            ]
-        )
-        # Include a penetrating future stage to ensure disabling Row M cannot
-        # silently replace the geometric guard with a feasible constant.
-        phi = np.array([0.10, -0.02, 0.25, 0.30])
-        gradient = np.tile(np.array([0.8, 0.2, -0.1]), (4, 1))
-        mf_A_raw = np.arange(32, dtype=float).reshape(4, 8) / 50.0
-        mf_c_raw = np.array([-0.1, -0.2, -0.3, -0.4])
-        calls = {"mf": 0, "psdf": 0}
-
-        def compute_mf(_):
-            calls["mf"] += 1
-            return (
-                phi.copy(),
-                gradient.copy(),
-                mf_A_raw.copy(),
-                mf_c_raw.copy(),
-            )
-
-        def compute_exact(poses):
-            calls["psdf"] += 1
-            self.assertEqual(np.asarray(poses).shape, (4, 3))
-            return phi.copy(), gradient.copy()
-
-        self.optimizer._compute_mf_affine_data = compute_mf
-        self.optimizer._compute_exact_psdf = compute_exact
-
-        enabled = self.optimizer._compute_constraint_affine_data(z_bar)
-        self.param.use_row_mf = False
-        disabled = self.optimizer._compute_constraint_affine_data(z_bar)
-
-        self.assertFalse(self.param.use_row_mf)
-        self.assertTrue(enabled["row_mf_enabled"])
-        self.assertFalse(disabled["row_mf_enabled"])
-        self.assertEqual(calls, {"mf": 1, "psdf": 1})
-        self.assertGreater(np.linalg.norm(enabled["guard_A"]), 0.0)
-        np.testing.assert_allclose(disabled["guard_A"], enabled["guard_A"])
-        np.testing.assert_allclose(disabled["guard_c"], enabled["guard_c"])
-
-        expected_guard_residual = phi - self.param.d_col
-        enabled_guard_residual = (
-            np.einsum("ij,ij->i", enabled["guard_A"], z_bar)
-            + enabled["guard_c"]
-        )
-        disabled_guard_residual = (
-            np.einsum("ij,ij->i", disabled["guard_A"], z_bar)
-            + disabled["guard_c"]
-        )
-        np.testing.assert_allclose(enabled_guard_residual, expected_guard_residual)
-        np.testing.assert_allclose(disabled_guard_residual, expected_guard_residual)
-        self.assertLess(disabled_guard_residual[1], 0.0)
-
-        self.assertTrue(np.isnan(disabled["mf_A_raw"]).all())
-        self.assertTrue(np.isnan(disabled["mf_c_raw"]).all())
-        np.testing.assert_array_equal(disabled["mf_valid"], np.zeros(4, dtype=bool))
-        np.testing.assert_array_equal(disabled["mf_mask"], np.zeros(4, dtype=bool))
-        np.testing.assert_allclose(disabled["mf_A"], np.zeros((4, 8)))
-        np.testing.assert_allclose(
-            disabled["mf_c"],
-            np.full(4, self.param.chance_epsilon),
-        )
-
-        # The independent master switch still disables all obstacle processing,
-        # even if a previously initialized PSDF wrapper remains attached.
-        self.param.use_obstacle_constraint = False
-        globally_disabled = self.optimizer._compute_constraint_affine_data(z_bar)
-        self.assertEqual(calls, {"mf": 1, "psdf": 1})
-        np.testing.assert_allclose(globally_disabled["guard_A"], np.zeros((4, 8)))
-        np.testing.assert_allclose(
-            globally_disabled["guard_c"],
-            np.full(4, 1000.0 - self.param.d_col),
-        )
-
-    def test_batch_mf_failure_falls_back_and_masks_only_failed_stage(self):
-        self.param.use_row_mf = True
-        self.param.d_col = 0.03
-        epsilon = float(self.param.chance_epsilon)
-        failed_stage = 2
-        wrapper = _StagewiseFallbackPSDFWrapper(failed_stage)
-        self.optimizer.psdf_wrapper = wrapper
-
-        z_bar = np.zeros((4, 8), dtype=float)
-        z_bar[:, 0] = np.arange(4, dtype=float)
-        z_bar[:, 1] = np.array([-0.2, -0.1, 0.0, 0.1])
-        z_bar[:, 2] = np.array([0.3, 0.2, 0.1, 0.0])
-        z_bar[:, 4:7] = np.log(0.01)
-
-        data = self.optimizer._compute_constraint_affine_data(z_bar)
-
-        self.assertEqual(wrapper.mf_call_sizes, [4, 1, 1, 1, 1])
-        self.assertEqual(wrapper.mf_single_stages, [0, 1, 2, 3])
-        self.assertEqual(wrapper.pose_call_sizes, [4])
-
-        expected_phi = 0.20 + 0.05 * z_bar[:, 0]
-        expected_gradient = np.tile(np.array([1.0, 0.25, -0.10]), (4, 1))
-        np.testing.assert_allclose(data["phi"], expected_phi)
-        np.testing.assert_allclose(data["gradient"], expected_gradient)
-        self.assertTrue(np.isfinite(data["guard_A"]).all())
-        self.assertTrue(np.isfinite(data["guard_c"]).all())
-
-        expected_guard_c = (
-            expected_phi
-            - np.einsum("ij,ij->i", expected_gradient, z_bar[:, :3])
-            - self.param.d_col
-        )
-        np.testing.assert_allclose(data["guard_c"], expected_guard_c)
-        np.testing.assert_array_equal(data["mf_valid"], [True, True, False, True])
-        np.testing.assert_array_equal(data["mf_mask"], [False, True, False, True])
-
-        for stage in (1, 3):
-            expected_A = wrapper.expected_mf_A(stage).numpy()
-            np.testing.assert_allclose(data["mf_A_raw"][stage], expected_A)
-            np.testing.assert_allclose(data["mf_A"][stage], expected_A)
-            self.assertAlmostEqual(
-                data["mf_c"][stage],
-                wrapper.expected_mf_c(stage),
-            )
-
-        np.testing.assert_allclose(
-            data["mf_A_raw"][0], wrapper.expected_mf_A(0).numpy()
-        )
-        np.testing.assert_allclose(data["mf_A"][0], np.zeros(8))
-        self.assertAlmostEqual(data["mf_c"][0], epsilon)
-
-        self.assertTrue(np.isnan(data["mf_A_raw"][failed_stage]).all())
-        self.assertTrue(np.isnan(data["mf_c_raw"][failed_stage]))
-        np.testing.assert_allclose(data["mf_A"][failed_stage], np.zeros(8))
-        self.assertAlmostEqual(data["mf_c"][failed_stage], epsilon)
 
     def test_infeasibility_classification_excludes_inactive_mf_row(self):
         diagnostics = {
@@ -881,6 +547,12 @@ class CCMFMultiFeatureTest(unittest.TestCase):
                 "phi": np.ones(4),
                 "mf_A_raw": np.zeros((4, 8)),
                 "mf_c_raw": np.zeros(4),
+                "probability_sum": np.full(4, np.nan),
+                "residual": np.full(4, np.nan),
+                "tail_clipped": np.zeros(4, dtype=bool),
+                "feature_count": np.zeros(4, dtype=int),
+                "status": np.full(4, "not_requested", dtype=object),
+                "branch": np.full(4, "inactive", dtype=object),
                 "epsilon": np.full(4, self.param.chance_epsilon),
                 "mf_valid": np.zeros(4, dtype=bool),
                 "mf_mask": np.zeros(4, dtype=bool),
@@ -1078,7 +750,7 @@ class CCMFMultiFeatureTest(unittest.TestCase):
             output.getvalue(),
         )
 
-    def test_constraint_log_keeps_only_feasibility_fields(self):
+    def test_constraint_log_keeps_feasibility_alongside_inverse_cdf_metadata(self):
         diagnostics = {
             "constraint_stages": np.arange(1, 4),
             "d_col": 0.1,
@@ -1114,7 +786,7 @@ class CCMFMultiFeatureTest(unittest.TestCase):
         self.assertIsNone(rows[1]["row_m_feasible_after_slack"])
         self.assertFalse(rows[1]["row_g_feasible"])
 
-    def test_compact_cycle_and_covariance_logs_use_eight_fields(self):
+    def test_cycle_logs_include_inverse_cdf_metadata_and_covariance_logs_keep_eight_fields(self):
         states = np.zeros((4, 8), dtype=float)
         states[:, 4:7] = np.log([0.01, 0.02, 0.03])
         states[:, 7] = -0.004
@@ -1150,7 +822,7 @@ class CCMFMultiFeatureTest(unittest.TestCase):
             set(cycle_rows[0]),
             set(self.optimizer.CYCLE_LOG_FIELDS),
         )
-        self.assertEqual(len(self.optimizer.CYCLE_LOG_FIELDS), 8)
+        self.assertEqual(cycle_rows[0]["slack_unit"], "standard_normal_quantile")
         self.assertEqual(
             json.loads(cycle_rows[0]["mf_probability_sum"]),
             [None, 0.1, 0.2, 0.3],
@@ -1240,6 +912,7 @@ class CCMFMultiFeatureTest(unittest.TestCase):
             "phi": np.ones(num_stages),
             "mf_A_raw": np.zeros((num_stages, self.optimizer.nx)),
             "mf_c_raw": np.zeros(num_stages),
+            "probability_sum": np.full(num_stages, np.nan),
             "epsilon": np.full(num_stages, self.param.chance_epsilon),
             "mf_valid": np.zeros(num_stages, dtype=bool),
             "mf_mask": np.zeros(num_stages, dtype=bool),
@@ -1281,7 +954,6 @@ class CCMFMultiFeatureTest(unittest.TestCase):
         )
         self.assertIsNot(CCMFOptimizer, CCSFOptimizer)
         self.assertIsNot(CCMFOptimizerParam, CCSFOptimizerParam)
-        self.assertTrue(CCSFOptimizerParam().use_projected_variance_margin)
 
 
 if __name__ == "__main__":

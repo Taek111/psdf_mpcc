@@ -1,0 +1,204 @@
+Trial CSV directory: /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_delta_omega_animations_20261029/results/r0p1
+
+[Trials] maze / cc_mf trial 1/1, seed=0
+Running single test...
+Start perturbation: seed=0, pose=[0.07751460442186786, 0.7923579027341738, -1.5387751942727323], delta=[0.002514604421867866, -0.0026420972658260378, 0.03202113252216411], clearance=0.010115 m, attempts=1
+Start pose saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_delta_omega_animations_20261029/results/r0p1/runs/config01/trial_0001/data/start_pose_MPC_cc_mf_rectangle_maze_rdelta_0p1_startseed0.json
+CC-MF configured from config: debug_mf=True, debug_infeasibility=True, r_delta_omega=0.1
+Resetting cc_mf optimizer for clean state...
+Trial failure criteria enabled: movement_window_sec=4.0, movement_threshold=0.03, max_consecutive_solver_failures=20
+generating global path with A* + Line of Sight
+시작 위치: [0.07751 0.79236]
+목적지: [1.8  0.09]
+도착 판정 기준: position L1 <= 0.02m
+Setting up CC-MF optimizer...
+CC-MF Row M configuration: enabled=True, active only when phi > d_col=0.0002, configured stages=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+/home/taek111/projects/psdf_mpcc/models/geometry_utils.py:246: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at /opt/conda/conda-bld/pytorch_1724789122112/work/torch/csrc/utils/tensor_new.cpp:278.)
+  edgesA = torch.tensor(edgesA, dtype=torch.float32)
+Added two affine safety rows at intermediate/terminal stages: 0=HARD guard/recovery, 1=SOFT MF
+field AcadosOcpDims.N has been migrated to AcadosOcpOptions.N_horizon. setting AcadosOcpOptions.N_horizon = N. For future comppatibility, please use AcadosOcpOptions.N_horizon directly.
+
+WARNING: Gauss-Newton Hessian approximation with EXTERNAL cost type not well defined!
+got cost_type EXTERNAL for cost_type_0, cost_type, cost_type_e, hessian_approx: 'GAUSS_NEWTON'.
+With this setting, acados will proceed computing the exact Hessian for the cost term and no Hessian contribution from constraints and dynamics.
+If the external cost is a linear least squares cost, this coincides with the Gauss-Newton Hessian.
+Note: There is also the option to use the external cost module with a numerical Hessian approximation (see `ext_cost_num_hess`).
+OR the option to provide a symbolic custom Hessian approximation (see `cost_expr_ext_cost_custom_hess`).
+
+rm -f libacados_ocp_solver_differential_drive_cc_mf.so
+rm -f differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_fun_jac_uxt_zt.o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_fun.o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_e_fun_jac_uxt_zt.o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_e_fun.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_0_fun.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_0_fun_jac_hess.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_0_fun_jac.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_fun.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_fun_jac_hess.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_fun_jac.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_e_fun.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_e_fun_jac_hess.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_e_fun_jac.o acados_solver_differential_drive_cc_mf.o
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_fun_jac_uxt_zt.o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_fun_jac_uxt_zt.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_fun.o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_e_fun_jac_uxt_zt.o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_e_fun_jac_uxt_zt.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_e_fun.o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_e_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_0_fun.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_0_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_0_fun_jac_hess.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_0_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_0_fun_jac.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_0_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_fun.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_fun_jac_hess.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_fun_jac.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_e_fun.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_e_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_e_fun_jac_hess.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_e_fun_jac_hess.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_e_fun_jac.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_e_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o acados_solver_differential_drive_cc_mf.o acados_solver_differential_drive_cc_mf.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_model/differential_drive_cc_mf_dyn_disc_phi_fun.o differential_drive_cc_mf_model/differential_drive_cc_mf_dyn_disc_phi_fun.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_model/differential_drive_cc_mf_dyn_disc_phi_fun_jac.o differential_drive_cc_mf_model/differential_drive_cc_mf_dyn_disc_phi_fun_jac.c
+cc -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_cc_mf_model/differential_drive_cc_mf_dyn_disc_phi_fun_jac_hess.o differential_drive_cc_mf_model/differential_drive_cc_mf_dyn_disc_phi_fun_jac_hess.c
+cc -shared differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_fun_jac_uxt_zt.o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_fun.o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_e_fun_jac_uxt_zt.o differential_drive_cc_mf_constraints/differential_drive_cc_mf_constr_h_e_fun.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_0_fun.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_0_fun_jac_hess.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_0_fun_jac.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_fun.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_fun_jac_hess.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_fun_jac.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_e_fun.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_e_fun_jac_hess.o differential_drive_cc_mf_cost/differential_drive_cc_mf_cost_ext_cost_e_fun_jac.o acados_solver_differential_drive_cc_mf.o differential_drive_cc_mf_model/differential_drive_cc_mf_dyn_disc_phi_fun.o differential_drive_cc_mf_model/differential_drive_cc_mf_dyn_disc_phi_fun_jac.o differential_drive_cc_mf_model/differential_drive_cc_mf_dyn_disc_phi_fun_jac_hess.o -o libacados_ocp_solver_differential_drive_cc_mf.so -L/home/taek111/projects/acados/lib -lacados -lhpipm -lblasfeo -lm  \
+-L -l
+acados was compiled without OpenMP.
+CC-MF backup SQP_WITH_FEASIBLE_QP solver disabled; using nominal safe-stop recovery.
+[CC-MF 0000] OK solve=1.0ms pose=(0.078,0.792,-1.539) u=(0.010,-0.000) s=0.014 PSDFmin=+0.00629 G=OK(+0.003193) MF=OK(active=20/20,min=+36.68,slack=+8.039e-14)
+[CC-MF 0001] OK solve=1.0ms pose=(0.078,0.791,-1.539) u=(0.020,-0.047) s=0.015 PSDFmin=+0.0008727 G=OK(+4.434e-14) MF=OK(active=20/20,min=+2.283e-11,slack=+5.6e-16)
+[CC-MF 0002] OK solve=1.3ms pose=(0.078,0.789,-1.543) u=(0.030,-0.053) s=0.017 PSDFmin=+0.002888 G=OK(+0.001939) MF=OK(active=20/20,min=+2.594e-12,slack=+2.116e-16)
+[CC-MF 0003] OK solve=1.3ms pose=(0.078,0.786,-1.549) u=(0.040,-0.060) s=0.020 PSDFmin=+0.001502 G=OK(+0.001559) MF=OK(active=20/20,min=+1.557e-09,slack=+1.373e-13)
+[CC-MF 0004] OK solve=1.5ms pose=(0.078,0.782,-1.555) u=(0.050,-0.077) s=0.024 PSDFmin=+0.002615 G=OK(+0.002379) MF=OK(active=20/20,min=+8.34e-09,slack=+9.909e-13)
+[CC-MF 0005] OK solve=1.3ms pose=(0.078,0.777,-1.562) u=(0.060,-0.032) s=0.026 PSDFmin=-0.0005411 G=OK(+2.72e-10) MF=OK(active=20/20,min=+3.607e-09,slack=+1.313e-12)
+[CC-MF 0006] OK solve=1.0ms pose=(0.078,0.771,-1.566) u=(0.070,-0.055) s=0.027 PSDFmin=-0.0001647 G=OK(+0.002055) MF=OK(active=16/20,min=+5.75e-10,slack=+1.566e-13)
+[CC-MF 0007] OK solve=1.1ms pose=(0.078,0.764,-1.571) u=(0.080,-0.029) s=0.040 PSDFmin=-0.008183 G=OK(+4.083e-12) MF=OK(active=18/20,min=+1.073e-09,slack=+1.107e-13)
+[CC-MF 0008] OK solve=1.1ms pose=(0.078,0.756,-1.574) u=(0.090,-0.089) s=0.041 PSDFmin=-0.005681 G=OK(+0.0005266) MF=OK(active=15/20,min=+6.966e-13,slack=+3.086e-16)
+[CC-MF 0009] OK solve=1.0ms pose=(0.078,0.747,-1.583) u=(0.100,-0.042) s=0.055 PSDFmin=-0.01662 G=OK(+9.29e-13) MF=OK(active=15/20,min=+0.05807,slack=+9.59e-14)
+[CC-MF 0010] OK solve=1.1ms pose=(0.078,0.737,-1.587) u=(0.110,-0.133) s=0.056 PSDFmin=-0.00811 G=OK(+1.998e-15) MF=OK(active=13/20,min=+8.662e-12,slack=+8.061e-16)
+[CC-MF 0011] OK solve=1.3ms pose=(0.077,0.726,-1.601) u=(0.113,0.009) s=0.071 PSDFmin=-0.02993 G=OK(+5.085e-14) MF=OK(active=12/20,min=+0.2807,slack=+3.587e-15)
+[CC-MF 0012] OK solve=1.1ms pose=(0.077,0.715,-1.600) u=(0.123,-0.093) s=0.072 PSDFmin=-0.008444 G=OK(+1.931e-13) MF=OK(active=9/20,min=+0.8741,slack=+2.318e-14)
+[CC-MF 0013] OK solve=1.0ms pose=(0.077,0.703,-1.609) u=(0.113,0.124) s=0.088 PSDFmin=-0.03422 G=OK(+2.672e-11) MF=OK(active=11/20,min=+1.195e-08,slack=+2.307e-12)
+[CC-MF 0014] OK solve=1.0ms pose=(0.076,0.692,-1.597) u=(0.115,0.011) s=0.090 PSDFmin=-0.002731 G=OK(+8.692e-12) MF=OK(active=9/20,min=+6.669e-09,slack=+2.238e-12)
+[CC-MF 0015] OK solve=1.3ms pose=(0.076,0.680,-1.596) u=(0.105,0.294) s=0.105 PSDFmin=-0.01626 G=OK(+1.751e-12) MF=OK(active=12/20,min=+1.08e-10,slack=+6.088e-14)
+[CC-MF 0016] OK solve=1.1ms pose=(0.076,0.670,-1.566) u=(0.115,0.100) s=0.123 PSDFmin=-0.001606 G=OK(+1.189e-08) MF=OK(active=8/20,min=+1.841e-08,slack=+1.459e-11)
+[CC-MF 0017] OK solve=1.4ms pose=(0.076,0.658,-1.556) u=(0.125,0.117) s=0.126 PSDFmin=-0.006683 G=OK(+2.22e-16) MF=OK(active=17/20,min=+1.071e-14,slack=+5.657e-17)
+[CC-MF 0018] OK solve=1.7ms pose=(0.076,0.646,-1.545) u=(0.115,0.425) s=0.144 PSDFmin=-0.00138 G=OK(+0.004567) MF=OK(active=15/20,min=+1.369e-12,slack=+9.826e-16)
+[CC-MF 0019] OK solve=1.2ms pose=(0.077,0.634,-1.502) u=(0.105,0.358) s=0.147 PSDFmin=-0.01085 G=OK(+0.00645) MF=OK(active=14/20,min=+2.475e-11,slack=+1.139e-14)
+[CC-MF 0020] OK solve=1.2ms pose=(0.078,0.624,-1.466) u=(0.095,0.544) s=0.165 PSDFmin=+0.000219 G=OK(+1.296e-11) MF=OK(active=10/20,min=+6.686e-10,slack=+3.608e-12)
+[CC-MF 0021] OK solve=1.2ms pose=(0.079,0.614,-1.412) u=(0.085,0.194) s=0.185 PSDFmin=+0.00032 G=OK(+0.006457) MF=OK(active=20/20,min=+1.191e-12,slack=+4.828e-15)
+[CC-MF 0022] OK solve=1.2ms pose=(0.080,0.606,-1.392) u=(0.095,0.310) s=0.190 PSDFmin=+0.004163 G=OK(+0.00298) MF=OK(active=20/20,min=+2.759e-12,slack=+3.876e-15)
+[CC-MF 0023] OK solve=1.3ms pose=(0.082,0.597,-1.361) u=(0.085,0.075) s=0.209 PSDFmin=+0.0005396 G=OK(+0.0002936) MF=OK(active=20/20,min=+4.926e-12,slack=+1.762e-14)
+[CC-MF 0024] OK solve=1.2ms pose=(0.084,0.588,-1.354) u=(0.075,0.222) s=0.214 PSDFmin=+0.003365 G=OK(+0.003124) MF=OK(active=20/20,min=+1.039e-10,slack=+9.753e-13)
+[CC-MF 0025] OK solve=1.2ms pose=(0.086,0.581,-1.332) u=(0.065,0.401) s=0.225 PSDFmin=+0.002905 G=OK(+0.00266) MF=OK(active=20/20,min=+1.906e-09,slack=+4.442e-12)
+[CC-MF 0026] OK solve=1.1ms pose=(0.087,0.575,-1.292) u=(0.055,0.429) s=0.225 PSDFmin=+0.002807 G=OK(+0.002471) MF=OK(active=20/20,min=+1.245e-08,slack=+2.186e-11)
+[CC-MF 0027] OK solve=1.0ms pose=(0.089,0.569,-1.249) u=(0.045,0.444) s=0.225 PSDFmin=-0.00939 G=OK(+0.002203) MF=OK(active=20/20,min=+1.732e-11,slack=+2.132e-14)
+[CC-MF 0028] OK solve=1.0ms pose=(0.091,0.565,-1.204) u=(0.050,0.496) s=0.238 PSDFmin=+0.003117 G=OK(+0.002287) MF=OK(active=17/20,min=+9.971e-14,slack=+2.349e-16)
+[CC-MF 0029] OK solve=1.3ms pose=(0.092,0.560,-1.155) u=(0.045,0.595) s=0.238 PSDFmin=-0.004884 G=OK(+0.003106) MF=OK(active=20/20,min=+6.343e-13,slack=+2.061e-15)
+[CC-MF 0030] OK solve=1.0ms pose=(0.094,0.556,-1.095) u=(0.035,0.647) s=0.238 PSDFmin=-0.003156 G=OK(+0.003616) MF=OK(active=16/20,min=+1.583e-07,slack=+4.512e-10)
+[CC-MF 0031] OK solve=1.1ms pose=(0.096,0.553,-1.031) u=(0.025,0.819) s=0.238 PSDFmin=+0.003667 G=OK(+0.002732) MF=OK(active=17/20,min=+1.726e-11,slack=+6.462e-15)
+[CC-MF 0032] OK solve=1.2ms pose=(0.098,0.551,-0.949) u=(0.015,0.796) s=0.251 PSDFmin=+0.0006835 G=OK(+0.003471) MF=OK(active=20/20,min=+1.495e-11,slack=+5.134e-14)
+[CC-MF 0033] OK solve=1.3ms pose=(0.098,0.550,-0.869) u=(0.013,0.904) s=0.251 PSDFmin=+0.003409 G=OK(+0.002698) MF=OK(active=20/20,min=+2.71e-08,slack=+3.407e-12)
+[CC-MF 0034] OK solve=0.9ms pose=(0.099,0.549,-0.779) u=(0.023,0.804) s=0.251 PSDFmin=+0.003202 G=OK(+0.002734) MF=OK(active=20/20,min=+2.189e-08,slack=+2.072e-10)
+[CC-MF 0035] OK solve=1.3ms pose=(0.101,0.547,-0.698) u=(0.033,0.826) s=0.251 PSDFmin=+0.003102 G=OK(+0.002569) MF=OK(active=20/20,min=+8.017e-08,slack=+1.42e-11)
+[CC-MF 0036] OK solve=1.4ms pose=(0.104,0.545,-0.616) u=(0.043,0.722) s=0.252 PSDFmin=+0.002914 G=OK(+0.002475) MF=OK(active=20/20,min=+2.109e-08,slack=+2.654e-11)
+[CC-MF 0037] OK solve=1.4ms pose=(0.107,0.543,-0.543) u=(0.053,0.731) s=0.252 PSDFmin=+0.003002 G=OK(+0.002563) MF=OK(active=20/20,min=+1.106e-08,slack=+2.106e-12)
+[CC-MF 0038] OK solve=1.0ms pose=(0.112,0.540,-0.470) u=(0.063,0.687) s=0.265 PSDFmin=+0.003274 G=OK(+0.002869) MF=OK(active=20/20,min=+2.201e-12,slack=+2.144e-15)
+[CC-MF 0039] OK solve=1.3ms pose=(0.118,0.538,-0.402) u=(0.073,0.623) s=0.266 PSDFmin=+0.003634 G=OK(+0.003271) MF=OK(active=20/20,min=+4.063e-07,slack=+1.076e-10)
+[CC-MF 0040] OK solve=1.4ms pose=(0.124,0.535,-0.339) u=(0.083,0.563) s=0.269 PSDFmin=+0.004075 G=OK(+0.003748) MF=OK(active=20/20,min=+5.252e-08,slack=+1.438e-11)
+[CC-MF 0041] OK solve=1.2ms pose=(0.132,0.533,-0.283) u=(0.093,0.523) s=0.280 PSDFmin=+0.004704 G=OK(+0.004399) MF=OK(active=20/20,min=+4.352e-10,slack=+4.969e-14)
+[CC-MF 0042] OK solve=1.0ms pose=(0.141,0.530,-0.231) u=(0.103,0.371) s=0.286 PSDFmin=+0.002394 G=OK(+0.002031) MF=OK(active=20/20,min=+2.397e-09,slack=+1.589e-12)
+[CC-MF 0043] OK solve=1.2ms pose=(0.151,0.528,-0.194) u=(0.113,0.454) s=0.297 PSDFmin=-0.01077 G=OK(+0.005479) MF=OK(active=20/20,min=+1.596e-08,slack=+1.506e-12)
+[CC-MF 0044] OK solve=1.0ms pose=(0.162,0.526,-0.148) u=(0.123,0.369) s=0.308 PSDFmin=+0.001938 G=OK(+2.955e-10) MF=OK(active=9/20,min=+0.4727,slack=+3.529e-12)
+[CC-MF 0045] OK solve=1.1ms pose=(0.175,0.525,-0.111) u=(0.133,0.283) s=0.320 PSDFmin=+0.005571 G=OK(+0.006714) MF=OK(active=20/20,min=+2.337e-11,slack=+6.666e-15)
+[CC-MF 0046] OK solve=1.0ms pose=(0.188,0.523,-0.083) u=(0.135,0.268) s=0.331 PSDFmin=+0.0006616 G=OK(+0.001166) MF=OK(active=20/20,min=+2.474e-12,slack=+9.231e-16)
+[CC-MF 0047] OK solve=1.0ms pose=(0.201,0.522,-0.056) u=(0.145,0.137) s=0.344 PSDFmin=-0.01026 G=OK(+0.003998) MF=OK(active=20/20,min=+3.766e-09,slack=+1.168e-12)
+[CC-MF 0048] OK solve=1.1ms pose=(0.216,0.522,-0.043) u=(0.144,0.120) s=0.356 PSDFmin=-0.0006462 G=OK(+1.277e-15) MF=OK(active=19/20,min=+6.405e-13,slack=+8.736e-17)
+[CC-MF 0049] OK solve=0.9ms pose=(0.230,0.521,-0.031) u=(0.137,0.080) s=0.368 PSDFmin=+0.0008607 G=OK(+2.045e-09) MF=OK(active=16/20,min=+8.015e-10,slack=+4.933e-13)
+[CC-MF 0050] OK solve=1.0ms pose=(0.244,0.521,-0.023) u=(0.129,0.112) s=0.381 PSDFmin=-0.000738 G=OK(+4.614e-12) MF=OK(active=20/20,min=+6.466e-10,slack=+2.571e-13)
+[CC-MF 0051] OK solve=1.0ms pose=(0.257,0.521,-0.011) u=(0.125,0.060) s=0.394 PSDFmin=-0.01717 G=OK(+0.0005292) MF=OK(active=13/20,min=+1.804e-08,slack=+2.512e-12)
+[CC-MF 0052] OK solve=1.1ms pose=(0.269,0.520,-0.005) u=(0.115,0.068) s=0.400 PSDFmin=+0.0003629 G=OK(+6.506e-14) MF=OK(active=18/20,min=+1.609e-11,slack=+6.981e-15)
+[CC-MF 0053] OK solve=1.0ms pose=(0.281,0.520,0.001) u=(0.106,0.103) s=0.415 PSDFmin=+0.002997 G=OK(+0.002528) MF=OK(active=20/20,min=+8.527e-13,slack=+4.541e-16)
+[CC-MF 0054] OK solve=1.0ms pose=(0.291,0.520,0.012) u=(0.115,0.052) s=0.429 PSDFmin=-0.01775 G=OK(+0.006511) MF=OK(active=20/20,min=+5.797e-10,slack=+1.051e-13)
+[CC-MF 0055] OK solve=1.2ms pose=(0.303,0.521,0.017) u=(0.105,0.195) s=0.433 PSDFmin=-0.01266 G=OK(+1.592e-13) MF=OK(active=18/20,min=+3.113e-11,slack=+7.722e-15)
+[CC-MF 0056] OK solve=1.0ms pose=(0.314,0.521,0.036) u=(0.103,0.104) s=0.448 PSDFmin=-0.03442 G=OK(+4.206e-12) MF=OK(active=8/20,min=+5.609e-10,slack=+3.683e-14)
+[CC-MF 0057] OK solve=1.0ms pose=(0.324,0.521,0.047) u=(0.101,-0.075) s=0.451 PSDFmin=-0.009052 G=OK(+7.7e-12) MF=OK(active=16/20,min=+1.36e-09,slack=+8.346e-13)
+[CC-MF 0058] OK solve=0.9ms pose=(0.334,0.522,0.039) u=(0.103,0.114) s=0.467 PSDFmin=-0.034 G=OK(+3.012e-09) MF=OK(active=11/20,min=+0.7838,slack=+5.149e-12)
+[CC-MF 0059] OK solve=1.1ms pose=(0.344,0.522,0.051) u=(0.093,-0.045) s=0.470 PSDFmin=-0.01279 G=OK(+3.173e-11) MF=OK(active=5/20,min=+2.518e-07,slack=+4.153e-12)
+[CC-MF 0060] OK solve=1.1ms pose=(0.353,0.523,0.046) u=(0.093,0.124) s=0.487 PSDFmin=-0.03991 G=OK(+9.426e-14) MF=OK(active=11/20,min=+3.012e-14,slack=+1.698e-15)
+[CC-MF 0061] OK solve=1.1ms pose=(0.363,0.523,0.059) u=(0.100,-0.011) s=0.490 PSDFmin=-0.01866 G=OK(+2.776e-16) MF=OK(active=7/20,min=+1.607,slack=+1.963e-16)
+[CC-MF 0062] OK solve=1.2ms pose=(0.373,0.524,0.058) u=(0.090,0.170) s=0.508 PSDFmin=-0.04297 G=OK(+0.0005019) MF=OK(active=10/20,min=+8.773e-10,slack=+6.467e-14)
+[CC-MF 0063] OK solve=1.1ms pose=(0.382,0.524,0.075) u=(0.100,0.038) s=0.511 PSDFmin=-0.02311 G=OK(+8.915e-14) MF=OK(active=6/20,min=+1.563,slack=+1.22e-14)
+[CC-MF 0064] OK solve=1.3ms pose=(0.392,0.525,0.078) u=(0.090,0.130) s=0.513 PSDFmin=-0.04209 G=OK(+0.003002) MF=OK(active=10/20,min=+6.639e-10,slack=+7.269e-13)
+[CC-MF 0065] OK solve=1.1ms pose=(0.400,0.526,0.091) u=(0.080,-0.026) s=0.530 PSDFmin=-0.01723 G=OK(+1.11e-13) MF=OK(active=12/20,min=+2.365e-11,slack=+1.949e-14)
+[CC-MF 0066] OK solve=1.1ms pose=(0.408,0.527,0.089) u=(0.070,0.153) s=0.534 PSDFmin=-0.03605 G=OK(+0.003106) MF=OK(active=9/20,min=+9.408e-12,slack=+7.848e-17)
+[CC-MF 0067] OK solve=1.1ms pose=(0.415,0.527,0.104) u=(0.072,0.077) s=0.553 PSDFmin=-0.007077 G=OK(+1.912e-13) MF=OK(active=12/20,min=+5.451e-11,slack=+3.872e-14)
+[CC-MF 0068] OK solve=1.1ms pose=(0.423,0.528,0.112) u=(0.062,0.145) s=0.557 PSDFmin=-0.03867 G=OK(+0.004705) MF=OK(active=10/20,min=+1.318e-08,slack=+7.367e-13)
+[CC-MF 0069] OK solve=1.3ms pose=(0.429,0.529,0.126) u=(0.052,0.116) s=0.559 PSDFmin=-0.003819 G=OK(+7.094e-14) MF=OK(active=13/20,min=+2.281e-11,slack=+1.282e-14)
+[CC-MF 0070] OK solve=1.1ms pose=(0.434,0.529,0.138) u=(0.047,0.152) s=0.571 PSDFmin=-0.03722 G=OK(+0.004912) MF=OK(active=11/20,min=+1.795e-07,slack=+4.085e-12)
+[CC-MF 0071] OK solve=0.9ms pose=(0.439,0.530,0.153) u=(0.037,0.388) s=0.576 PSDFmin=-0.003882 G=OK(+2.25e-11) MF=OK(active=12/20,min=+3.089e-09,slack=+3.152e-12)
+[CC-MF 0072] OK solve=1.0ms pose=(0.442,0.531,0.192) u=(0.047,0.393) s=0.580 PSDFmin=-0.03288 G=OK(+0.001505) MF=OK(active=9/20,min=+1.389e-07,slack=+3.953e-12)
+[CC-MF 0073] OK solve=1.2ms pose=(0.447,0.532,0.231) u=(0.037,0.205) s=0.584 PSDFmin=-0.0002102 G=OK(+3.001e-10) MF=OK(active=10/20,min=+6.542e-08,slack=+9.052e-11)
+[CC-MF 0074] OK solve=4.0ms pose=(0.450,0.533,0.252) u=(0.036,-0.145) s=0.585 PSDFmin=-0.00834 G=OK(+0.001255) MF=OK(active=18/20,min=-1.417e-14,slack=+1.825)
+[CC-MF 0075] OK solve=1.4ms pose=(0.454,0.534,0.237) u=(0.039,0.075) s=0.586 PSDFmin=-0.03902 G=OK(+0.003553) MF=OK(active=19/20,min=+0.02769,slack=+5.285e-14)
+[CC-MF 0076] OK solve=1.0ms pose=(0.458,0.534,0.245) u=(0.029,0.095) s=0.595 PSDFmin=-0.007614 G=OK(+5.682e-14) MF=OK(active=9/20,min=+4.097e-11,slack=+3.799e-14)
+[CC-MF 0077] OK solve=1.1ms pose=(0.460,0.535,0.254) u=(0.039,0.201) s=0.598 PSDFmin=-0.01498 G=OK(+0.002884) MF=OK(active=7/20,min=+5.186e-09,slack=+2.04e-12)
+[CC-MF 0078] OK solve=1.4ms pose=(0.464,0.536,0.274) u=(0.037,0.383) s=0.601 PSDFmin=-0.008824 G=OK(+9.225e-12) MF=OK(active=10/20,min=+2.047e-09,slack=+7.618e-13)
+[CC-MF 0079] OK solve=1.0ms pose=(0.468,0.537,0.313) u=(0.028,0.248) s=0.605 PSDFmin=-0.00978 G=OK(+0.00135) MF=OK(active=13/20,min=+3.947e-12,slack=+7.072e-15)
+[CC-MF 0080] OK solve=1.2ms pose=(0.470,0.538,0.337) u=(0.038,0.284) s=0.606 PSDFmin=-0.03942 G=OK(+0.004823) MF=OK(active=16/20,min=+0.3688,slack=+4.016e-14)
+[CC-MF 0081] OK solve=1.0ms pose=(0.474,0.539,0.366) u=(0.028,0.618) s=0.608 PSDFmin=-0.0132 G=OK(+2.047e-11) MF=OK(active=6/20,min=+6.932e-09,slack=+3.283e-12)
+[CC-MF 0082] OK solve=1.2ms pose=(0.476,0.540,0.428) u=(0.029,0.684) s=0.610 PSDFmin=-0.003225 G=OK(+2.004e-12) MF=OK(active=4/20,min=+0.1553,slack=+3.442e-13)
+[CC-MF 0083] OK solve=3.6ms pose=(0.479,0.542,0.496) u=(0.035,0.334) s=0.613 PSDFmin=-0.003042 G=OK(+0) MF=OK(active=16/20,min=-1.107e-14,slack=+1.662)
+[CC-MF 0084] OK solve=3.5ms pose=(0.482,0.544,0.529) u=(0.045,0.684) s=0.619 PSDFmin=-0.0008844 G=OK(+5.551e-17) MF=OK(active=17/20,min=-6.639e-14,slack=+2.383)
+[CC-MF 0085] OK solve=1.2ms pose=(0.486,0.546,0.598) u=(0.035,0.534) s=0.621 PSDFmin=-0.005118 G=OK(+0) MF=OK(active=19/20,min=-3.553e-14,slack=+0.961)
+[CC-MF 0086] OK solve=2.6ms pose=(0.489,0.548,0.651) u=(0.045,0.184) s=0.625 PSDFmin=+0.001171 G=OK(+0) MF=OK(active=15/20,min=-4.496e-15,slack=+0.3399)
+[CC-MF 0087] OK solve=1.4ms pose=(0.492,0.551,0.670) u=(0.035,0.381) s=0.629 PSDFmin=+0.003255 G=OK(+0.003589) MF=OK(active=20/20,min=+3.009e-11,slack=+0.4078)
+[CC-MF 0088] OK solve=1.5ms pose=(0.495,0.553,0.708) u=(0.037,0.686) s=0.633 PSDFmin=-0.0006283 G=OK(+7.222e-13) MF=OK(active=20/20,min=+8.844e-11,slack=+2.003e-13)
+[CC-MF 0089] OK solve=1.3ms pose=(0.498,0.556,0.776) u=(0.037,0.674) s=0.636 PSDFmin=-0.01293 G=OK(+6.541e-13) MF=OK(active=18/20,min=+1.666e-11,slack=+1.492e-14)
+[CC-MF 0090] OK solve=1.3ms pose=(0.500,0.558,0.844) u=(0.027,0.694) s=0.640 PSDFmin=-0.02796 G=OK(+6.385e-11) MF=OK(active=7/20,min=+3.654e-08,slack=+3.274e-12)
+[CC-MF 0091] OK solve=1.2ms pose=(0.502,0.560,0.913) u=(0.019,0.506) s=0.643 PSDFmin=+0.001178 G=OK(+2.744e-09) MF=OK(active=15/20,min=+6.246e-08,slack=+6.097e-11)
+[CC-MF 0092] OK solve=1.2ms pose=(0.503,0.562,0.964) u=(0.023,0.334) s=0.647 PSDFmin=+0.0001757 G=OK(+2.012e-12) MF=OK(active=20/20,min=+1.378e-10,slack=+3.253e-13)
+[CC-MF 0093] OK solve=1.4ms pose=(0.504,0.564,0.997) u=(0.031,0.164) s=0.647 PSDFmin=-0.0176 G=OK(+0.001109) MF=OK(active=19/20,min=+7.621e-09,slack=+1.449e-12)
+[CC-MF 0094] OK solve=1.0ms pose=(0.506,0.566,1.013) u=(0.041,0.140) s=0.650 PSDFmin=+0.000953 G=OK(+8.773e-11) MF=OK(active=14/20,min=+2.113e-08,slack=+9.56e-12)
+[CC-MF 0095] OK solve=1.0ms pose=(0.508,0.570,1.027) u=(0.031,-0.003) s=0.653 PSDFmin=+0.0004328 G=OK(+0.001253) MF=OK(active=20/20,min=+7.998e-11,slack=+2.886e-14)
+[CC-MF 0096] OK solve=1.0ms pose=(0.510,0.573,1.027) u=(0.038,0.167) s=0.656 PSDFmin=+0.001618 G=OK(+0.001408) MF=OK(active=20/20,min=+6.545e-13,slack=+8.034e-16)
+[CC-MF 0097] OK solve=1.1ms pose=(0.512,0.576,1.044) u=(0.028,-0.065) s=0.662 PSDFmin=+0.001307 G=OK(+0.00111) MF=OK(active=20/20,min=+2.132e-13,slack=+4.893e-17)
+[CC-MF 0098] OK solve=1.6ms pose=(0.513,0.578,1.037) u=(0.018,0.057) s=0.662 PSDFmin=+0.001019 G=OK(+0.0008185) MF=OK(active=20/20,min=+1.116e-11,slack=+7.379e-15)
+[CC-MF 0099] OK solve=1.2ms pose=(0.514,0.580,1.043) u=(0.008,-0.073) s=0.664 PSDFmin=+0.001229 G=OK(+0.001039) MF=OK(active=20/20,min=+5.899e-12,slack=+1.135e-15)
+[CC-MF 0100] OK solve=1.6ms pose=(0.515,0.580,1.036) u=(-0.002,0.025) s=0.665 PSDFmin=+0.0009515 G=OK(+0.0007511) MF=OK(active=20/20,min=+1.343e-10,slack=+3.501e-14)
+[CC-MF 0101] OK solve=1.1ms pose=(0.514,0.580,1.038) u=(-0.004,-0.058) s=0.665 PSDFmin=+0.001252 G=OK(+0.001063) MF=OK(active=20/20,min=+2.029e-10,slack=+4.634e-14)
+[CC-MF 0102] OK solve=1.1ms pose=(0.514,0.580,1.033) u=(0.006,0.031) s=0.664 PSDFmin=+0.0009887 G=OK(+0.0007883) MF=OK(active=20/20,min=+5.048e-13,slack=+3.048e-16)
+[CC-MF 0103] OK solve=1.6ms pose=(0.515,0.581,1.036) u=(-0.004,-0.057) s=0.665 PSDFmin=+0.001267 G=OK(+0.001078) MF=OK(active=20/20,min=+2.172e-10,slack=+4.549e-14)
+[CC-MF 0104] OK solve=2.1ms pose=(0.514,0.580,1.030) u=(0.006,0.034) s=0.665 PSDFmin=+0.001052 G=OK(+0.0008522) MF=OK(active=20/20,min=+1.27e-07,slack=+4.381e-11)
+[CC-MF 0105] OK solve=1.2ms pose=(0.515,0.581,1.033) u=(-0.004,-0.055) s=0.665 PSDFmin=+0.001265 G=OK(+0.001073) MF=OK(active=20/20,min=+1.947e-12,slack=+4.353e-16)
+[CC-MF 0106] OK solve=1.0ms pose=(0.515,0.580,1.028) u=(0.006,0.037) s=0.665 PSDFmin=+0.001131 G=OK(+0.000931) MF=OK(active=20/20,min=+8.123e-10,slack=+1.787e-12)
+[CC-MF 0107] OK solve=1.2ms pose=(0.515,0.581,1.032) u=(-0.004,-0.054) s=0.665 PSDFmin=+0.001261 G=OK(+0.001067) MF=OK(active=20/20,min=+1.382e-08,slack=+3.295e-12)
+[CC-MF 0108] OK solve=1.0ms pose=(0.515,0.581,1.026) u=(0.006,0.039) s=0.665 PSDFmin=+0.001212 G=OK(+0.001012) MF=OK(active=20/20,min=+1.011e-09,slack=+7.705e-12)
+[CC-MF 0109] OK solve=1.2ms pose=(0.515,0.581,1.030) u=(-0.004,-0.053) s=0.666 PSDFmin=+0.001258 G=OK(+0.001061) MF=OK(active=20/20,min=+1.107e-09,slack=+2.571e-13)
+[CC-MF 0110] OK solve=1.0ms pose=(0.515,0.581,1.025) u=(0.006,0.041) s=0.665 PSDFmin=+0.00129 G=OK(+0.00109) MF=OK(active=20/20,min=+4.16e-11,slack=+1.387e-11)
+[CC-MF 0111] OK solve=1.2ms pose=(0.515,0.581,1.029) u=(-0.004,-0.053) s=0.666 PSDFmin=+0.001254 G=OK(+0.001056) MF=OK(active=20/20,min=+5.865e-09,slack=+6.044e-12)
+[CC-MF 0112] OK solve=1.0ms pose=(0.515,0.581,1.023) u=(0.006,0.041) s=0.666 PSDFmin=+0.001365 G=OK(+0.001164) MF=OK(active=20/20,min=+8.36e-13,slack=+1.176e-14)
+[CC-MF 0113] OK solve=1.0ms pose=(0.515,0.582,1.028) u=(-0.004,-0.054) s=0.666 PSDFmin=+0.00125 G=OK(+0.00105) MF=OK(active=20/20,min=+1.538e-09,slack=+3.327e-13)
+[CC-MF 0114] OK solve=1.1ms pose=(0.515,0.581,1.022) u=(0.006,0.041) s=0.666 PSDFmin=+0.001436 G=OK(+0.001235) MF=OK(active=20/20,min=+3.092e-12,slack=+1.028e-15)
+[CC-MF 0115] OK solve=1.0ms pose=(0.515,0.582,1.026) u=(-0.004,-0.054) s=0.666 PSDFmin=+0.001243 G=OK(+0.001043) MF=OK(active=20/20,min=+1.359e-08,slack=+2.949e-12)
+[CC-MF 0116] OK solve=1.1ms pose=(0.515,0.582,1.021) u=(0.006,0.042) s=0.666 PSDFmin=+0.001489 G=OK(+0.001288) MF=OK(active=20/20,min=+7.072e-12,slack=+2.268e-15)
+[CC-MF 0117] OK solve=1.0ms pose=(0.516,0.582,1.025) u=(-0.004,-0.053) s=0.667 PSDFmin=+0.001233 G=OK(+0.001032) MF=OK(active=20/20,min=+5.025e-09,slack=+1.067e-12)
+[CC-MF 0118] OK solve=1.0ms pose=(0.515,0.582,1.020) u=(0.006,0.042) s=0.666 PSDFmin=+0.001504 G=OK(+0.001302) MF=OK(active=20/20,min=+1.535e-10,slack=+1.508e-12)
+[CC-MF 0119] OK solve=1.1ms pose=(0.516,0.582,1.024) u=(-0.004,-0.052) s=0.667 PSDFmin=+0.001221 G=OK(+0.001021) MF=OK(active=20/20,min=+7.867e-09,slack=+1.649e-12)
+[CC-MF 0120] OK solve=1.0ms pose=(0.516,0.582,1.019) u=(0.006,0.043) s=0.667 PSDFmin=+0.001497 G=OK(+0.001295) MF=OK(active=20/20,min=+2.457e-10,slack=+3.081e-12)
+[CC-MF 0121] OK solve=1.0ms pose=(0.516,0.583,1.023) u=(-0.004,-0.040) s=0.667 PSDFmin=+0.001244 G=OK(+0.001044) MF=OK(active=20/20,min=+2.414e-11,slack=+5.141e-15)
+[CC-MF 0122] OK solve=1.0ms pose=(0.516,0.582,1.019) u=(-0.000,0.031) s=0.667 PSDFmin=+0.001527 G=OK(+0.001327) MF=OK(active=20/20,min=+2.52e-13,slack=+3.278e-15)
+[CC-MF 0123] OK solve=1.0ms pose=(0.516,0.582,1.022) u=(-0.005,-0.037) s=0.667 PSDFmin=+0.001255 G=OK(+0.001055) MF=OK(active=20/20,min=+1.007e-08,slack=+2.06e-11)
+[CC-MF 0124] OK solve=1.0ms pose=(0.515,0.582,1.019) u=(0.002,0.036) s=0.666 PSDFmin=+0.001525 G=OK(+0.001325) MF=OK(active=20/20,min=+8.24e-13,slack=+3.539e-14)
+[CC-MF 0125] OK solve=1.0ms pose=(0.515,0.582,1.022) u=(-0.005,-0.036) s=0.666 PSDFmin=+0.001263 G=OK(+0.001063) MF=OK(active=20/20,min=+1.12e-09,slack=+2.062e-12)
+[CC-MF 0126] OK solve=1.1ms pose=(0.515,0.582,1.019) u=(0.003,0.037) s=0.666 PSDFmin=+0.001522 G=OK(+0.001322) MF=OK(active=20/20,min=+6.746e-13,slack=+1.381e-14)
+[CC-MF 0127] OK solve=1.2ms pose=(0.515,0.582,1.022) u=(-0.005,-0.036) s=0.666 PSDFmin=+0.001271 G=OK(+0.001071) MF=OK(active=20/20,min=+5.609e-12,slack=+3.197e-15)
+[CC-MF 0128] OK solve=1.1ms pose=(0.515,0.581,1.019) u=(0.004,0.037) s=0.666 PSDFmin=+0.001521 G=OK(+0.001321) MF=OK(active=20/20,min=+2.806e-11,slack=+2.445e-13)
+[CC-MF 0129] OK solve=1.1ms pose=(0.515,0.582,1.022) u=(-0.004,-0.037) s=0.666 PSDFmin=+0.001274 G=OK(+0.001074) MF=OK(active=20/20,min=+2.375e-12,slack=+2.197e-15)
+실패 조건 충족으로 시뮬레이션 종료: stuck_for_4.00s_disp_0.0276m_le_0.0300m
+Using cc_mf optimizer with differential_drive dynamics:
+median:  0.001118200000746583
+std:  0.0004408532497133165
+min:  0.0008880999994289596
+max:  0.003974499999458203
+Simulation finished.
+Run outcome: status=failure, reason=stuck_for_4.00s_disp_0.0276m_le_0.0300m, final_time=12.99999999999997, distance_to_goal=1.7912859156415688
+Optimizer runtime stats: safe_stop_count=0, backup_feasible_qp_success_count=0, plant_input_apply_count=130, last_solve_mode=sqp_rti
+Trial history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_delta_omega_animations_20261029/results/r0p1/runs/config01/trial_0001/data/trial_history_MPC_cc_mf_rectangle_maze_rdelta_0p1_startseed0.csv
+CC-MF constraints history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_delta_omega_animations_20261029/results/r0p1/runs/config01/trial_0001/data/cc_mf_constraints_MPC_cc_mf_rectangle_maze_rdelta_0p1_startseed0.csv
+CC-MF covariance history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_delta_omega_animations_20261029/results/r0p1/runs/config01/trial_0001/data/cc_mf_covariance_MPC_cc_mf_rectangle_maze_rdelta_0p1_startseed0.csv
+CC-MF cycle history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_delta_omega_animations_20261029/results/r0p1/runs/config01/trial_0001/data/cc_mf_cycle_MPC_cc_mf_rectangle_maze_rdelta_0p1_startseed0.csv
+Pose-SDF data saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_delta_omega_animations_20261029/results/r0p1/runs/config01/trial_0001/data/pose_sdf_MPC_cc_mf_rectangle_maze_rdelta_0p1_startseed0.csv
+Total data points: 130
+SDF statistics - Min: 0.0025, Max: 0.0138, Mean: 0.0063
+Generating animation...
+Saving animation: /home/taek111/projects/psdf_mpcc/animations/cc_mf/MPC_cc_mf_rectangle_maze_rdelta_0p1_startseed0_20261029_181303_450285_config01_trial0001.mp4 (130 frames, 10 fps, 100 DPI)
+Animation saved: /home/taek111/projects/psdf_mpcc/animations/cc_mf/MPC_cc_mf_rectangle_maze_rdelta_0p1_startseed0_20261029_181303_450285_config01_trial0001.mp4
+Single test completed.
+CC-MF execution summary: SQP-WITH FEASIBLE QP=0, Safe stop=0, Plant-applied control inputs=130
+[Trials] Saved: status=failure, successful solver steps=130
+Trial outcomes: /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_delta_omega_animations_20261029/results/r0p1/trial_results.csv
+Success rates and solver mean/p95 [s]: /home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_delta_omega_animations_20261029/results/r0p1/summary.csv

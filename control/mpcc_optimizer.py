@@ -25,48 +25,51 @@ from utils.spline_path import (
 )
 
 
-def initialize_mpcc_tracking_params(param):
-    """Set only shared tracking defaults, preserving method-specific fields."""
-    param.horizon = 20
-    param.tf = 0.1 * param.horizon
-    param.mat_Qe = np.diag([1.0, 10.0])  # [contour, lag]
-    param.mat_Re = np.diag([1.0, 0.01])  # [v, omega]
-    param.q_s = 1.0
-    param.terminal_weight = 5.0
-    param.v_s_target = 0.8
-    param.q_s_ref = 2.0
-
-    param.v_s_max = 2.0
-    param.enforce_v_s_not_faster_than_vmax = True
-    param.path_gate_epsilon = 0.05
-    param.tangent_reg_delta = 1e-6
-    param.reference_weight_reg = 1e-8
-    param.fd_eps = 1e-3
-    param.max_segments = 20
-    param.line_search_window = 0.5
-    param.line_search_samples = 41
-    param.s_upper_guard = 100.0
-    param.use_s_state_bounds = True
-    param.s_backtrack_tolerance = 0.3
-    param.vmin, param.vmax = -0.7, 0.7
-    param.omegamin, param.omegamax = -1.2, 1.2
-
-
-def initialize_mpcc_solver_params(param, integrator_type):
-    """Set shared solver defaults without importing safety or device options."""
-    param.qp_solver = "PARTIAL_CONDENSING_HPIPM"
-    param.hessian_approx = "GAUSS_NEWTON"
-    param.integrator_type = integrator_type
-    param.nlp_solver_type = "SQP_RTI"
-    param.qp_solver_iter_max = 50
-    param.nlp_solver_max_iter = 50
-    param.tol = 1e-4
-
-
 class MPCCOptimizerParam:
     def __init__(self):
-        initialize_mpcc_tracking_params(self)
-        initialize_mpcc_solver_params(self, integrator_type="ERK")
+        # Deterministic MPCC has no pose-covariance or process-noise model.
+        # CC subclasses define sigma_*0 (initial std) and q_*/alpha_*/beta_*
+        # (process-noise rates) in their own parameter initializers.
+        self.horizon = 20
+        self.tf = 0.1 * self.horizon
+        self.mat_Qe = np.diag([1.0, 10.0])  # [contour, lag]
+        self.mat_Re = np.diag([1.0, 0.01])  # [v, omega]
+        # Per-step command changes: r_delta_v * (v - v_prev)^2 and
+        # r_delta_omega * (omega - omega_prev)^2, independent of hard rate limits.
+        # Set either weight to zero to disable its command-change penalty.
+        self.r_delta_v = 0.05
+        self.r_delta_omega = 0.05
+        self.q_s = 1.0
+        self.terminal_weight = 5.0
+        self.v_s_target = 1.0
+        self.q_s_ref = 2.0
+
+        self.v_s_max = 2.0
+        self.enforce_v_s_not_faster_than_vmax = True
+        self.path_gate_epsilon = 0.05
+        self.tangent_reg_delta = 1e-6
+        self.reference_weight_reg = 1e-8
+        self.fd_eps = 1e-3
+        self.max_segments = 20
+        self.line_search_window = 0.5
+        self.line_search_samples = 41
+        self.s_upper_guard = 100.0
+        self.use_s_state_bounds = True
+        self.s_backtrack_tolerance = 0.3
+        # Shared deadlock tuning for MPCC and all CC parameter subclasses.
+        self.vmin, self.vmax = -1.0, 1.0
+        self.omegamin, self.omegamax = -1.0, 1.0
+        # Optional symmetric command-rate limits (m/s^2 and rad/s^2).
+        self.a_max = 0.5
+        self.alpha_max = 5.0
+
+        self.qp_solver = "PARTIAL_CONDENSING_HPIPM"
+        self.hessian_approx = "GAUSS_NEWTON"
+        self.integrator_type = "ERK"
+        self.nlp_solver_type = "SQP_RTI"
+        self.qp_solver_iter_max = 50
+        self.nlp_solver_max_iter = 50
+        self.tol = 1e-4
 
         # Safety constraints (PSDF style)
         self.d_min = 0.001
@@ -256,7 +259,113 @@ class MPCCOptimizer(AcadosCodegenMixin):
         model.f_impl_expr = xdot - f_expl
         model.cost_expr_ext_cost = cost_stage
         model.cost_expr_ext_cost_e = cost_terminal
+        return self._augment_input_memory(model, param)
+
+    def _augment_input_memory(self, model, param):
+        """Add command-change cost and retain inputs with an exact discrete shift."""
+        limits = [getattr(param, name, None) for name in ("a_max", "alpha_max")]
+        for name, limit in zip(("a_max", "alpha_max"), limits):
+            if limit is not None and (
+                isinstance(limit, (bool, np.bool_))
+                or not np.isscalar(limit)
+                or not isinstance(limit, (int, float, np.integer, np.floating))
+                or not np.isfinite(limit)
+                or limit < 0
+            ):
+                raise ValueError(f"{name} must be finite and nonnegative, or None")
+        change_weights = {
+            name: getattr(param, name, 0.0)
+            for name in ("r_delta_v", "r_delta_omega")
+        }
+        for name, weight in change_weights.items():
+            if (
+                isinstance(weight, (bool, np.bool_))
+                or not np.isscalar(weight)
+                or not isinstance(weight, (int, float, np.integer, np.floating))
+                or not np.isfinite(weight)
+                or weight < 0
+            ):
+                raise ValueError(f"{name} must be finite and nonnegative")
+        self._input_memory_slice = None
+        if (
+            all(limit is None for limit in limits)
+            and all(weight == 0 for weight in change_weights.values())
+        ):
+            return model
+
+        base_nx = int(model.x.numel())
+        self._input_memory_slice = slice(base_nx, base_nx + 2)
+        if ca.MX(model.disc_dyn_expr).is_empty():
+            # Match the four-stage ERK map before adding the discrete memory.
+            dt = float(param.tf) / float(param.horizon)
+            rhs = ca.Function("mpcc_rhs", [model.x, model.u], [model.f_expl_expr])
+            x, u = model.x, model.u
+            k1 = rhs(x, u)
+            k2 = rhs(x + 0.5 * dt * k1, u)
+            k3 = rhs(x + 0.5 * dt * k2, u)
+            k4 = rhs(x + dt * k3, u)
+            model.disc_dyn_expr = x + dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6
+        memory = ca.MX.sym("previous_input", 2)
+        model.x = ca.vertcat(model.x, memory)
+        model.disc_dyn_expr = ca.vertcat(model.disc_dyn_expr, model.u[:2])
+        # Stage 0 uses the last plant-applied command; the discrete shift
+        # supplies each later stage with the preceding predicted command.
+        delta_v = model.u[0] - memory[0]
+        delta_omega = model.u[1] - memory[1]
+        model.cost_expr_ext_cost += (
+            float(change_weights["r_delta_v"]) * delta_v**2
+            + float(change_weights["r_delta_omega"]) * delta_omega**2
+        )
+        # Discrete dynamics replace the continuous model, including xdot.
+        model.xdot = ca.MX.sym("xdot", base_nx + 2)
+        model.f_expl_expr = []
+        model.f_impl_expr = []
         return model
+
+    def _with_input_memory(self, base_state):
+        """Anchor memory to the last input actually applied to the plant."""
+        if getattr(self, "_input_memory_slice", None) is None:
+            return np.asarray(base_state, dtype=float)
+        previous = np.zeros(2) if self.state is None else np.asarray(self.state._u, dtype=float)[:2]
+        if previous.shape != (2,) or not np.isfinite(previous).all():
+            raise ValueError("Previous applied physical input must contain two finite values")
+        return np.r_[base_state, previous]
+
+    def _set_input_memory_trajectory(self, states, inputs):
+        memory = getattr(self, "_input_memory_slice", None)
+        if memory is not None:
+            states[0, memory] = self._with_input_memory([])
+            states[1:, memory] = inputs[:, :2]
+
+    def _refresh_input_memory_guess(self, solver):
+        if getattr(self, "_input_memory_slice", None) is None:
+            return
+        states = np.stack([solver.get(i, "x") for i in range(self.N + 1)])
+        inputs = np.stack([solver.get(i, "u") for i in range(self.N)])
+        self._set_input_memory_trajectory(states, inputs)
+        for stage, state in enumerate(states):
+            solver.set(stage, "x", state)
+
+    def _set_input_rate_constraints(self, param):
+        """Hard linear rows u[i] - memory[i] bound every control interval."""
+        memory = getattr(self, "_input_memory_slice", None)
+        if memory is None:
+            return
+        limits = [(axis, float(limit)) for axis, limit in enumerate(
+            (param.a_max, param.alpha_max)
+        ) if limit is not None]
+        C = np.zeros((len(limits), self.nx))
+        D = np.zeros((len(limits), self.nu))
+        bound = np.empty(len(limits))
+        dt = float(param.tf) / float(param.horizon)
+        for row, (axis, limit) in enumerate(limits):
+            C[row, memory.start + axis] = -1.0
+            D[row, axis] = 1.0
+            bound[row] = limit * dt
+        self.ocp.constraints.C = C
+        self.ocp.constraints.D = D
+        self.ocp.constraints.lg = -bound
+        self.ocp.constraints.ug = bound
 
     def _build_stage_path_parameter(self, s_value):
         path_parameter = stage_parameter(
@@ -359,10 +468,13 @@ class MPCCOptimizer(AcadosCodegenMixin):
         self.ocp.constraints.lbu = np.array([param.vmin, param.omegamin, 0.0], dtype=float)
         self.ocp.constraints.ubu = np.array([param.vmax, param.omegamax, effective_v_s_max], dtype=float)
         self.ocp.constraints.idxbu = np.array([0, 1, 2], dtype=np.int64)
+        self._set_input_rate_constraints(param)
 
     def _configure_solver_options(self, param, integrator_type=None):
         """Share solver options while allowing discrete CC maps to stay discrete."""
         integrator_type = param.integrator_type if integrator_type is None else integrator_type
+        if getattr(self, "_input_memory_slice", None) is not None:
+            integrator_type = "DISCRETE"
         self.ocp.solver_options.qp_solver = param.qp_solver
         self.ocp.solver_options.hessian_approx = param.hessian_approx
         self.ocp.solver_options.integrator_type = integrator_type
@@ -394,9 +506,10 @@ class MPCCOptimizer(AcadosCodegenMixin):
         s_lower, s_upper = self._get_current_s_bounds(param)
         self._current_s0 = float(np.clip(self._current_s0, s_lower, s_upper))
         x0_full = np.array([x0_phys[0], x0_phys[1], x0_phys[2], self._current_s0], dtype=float)
+        x0_full = self._with_input_memory(x0_full)
 
         # Stage-0 equality on full augmented state.
-        self.ocp.constraints.idxbx_0 = np.array([0, 1, 2, 3], dtype=np.int64)
+        self.ocp.constraints.idxbx_0 = np.arange(self.nx, dtype=np.int64)
         self.ocp.constraints.lbx_0 = x0_full.copy()
         self.ocp.constraints.ubx_0 = x0_full.copy()
 
@@ -486,14 +599,13 @@ class MPCCOptimizer(AcadosCodegenMixin):
             v_s_ws = float(np.clip(0.1, 0.0, effective_v_s_max))
             for i in range(self.N):
                 s_ws = self._clamp_s(self._current_s0 + i * dt * v_s_ws)
-                self.solver.set(i, "x", np.array([x_ws[0], x_ws[1], x_ws[2], s_ws], dtype=float))
+                self.solver.set(i, "x", self._with_input_memory([x_ws[0], x_ws[1], x_ws[2], s_ws]))
                 self.solver.set(i, "u", np.array([u_ws[0], u_ws[1], v_s_ws], dtype=float))
             self.solver.set(
                 self.N,
                 "x",
-                np.array(
+                self._with_input_memory(
                     [x_ws[0], x_ws[1], x_ws[2], self._clamp_s(self._current_s0 + self.N * dt * v_s_ws)],
-                    dtype=float,
                 ),
             )
         except Exception as e:
@@ -502,6 +614,7 @@ class MPCCOptimizer(AcadosCodegenMixin):
                 self.solver.set(i, "x", np.zeros((self.nx,), dtype=float))
                 self.solver.set(i, "u", np.zeros((self.nu,), dtype=float))
             self.solver.set(self.N, "x", np.zeros((self.nx,), dtype=float))
+        self._refresh_input_memory_guess(self.solver)
 
     def update_obstacles(self, obstacles_geo):
         if self.psdf_wrapper is None:
@@ -564,11 +677,14 @@ class MPCCOptimizer(AcadosCodegenMixin):
             s_lower, s_upper = self._get_current_s_bounds(self.param)
             self._current_s0 = float(np.clip(self._current_s0, s_lower, s_upper))
             x0 = np.array([self.state._x[0], self.state._x[1], self.state._x[2], self._current_s0], dtype=float)
+            x0 = self._with_input_memory(x0)
             try:
-                # Preferred when idxbx_0 = [0,1,2,3]
+                # Fix the full state, including input memory when enabled.
                 self.solver.set(0, "lbx", x0)
                 self.solver.set(0, "ubx", x0)
             except Exception:
+                if getattr(self, "_input_memory_slice", None) is not None:
+                    raise
                 # Fallback for configurations where only s is boxed.
                 print("Warning: stage-0 full-state bounds update failed; falling back to s-only bound.")
                 self.solver.set(0, "lbx", np.array([x0[3]], dtype=float))
@@ -599,6 +715,7 @@ class MPCCOptimizer(AcadosCodegenMixin):
         except Exception:
             pass
 
+        self._refresh_input_memory_guess(self.solver)
         psdf_params_batch = None
         if self.ped_model is not None and self.psdf_param_dim > 0:
             x_guess = np.stack([self.solver.get(i, "x") for i in range(self.N + 1)], axis=0)

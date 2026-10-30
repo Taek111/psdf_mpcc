@@ -19,6 +19,7 @@ from scipy.stats import chi2
 
 from control.cc_covariance import covariance_from_log_cholesky, resolve_robust_horizon
 from control.cc_sf_optimizer import AcadosSolution, CCSFOptimizer
+from control.mpcc_optimizer import MPCCOptimizerParam
 from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
 from models.geometry_utils import polygon_to_edges
 from utils.acados_diagnostics import report_solver_failure
@@ -30,51 +31,37 @@ PROCESS_NOISE_FIELDS = (
 )
 
 
-class CCECSOptimizerParam:
-    """MPCC defaults match CC-MF; only process noise is removed from covariance."""
+class CCECSOptimizerParam(MPCCOptimizerParam):
+    """MPCC tracking with bounded input rates and noise-free covariance."""
 
     def __init__(self):
-        self.horizon = 20
-        self.tf = 0.1 * self.horizon
-        self.mat_Qe = np.diag([1.0, 10.0])
-        self.mat_Re = np.diag([1.0, 0.01])
-        self.q_s = 1.0
-        self.terminal_weight = 5.0
-        self.v_s_target = 0.8
-        self.q_s_ref = 2.0
-        self.v_s_max = 2.0
-        self.enforce_v_s_not_faster_than_vmax = True
-        self.path_gate_epsilon = 0.05
-        self.tangent_reg_delta = 1e-6
-        self.reference_weight_reg = 1e-8
-        self.fd_eps = 1e-3
-        self.max_segments = 20
-        self.line_search_window = 0.5
-        self.line_search_samples = 41
-        self.s_upper_guard = 100.0
-        self.use_s_state_bounds = True
-        self.s_backtrack_tolerance = 0.3
-        self.vmin, self.vmax = -0.7, 0.7
-        self.omegamin, self.omegamax = -1.2, 1.2
+        super().__init__()
 
-        self.d_min = 0.001
-        self.use_obstacle_constraint = True
         self.chance_epsilon = 0.20  # Entire future horizon, not per obstacle/node.
         self.robust_horizon = None  # Same min(10, horizon) default as CC-MF.
         self.initial_pose_covariance = None
+        # Initial body-frame covariance [forward f, lateral l, heading psi]:
+        # Sigma_0 = diag([sigma_f0**2, sigma_l0**2, sigma_psi0**2]) when
+        # initial_pose_covariance is None. Std units are [m, m, rad].
         self.sigma_f0 = 0.0002
         self.sigma_l0 = 0.00025
         self.sigma_psi0 = 0.00025
+
+        # Per-step process covariance: Q_k = dt * diag([q_f, q_l, q_psi]),
+        # dt = tf / horizon, v = linear speed, omega = angular speed.
+        # q_f   = q_f0   + alpha_f * v**2
+        # q_l   = q_l0   + alpha_v * v**2 + alpha_kappa * abs(v * omega)
+        # q_psi = q_psi0 + beta_v * v**2 + beta_kappa * abs(v * omega)
+        #               + beta_omega * omega**2
+        # q_*0 are baseline variance rates [m**2/s, m**2/s, rad**2/s].
+        # The *_kappa terms use physical turning, not spline curvature.
+        # ECS requires every coefficient below to be zero, so Q_k = 0.
+        # Initial uncertainty still propagates through A_k Sigma_k A_k.T,
+        # retaining only the forward and lateral/heading covariance blocks.
         for name in PROCESS_NOISE_FIELDS:
             setattr(self, name, 0.0)
 
-        self.qp_solver = "PARTIAL_CONDENSING_HPIPM"
-        self.hessian_approx = "GAUSS_NEWTON"
         self.integrator_type = "DISCRETE"
-        self.nlp_solver_type = "SQP_RTI"
-        self.qp_solver_iter_max = 50
-        self.nlp_solver_max_iter = 50
-        self.tol = 1e-4
         self.enable_backup_solver = False
         self.augmented_psdf_device = "cuda"
         self.debug_mode = False
@@ -363,8 +350,8 @@ class CCECSOptimizer(CCSFOptimizer):
 
     def _compute_constraint_data(self, states):
         states = np.asarray(states, dtype=float)
-        if states.shape != (self.N + 1, 8) or not np.isfinite(states).all():
-            raise ValueError("Nominal states must be finite with shape (N+1, 8)")
+        if states.shape != (self.N + 1, self.nx) or not np.isfinite(states).all():
+            raise ValueError("Nominal states must be finite with shape (N+1, nx)")
         covariance_from_log_cholesky(states[:, 4:8])
         distances, gradients = self._evaluate_cluster_geometry(states[:, :3])
         stage_epsilon, beta = self._risk_allocation(self.param)
@@ -409,6 +396,7 @@ class CCECSOptimizer(CCSFOptimizer):
         self._current_s0 = float(np.clip(self._current_s0, s_lower, s_upper))
         x0 = np.r_[self.state._x[:3], self._current_s0,
                    self._build_initial_covariance_state(self.param)]
+        x0 = self._with_input_memory(x0)
         # A failed bounds/parameter update must never solve with stale state.
         solver.set(0, "lbx", x0)
         solver.set(0, "ubx", x0)
@@ -491,10 +479,11 @@ class CCECSOptimizer(CCSFOptimizer):
     def _apply_safe_stop(self, solver_status):
         # DD inputs are velocities: zero control holds the measured pose from
         # the first applied input, without a braking interval or stale command.
-        states = np.zeros((self.N + 1, 8))
+        states = np.zeros((self.N + 1, self.nx))
         inputs = np.zeros((self.N, 3))
         states[:, :4] = np.r_[self.state._x[:3], self._current_s0]
         states[:, 4:8] = self._propagate_covariance_state_batch(inputs, states[:, 3])
+        self._set_input_memory_trajectory(states, inputs)
         if not np.isfinite(states).all() or not np.isfinite(inputs).all():
             raise ValueError("Non-finite nominal safe-stop plan")
         self.solver.reset(reset_qp_solver_mem=1)

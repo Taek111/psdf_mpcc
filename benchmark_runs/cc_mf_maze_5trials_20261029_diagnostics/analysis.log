@@ -1,0 +1,152 @@
+/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_maze_5trials_20261029_diagnostics/source_snapshot/models/geometry_utils.py:246: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at /opt/conda/conda-bld/pytorch_1724789122112/work/torch/csrc/utils/tensor_new.cpp:278.)
+  edgesA = torch.tensor(edgesA, dtype=torch.float32)
+/home/taek111/projects/psdf_mpcc/benchmark_runs/cc_mf_maze_5trials_20261029_diagnostics/analyze_diagnostics.py:128: RuntimeWarning: All-NaN slice encountered
+  "max_mf_slack": np.nanmax(np.array(d["mf_lower_slack"], float)),
+[
+  {
+    "trial": 1,
+    "seed": 0,
+    "status": "success",
+    "final_time_s": 54.500000000000504,
+    "steps": 545,
+    "safe_stop_cycles": 0,
+    "successful_solver_cycles": 545,
+    "omega_reversals_ge_0_05": 94,
+    "omega_rate_saturated_transitions": 254,
+    "min_precontrol_psdf_mm": 0.5444996058940887,
+    "min_precontrol_polygon_clearance_mm": 0.5444810565871875,
+    "precontrol_polygon_collision_count": 0,
+    "successful_cycles_predicted_horizon_has_penetration": 366,
+    "successful_cycles_affine_guard_violation": 0,
+    "successful_cycles_fresh_mf_sum_gt_epsilon": 453,
+    "successful_cycles_affine_soft_feasible_but_fresh_soft_violated": 407,
+    "guard_affine_minus_exact_m": {
+      "median": 0.0021608484305640713,
+      "p95": 0.033911234680493285,
+      "max": 0.12412679337202784
+    },
+    "mf_affine_minus_frozen_quantile": {
+      "median": 0.3741572330691837,
+      "p95": 6.703317158478691,
+      "max": 150.1256926158382
+    },
+    "mean_mf_row_mask_changes_per_cycle": 4.705882352941177
+  },
+  {
+    "trial": 2,
+    "seed": 1,
+    "status": "failure",
+    "final_time_s": 19.400000000000006,
+    "steps": 194,
+    "safe_stop_cycles": 0,
+    "successful_solver_cycles": 194,
+    "omega_reversals_ge_0_05": 60,
+    "omega_rate_saturated_transitions": 86,
+    "min_precontrol_psdf_mm": 0.4047192633152008,
+    "min_precontrol_polygon_clearance_mm": 0.40471829228362144,
+    "precontrol_polygon_collision_count": 0,
+    "successful_cycles_predicted_horizon_has_penetration": 133,
+    "successful_cycles_affine_guard_violation": 0,
+    "successful_cycles_fresh_mf_sum_gt_epsilon": 180,
+    "successful_cycles_affine_soft_feasible_but_fresh_soft_violated": 176,
+    "guard_affine_minus_exact_m": {
+      "median": 0.0009523228050723584,
+      "p95": 0.030204065039904884,
+      "max": 0.12268774402664487
+    },
+    "mf_affine_minus_frozen_quantile": {
+      "median": 0.39750978142415394,
+      "p95": 6.612463529146325,
+      "max": 45.182763282183544
+    },
+    "mean_mf_row_mask_changes_per_cycle": 4.3782383419689115
+  },
+  {
+    "trial": 3,
+    "seed": 2,
+    "status": "failure",
+    "final_time_s": 48.00000000000041,
+    "steps": 480,
+    "safe_stop_cycles": 2,
+    "successful_solver_cycles": 478,
+    "omega_reversals_ge_0_05": 152,
+    "omega_rate_saturated_transitions": 232,
+    "min_precontrol_psdf_mm": 0.6002597510814667,
+    "min_precontrol_polygon_clearance_mm": 0.6003068203462348,
+    "precontrol_polygon_collision_count": 0,
+    "successful_cycles_predicted_horizon_has_penetration": 308,
+    "successful_cycles_affine_guard_violation": 0,
+    "successful_cycles_fresh_mf_sum_gt_epsilon": 420,
+    "successful_cycles_affine_soft_feasible_but_fresh_soft_violated": 369,
+    "guard_affine_minus_exact_m": {
+      "median": 0.0020596605251585547,
+      "p95": 0.03651490248064342,
+      "max": 0.15161913649353845
+    },
+    "mf_affine_minus_frozen_quantile": {
+      "median": 0.5016167376538387,
+      "p95": 7.539941013078171,
+      "max": 70.40308252228071
+    },
+    "mean_mf_row_mask_changes_per_cycle": 4.6054279749478075
+  },
+  {
+    "trial": 4,
+    "seed": 3,
+    "status": "failure",
+    "final_time_s": 26.900000000000112,
+    "steps": 269,
+    "safe_stop_cycles": 0,
+    "successful_solver_cycles": 269,
+    "omega_reversals_ge_0_05": 80,
+    "omega_rate_saturated_transitions": 125,
+    "min_precontrol_psdf_mm": 0.9765811264514923,
+    "min_precontrol_polygon_clearance_mm": 0.9765925394025665,
+    "precontrol_polygon_collision_count": 0,
+    "successful_cycles_predicted_horizon_has_penetration": 181,
+    "successful_cycles_affine_guard_violation": 0,
+    "successful_cycles_fresh_mf_sum_gt_epsilon": 253,
+    "successful_cycles_affine_soft_feasible_but_fresh_soft_violated": 239,
+    "guard_affine_minus_exact_m": {
+      "median": 0.0006761968968720189,
+      "p95": 0.030905415240886535,
+      "max": 0.15475097913589522
+    },
+    "mf_affine_minus_frozen_quantile": {
+      "median": 0.4027366727468324,
+      "p95": 6.265619930087099,
+      "max": 38.77269348446
+    },
+    "mean_mf_row_mask_changes_per_cycle": 4.358208955223881
+  },
+  {
+    "trial": 5,
+    "seed": 4,
+    "status": "failure",
+    "final_time_s": 19.80000000000001,
+    "steps": 198,
+    "safe_stop_cycles": 0,
+    "successful_solver_cycles": 198,
+    "omega_reversals_ge_0_05": 54,
+    "omega_rate_saturated_transitions": 79,
+    "min_precontrol_psdf_mm": 0.5265601794235408,
+    "min_precontrol_polygon_clearance_mm": 0.526548970183005,
+    "precontrol_polygon_collision_count": 0,
+    "successful_cycles_predicted_horizon_has_penetration": 132,
+    "successful_cycles_affine_guard_violation": 0,
+    "successful_cycles_fresh_mf_sum_gt_epsilon": 178,
+    "successful_cycles_affine_soft_feasible_but_fresh_soft_violated": 164,
+    "guard_affine_minus_exact_m": {
+      "median": 0.0008387330128598407,
+      "p95": 0.03161886901615452,
+      "max": 0.09872649108736567
+    },
+    "mf_affine_minus_frozen_quantile": {
+      "median": 0.37926332816710084,
+      "p95": 6.635843630831899,
+      "max": 38.77269348446
+    },
+    "mean_mf_row_mask_changes_per_cycle": 4.50761421319797
+  }
+]
+Saved 276 covariance-only risk replays and diagnostic figure.

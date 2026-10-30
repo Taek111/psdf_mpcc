@@ -12,14 +12,9 @@ import numpy as np
 from models.dd_dynamics import symbolic_dd_step as _symbolic_dd_step
 
 
-def initialize_cc_noise_params(param):
-    """Share the existing MF growth coefficients with SF, already scaled."""
-    param.alpha_f = 0.0012
-    param.alpha_v = 0.00024
-    param.alpha_kappa = 0.0003
-    param.beta_v = 0.012
-    param.beta_kappa = 0.0048
-    param.beta_omega = 0.0048
+# Log-Cholesky cannot encode log(0). Use this numerical standard deviation
+# only for explicitly zero initial sigmas; positive settings are untouched.
+ZERO_INITIAL_STD = 1e-12
 
 
 def _finite_array(value, trailing_shape, name):
@@ -90,7 +85,9 @@ def initial_local_covariance(param, state=None):
 
     ``initial_pose_covariance``, when supplied, is an estimator covariance in
     world coordinates and requires the current state's heading. Otherwise the
-    existing positive ``sigma_f0``, ``sigma_l0`` and ``sigma_psi0`` are used.
+    nonnegative ``sigma_f0``, ``sigma_l0`` and ``sigma_psi0`` are used.
+    Explicit zeros are represented by ``ZERO_INITIAL_STD**2`` variance so
+    log-Cholesky initialization stays finite without changing the settings.
     """
     world_covariance = getattr(param, "initial_pose_covariance", None)
     if world_covariance is None:
@@ -101,8 +98,9 @@ def initial_local_covariance(param, state=None):
             ],
             dtype=float,
         )
-        if not np.all(np.isfinite(sigmas)) or np.any(sigmas <= 0.0):
-            raise ValueError("initial covariance standard deviations must be finite and positive")
+        if not np.all(np.isfinite(sigmas)) or np.any(sigmas < 0.0):
+            raise ValueError("initial covariance standard deviations must be finite and nonnegative")
+        sigmas = np.where(sigmas == 0.0, ZERO_INITIAL_STD, sigmas)
         with np.errstate(over="ignore", under="ignore"):
             covariance = np.diag(sigmas**2)
     else:

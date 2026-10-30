@@ -66,6 +66,11 @@ class _Solver:
 class CCECSTest(unittest.TestCase):
     def setUp(self):
         self.param = CCECSOptimizerParam()
+        # Keep these covariance/geometry fixtures at eight states; enabled
+        # input-memory dynamics are covered in test_mpcc_input_rates.py.
+        self.param.a_max = self.param.alpha_max = None
+        self.param.r_delta_v = 0.0
+        self.param.r_delta_omega = 0.0
         self.param.horizon = 3
         self.param.tf = 0.3
         self.optimizer = CCECSOptimizer()

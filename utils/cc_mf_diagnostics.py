@@ -197,21 +197,23 @@ class CCMFDiagnosticsMixin(AcadosDiagnosticsMixin):
         d_col = float(self.param.d_col)
         phi_exact, _ = self._compute_exact_psdf(states[:, :3])
         phi_exact = np.asarray(phi_exact, dtype=float)
+        # Risk rows depend on pose/progress/covariance, never input memory.
+        risk_states = states[:, :8]
 
         guard_affine_residual = (
-            np.einsum("ij,ij->i", constraint_data["guard_A"], states)
+            np.einsum("ij,ij->i", constraint_data["guard_A"], risk_states)
             + constraint_data["guard_c"]
         )
         guard_fresh_residual = phi_exact - d_col
         mf_affine_residual = (
-            np.einsum("ij,ij->i", constraint_data["mf_A"], states)
+            np.einsum("ij,ij->i", constraint_data["mf_A"], risk_states)
             + constraint_data["mf_c"]
         )
         fresh = None
         try:
-            fresh = self._compute_constraint_affine_data(states)
+            fresh = self._compute_constraint_affine_data(risk_states)
             mf_fresh_raw_residual = (
-                np.einsum("ij,ij->i", fresh["mf_A_raw"], states)
+                np.einsum("ij,ij->i", fresh["mf_A_raw"], risk_states)
                 + fresh["mf_c_raw"]
             )
             raw_valid = fresh["mf_valid"] & np.isfinite(
@@ -219,7 +221,7 @@ class CCMFDiagnosticsMixin(AcadosDiagnosticsMixin):
             ).all(axis=1) & np.isfinite(fresh["mf_c_raw"])
             mf_fresh_raw_residual[~raw_valid] = np.nan
             mf_fresh_effective_residual = (
-                np.einsum("ij,ij->i", fresh["mf_A"], states) + fresh["mf_c"]
+                np.einsum("ij,ij->i", fresh["mf_A"], risk_states) + fresh["mf_c"]
             )
             mf_fresh_mask = fresh["mf_mask"].copy()
             mf_fresh_mask[0] = False

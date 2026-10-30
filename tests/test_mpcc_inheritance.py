@@ -45,6 +45,8 @@ class MPCCInheritanceTest(unittest.TestCase):
         self.assertFalse(issubclass(CCMFOptimizer, CCSFOptimizer))
         self.assertTrue(issubclass(CCECSOptimizer, CCSFOptimizer))
         self.assertIsNot(CCMFOptimizerParam, CCSFOptimizerParam)
+        for param_type in (CCSFOptimizerParam, CCECSOptimizerParam, CCMFOptimizerParam):
+            self.assertEqual(param_type.__bases__, (MPCCOptimizerParam,))
         self.assertIs(CCSFOptimizer._build_mpcc_cost, MPCCOptimizer._build_mpcc_cost)
         self.assertIs(CCMFOptimizer._build_mpcc_cost, MPCCOptimizer._build_mpcc_cost)
 
@@ -65,7 +67,7 @@ class MPCCInheritanceTest(unittest.TestCase):
             self.assertEqual(getattr(ecs, name), 0.0, msg=name)
         self.assertEqual(MPCCOptimizerParam().integrator_type, "ERK")
 
-    def test_param_initializers_keep_arrays_independent_and_safety_fields_isolated(self):
+    def test_param_initializers_inherit_shared_defaults_and_keep_arrays_independent(self):
         params = [param_type() for _, param_type in MPCC_TYPES]
         params.append(CCSFOptimizerParam())
         for param in params:
@@ -80,10 +82,26 @@ class MPCCInheritanceTest(unittest.TestCase):
             self.assertEqual(param.mat_Re[0, 0], 1.0)
         for param in params[1:]:
             for field in ("use_soft_constraint", "slack_weight", "detection_frequency"):
-                self.assertFalse(hasattr(param, field), msg=field)
+                self.assertEqual(getattr(param, field), getattr(params[0], field), msg=field)
         self.assertFalse(hasattr(params[1], "use_risk_margin"))
         self.assertFalse(hasattr(params[2], "enable_backup_solver"))
         self.assertFalse(hasattr(params[2], "mf_active_terminal"))
+
+    def test_cc_initializers_inherit_changed_shared_defaults(self):
+        original_init = MPCCOptimizerParam.__init__
+
+        def tuned_defaults(param):
+            original_init(param)
+            param.q_s = 3.25
+            param.qp_solver_iter_max = 71
+
+        with patch.object(MPCCOptimizerParam, "__init__", tuned_defaults):
+            for param_type in (CCSFOptimizerParam, CCECSOptimizerParam, CCMFOptimizerParam):
+                with self.subTest(parameter=param_type.__name__):
+                    param = param_type()
+                    self.assertEqual(param.q_s, 3.25)
+                    self.assertEqual(param.qp_solver_iter_max, 71)
+                    self.assertEqual(param.integrator_type, "DISCRETE")
 
     def test_removed_sf_window_keys_are_ignored_by_config_loader(self):
         param = CCSFOptimizerParam()

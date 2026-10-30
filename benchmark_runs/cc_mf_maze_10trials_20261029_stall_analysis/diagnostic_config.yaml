@@ -1,0 +1,35 @@
+trials: 10
+start_perturbation:
+  enabled: true
+  seed: 0
+  position_std: 0.02
+  heading_std_deg: 2.8647889756541165
+  max_sigma: 3.0
+  min_clearance: 0.01
+  max_attempts: 1000
+localization_error:
+  enabled: false
+defaults:
+  simulation_time: 60.0
+  generate_animation: true
+  generate_plots: false
+trial_failure_criteria:
+  enabled: true
+  movement_window_sec: 20.0
+  movement_threshold: 0.03
+  max_consecutive_solver_failures: 20
+cc_mf:
+  r_delta_omega: 0.03
+  debug_mf: true
+  debug_infeasibility: true
+cc_sf:
+  debug_mode: false
+cc_ecs:
+  debug_mode: false
+test_configs:
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: cc_mf
+  dynamics_type: differential_drive
+  path_planner: astar
+output_suffix: stall10_20261029

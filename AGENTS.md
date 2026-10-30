@@ -12,6 +12,10 @@
 - NMPC: `python test_nmpc.py -c config.yaml` or quick `python test_nmpc.py --single`.
 - Other runs: `python test_hybrid_astar.py`, `python test_psdf.py`.
 
+## 주행 실험 기본 규칙
+- 주행 실험 실행 요청에 별도 지정이 없으면 footprint는 `rectangle`, kinematics는 DD(`differential_drive`), environment는 `maze`를 사용한다.
+- Animation 추가 요청 시 기존 기본 animation 생성 코드를 사용하고, 별도의 인코딩 작업 없이 `animations/<controller>/` 디렉토리에 저장한다.
+
 ## NMPC 반복 실험 (`test_nmpc.py`)
 - 설정: `config/config_nmpc_trials_maze_oblique.yaml`. `maze`/`oblique_maze` × `psdf`/`dcbf`/`obca`를 조합별 100 trial씩, 총 600회 실행한다. 동역학은 DD(`differential_drive`), footprint는 `rectangle`, planner는 A*이다.
 - Trial당 시뮬레이션 제한은 60초. 시작 pose에 Gaussian perturbation(x/y 표준편차 각각 20 mm, heading 표준편차 0.05 rad ≈ 2.864789°, ±3σ 제한, 초기 clearance ≥ 10 mm)을 적용한다. Seed는 0–99이며 같은 환경·trial 번호에서 방법 간 동일한 시작 pose를 사용한다. Localization error와 animation/plot은 끈다.

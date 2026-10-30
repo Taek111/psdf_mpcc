@@ -9,7 +9,6 @@ from unittest.mock import Mock, patch
 import numpy as np
 
 from control.cc_ecs_optimizer import CCECSOptimizer, CCECSOptimizerParam
-from control.cc_mf_imp_optimizer import CCMFImpOptimizer, CCMFImpOptimizerParam
 from control.cc_mf_optimizer import CCMFOptimizer, CCMFOptimizerParam
 from control.cc_sf_optimizer import CCSFOptimizer, CCSFOptimizerParam
 from control.mpcc_optimizer import MPCCOptimizer, MPCCOptimizerParam
@@ -36,7 +35,6 @@ class MPCCObstacleUpdatesTest(unittest.TestCase):
             (CCSFOptimizer, CCSFOptimizerParam),
             (CCECSOptimizer, CCECSOptimizerParam),
             (CCMFOptimizer, CCMFOptimizerParam),
-            (CCMFImpOptimizer, CCMFImpOptimizerParam),
         ):
             with self.subTest(method=optimizer_type.__name__):
                 optimizer = optimizer_type()

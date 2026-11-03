@@ -84,7 +84,7 @@ class MPCCInputRateTest(unittest.TestCase):
         for optimizer_type, param_type, base_nx in default_controllers:
             with self.subTest(controller=optimizer_type.__name__):
                 optimizer, param = self.make_optimizer(optimizer_type, param_type)
-                expected_limits = (0.5, 5.0, -1.0, 1.0)
+                expected_limits = (0.3, 5.0, -1.0, 1.0)
                 self.assertEqual(
                     (param.a_max, param.alpha_max, param.omegamin, param.omegamax),
                     expected_limits,
@@ -95,9 +95,27 @@ class MPCCInputRateTest(unittest.TestCase):
                 self.setup_ocp(optimizer, param)
                 self.assertEqual(optimizer.nx, base_nx)
                 self.assertEqual(optimizer.nu, 3)
-                expected_integrator = "ERK" if base_nx == 4 else "DISCRETE"
-                self.assertEqual(optimizer.ocp.solver_options.integrator_type, expected_integrator)
+                self.assertEqual(optimizer.ocp.solver_options.integrator_type, "DISCRETE")
+                self.assertEqual(int(optimizer.ocp.model.disc_dyn_expr.numel()), base_nx)
                 self.assertEqual(optimizer.ocp.constraints.C.size, 0)
+
+    def test_unaugmented_mpcc_discrete_map_matches_the_plant(self):
+        optimizer, param = self.make_optimizer(
+            MPCCOptimizer, MPCCOptimizerParam, a_max=None, alpha_max=None,
+        )
+        model = optimizer.create_model(param)
+        transition = ca.Function(
+            "unaugmented_mpcc_step", [model.x, model.u], [model.disc_dyn_expr],
+        )
+        state = np.array([0.3, -0.2, 0.7, 0.4])
+        for controls in ([0.27, -0.6, 0.19], [-0.3, 0.4, 0.1], [0.0, 0.0, 0.0]):
+            with self.subTest(controls=controls):
+                actual = np.asarray(transition(state, controls)).ravel()
+                expected_pose = DifferentialDriveDynamics.forward_dynamics(
+                    state[:3], controls[:2], param.tf / param.horizon,
+                )
+                np.testing.assert_allclose(actual[:3], expected_pose, atol=1e-14)
+                self.assertAlmostEqual(actual[3], state[3] + 0.2 * controls[2])
 
     def test_enabled_dynamics_remember_input_without_changing_tracking_or_covariance(self):
         control = np.array([0.27, -0.6, 0.19])

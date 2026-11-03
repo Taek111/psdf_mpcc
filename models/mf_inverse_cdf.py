@@ -95,7 +95,6 @@ def compute_mf_icdf(
     d_min: float,
     *,
     stage_requested=None,
-    d_col: float = 0.0002,
     no_obstacles: bool = False,
     return_frozen_features: bool = False,
     required_override=None,
@@ -104,16 +103,16 @@ def compute_mf_icdf(
     """Return one affine row per stage, with explicit validity metadata.
 
     States are ``[x, y, theta, s, log(L_ff), log(L_ll),
-    log(L_theta,theta), L_theta,l]``.  The strict signed-PSDF gate and requested
-    stage window determine ``required``.  Invalid required rows have NaN
-    coefficients and must never reach the solver.  Normal inactive rows use
-    ``A=0, c=1``; their missing residual is not an evaluated safety margin.
+    log(L_theta,theta), L_theta,l]``.  The strict signed-PSDF gate ``phi > d_min``
+    and requested stage window determine ``required``.  Invalid required rows
+    have NaN coefficients and must never reach the solver.  Normal inactive
+    rows use ``A=0, c=1``; their missing residual is not an evaluated safety margin.
 
     Geometry and covariance inputs are validated with batched tensor masks;
     no per-stage device synchronization is needed on CUDA.
     """
-    if not math.isfinite(float(d_min)) or not math.isfinite(float(d_col)):
-        raise ValueError("inverse-CDF MF thresholds must be finite")
+    if not math.isfinite(float(d_min)):
+        raise ValueError("inverse-CDF MF d_min must be finite")
     if z_bar.ndim != 2 or z_bar.shape[1] != 8:
         raise ValueError("z_bar must have shape (H, 8)")
     if not z_bar.is_floating_point():
@@ -137,7 +136,7 @@ def compute_mf_icdf(
     if requested.shape != (H,):
         raise ValueError("stage_requested must have shape (H,)")
     geometry_ok = torch.isfinite(phi) & torch.isfinite(gradient).all(-1)
-    required = requested & ((phi > d_col) | ~geometry_ok)
+    required = requested & ((phi > d_min) | ~geometry_ok)
     if required_override is not None:
         required = torch.as_tensor(required_override, dtype=torch.bool, device=z_bar.device)
         if required.shape != (H,):

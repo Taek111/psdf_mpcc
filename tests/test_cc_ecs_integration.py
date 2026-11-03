@@ -20,7 +20,7 @@ class _FactoryComplete(Exception):
 
 
 class CCECSIntegrationTest(unittest.TestCase):
-    def test_factory_uses_only_ecs_overrides_and_matching_spline(self):
+    def test_factory_keeps_legacy_ecs_overrides_and_matching_spline(self):
         simulation = simulation_mpc()
         optimizer = SimpleNamespace(reset=Mock())
         robot = Mock()
@@ -65,8 +65,8 @@ class CCECSIntegrationTest(unittest.TestCase):
         self.assertIs(actual_optimizer, optimizer)
         self.assertEqual(params.horizon, 3)
         self.assertAlmostEqual(params.d_min, 0.006)
-        self.assertAlmostEqual(params.chance_epsilon, 0.20)
-        self.assertAlmostEqual(params.vmin, -0.7)
+        self.assertAlmostEqual(params.chance_epsilon, 0.10)
+        self.assertAlmostEqual(params.vmin, -1.0)
         self.assertEqual(planner.call_args.kwargs["num_horizon"], 3)
         self.assertAlmostEqual(planner.call_args.kwargs["local_path_timestep"], 0.1)
         robot.set_local_planner.assert_called_with(spline)
@@ -143,24 +143,23 @@ class CCECSIntegrationTest(unittest.TestCase):
             simulation.save_cc_ecs_history_to_csv()
             self.assertEqual(list(Path(directory).iterdir()), [])
 
-    def test_example_config_has_four_isolated_ecs_runs(self):
+    def test_benchmark_uses_shared_defaults_without_method_overrides(self):
         path = (
             Path(__file__).resolve().parents[1]
-            / "config" / "config_nmpc_cc_ecs_rectangle_all4.yaml"
+            / "config" / "config_benchmark.yaml"
         )
         config = yaml.safe_load(path.read_text(encoding="utf-8"))
-        self.assertEqual(
-            [entry["maze_type"] for entry in config["test_configs"]],
-            ["s_path", "straight_corridor", "maze", "oblique_maze"],
-        )
+        methods = ("mpcc", "cc_sf", "cc_mf", "cc_ecs")
+        for method in methods:
+            self.assertEqual(simulation_mpc._get_config_block(config, method), {})
         for entry in config["test_configs"]:
-            self.assertEqual(entry["optimizer_type"], "cc_ecs")
+            self.assertIn(entry["optimizer_type"], methods)
+            self.assertEqual(entry["maze_type"], "maze")
             self.assertEqual(entry["robot_shape"], "rectangle")
             self.assertEqual(entry["dynamics_type"], "differential_drive")
             self.assertEqual(entry["path_planner"], "astar")
-        self.assertFalse(config["defaults"]["generate_animation"])
-        self.assertFalse(config["defaults"]["generate_plots"])
-        self.assertNotIn("cc_mf", config)
+            for method in methods:
+                self.assertEqual(simulation_mpc._get_config_block(entry, method), {})
 
 
 if __name__ == "__main__":

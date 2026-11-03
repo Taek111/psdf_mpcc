@@ -10,7 +10,10 @@ import numpy as np
 import torch
 from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 from control.cc_covariance import (
+    build_covariance_proximal_parameters,
     covariance_from_log_cholesky,
+    covariance_proximal_cost,
+    get_covariance_proximal_weight,
     initial_local_covariance,
     log_cholesky_from_covariance,
     propagate_log_cholesky,
@@ -18,7 +21,7 @@ from control.cc_covariance import (
     symbolic_dd_step,
     symbolic_log_cholesky_transition,
 )
-from control.mpcc_optimizer import MPCCOptimizer, MPCCOptimizerParam
+from control.mpcc_optimizer import CCMPCCOptimizerParam, MPCCOptimizer
 from utils.acados_diagnostics import report_solver_failure
 from utils.cc_mf_diagnostics import CCMFDiagnosticsMixin
 from utils.spline_path import (
@@ -33,60 +36,20 @@ class MFInverseCDFEvaluationError(RuntimeError):
     """A requested inverse-CDF row could not be evaluated safely."""
 
 
-class CCMFOptimizerParam(MPCCOptimizerParam):
+class CCMFOptimizerParam(CCMPCCOptimizerParam):
     def __init__(self):
         super().__init__()
         # Safety rows: Row G is hard; only Row M has a slack.
-        self.d_min = 0.0002
-        self.d_col = 0.0002
+        # Shared d_min is the MF activation and chance-model threshold [m].
+        # Hard guard and current-pose stop clearance [m].
+        self.d_col = 0.00005
         self.use_row_mf = True
-        self.chance_epsilon = 0.20
         # Slack and its penalties use standard-normal quantile units.
         self.mf_slack_linear = 100.0
         self.mf_slack_quadratic = 1.0
         self.mf_active_start_step = 1
         self.mf_active_end_step = None
         self.mf_active_terminal = True
-        self.augmented_psdf_device = "cuda"
-
-        # Risk and covariance
-        # None selects min(10, horizon); set to horizon for full propagation.
-        self.robust_horizon = 10
-        self.initial_pose_covariance = None  # Optional world-frame estimator covariance.
-        # Initial body-frame covariance [forward f, lateral l, heading psi]:
-        # Sigma_0 = diag([sigma_f0**2, sigma_l0**2, sigma_psi0**2]) when
-        # initial_pose_covariance is None. Std units are [m, m, rad].
-        self.sigma_f0 = 0.0002
-        self.sigma_l0 = 0.00025
-        self.sigma_psi0 = 0.000025 #  0.00025
-
-        # Per-step process covariance: Q_k = dt * diag([q_f, q_l, q_psi]),
-        # dt = tf / horizon, v = linear speed, omega = angular speed.
-        # q_f   = q_f0   + alpha_f * v**2
-        # q_l   = q_l0   + alpha_v * v**2 + alpha_kappa * abs(v * omega)
-        # q_psi = q_psi0 + beta_v * v**2 + beta_kappa * abs(v * omega)
-        #               + beta_omega * omega**2
-        # q_*0 are baseline variance rates [m**2/s, m**2/s, rad**2/s].
-        # The *_kappa terms use physical turning, not spline curvature.
-        # Propagation keeps the reduced blocks of A_k Sigma_k A_k.T + Q_k;
-        # forward/lateral and forward/heading cross-covariances are discarded.
-        self.q_f0 = 0 #1e-5
-        self.q_l0 = 0 #2.5e-5
-        self.q_psi0 = 0 #2.5e-5
-        # Coefficients include the scale at initialization; propagation uses
-        # these resolved values directly. Preserve the preceding 0.6 baseline.
-        self.covariance_growth_scale = 0.8
-        self.alpha_f = 0.002 * self.covariance_growth_scale
-        self.alpha_v = 0.0004 * self.covariance_growth_scale
-        self.alpha_kappa = 0.0005 * self.covariance_growth_scale
-        self.beta_v = 0.02 * self.covariance_growth_scale
-        self.beta_kappa = 0.008 * self.covariance_growth_scale
-        self.beta_omega = 0.008 * self.covariance_growth_scale
-        self.risk_cov_jitter = 1e-9
-
-        # Solver and recovery
-        self.integrator_type = "DISCRETE"
-        self.enable_backup_solver = False
 
         # Optional diagnostics
         self.debug_mf = False
@@ -138,6 +101,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         "phi",
         "d_col",
         "phi_gt_d_col",
+        "d_min",
+        "phi_gt_d_min",
         "mf_valid",
         "mf_active",
         "row_g_residual",
@@ -202,6 +167,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         self.guard_param_slice = slice(0, 0)
         self.mf_param_slice = slice(0, 0)
         self.covariance_propagation_param_slice = slice(0, 0)
+        self.covariance_proximal_param_slice = slice(0, 0)
         self._prev_predicted_s = 0.0
         self._current_s0 = 0.0
         self._has_prev_predicted_s = False
@@ -270,6 +236,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         self.guard_param_slice = slice(0, 0)
         self.mf_param_slice = slice(0, 0)
         self.covariance_propagation_param_slice = slice(0, 0)
+        self.covariance_proximal_param_slice = slice(0, 0)
         self._prev_predicted_s = 0.0
         self._current_s0 = 0.0
         self._has_prev_predicted_s = False
@@ -365,6 +332,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         return float(param.q_s_ref)
 
     def create_model(self, param):
+        proximal_weight = self._get_covariance_proximal_weight(param)
         dt = float(param.tf) / float(max(param.horizon, 1))
         self.robust_horizon = resolve_robust_horizon(param)
         nx = 8  # [x, y, theta, s, xi_f, xi_l, xi_theta, xi_c]
@@ -393,6 +361,14 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             self.mf_param_slice.stop, self.mf_param_slice.stop + 1,
         )
         p_all = ca.vertcat(p_ref_t_ref, p_guard, p_mf, p_covariance_propagation)
+        proximal_start = self.covariance_propagation_param_slice.stop
+        self.covariance_proximal_param_slice = slice(
+            proximal_start, proximal_start + (6 if proximal_weight > 0.0 else 0),
+        )
+        if proximal_weight > 0.0:
+            # [nominal xi (4), inverse nominal marginal heading std, active]
+            p_proximal = ca.MX.sym("covariance_proximal", 6)
+            p_all = ca.vertcat(p_all, p_proximal)
 
         v = u[0]
         omega = u[1]
@@ -412,6 +388,12 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         cost_stage, cost_terminal = self._build_mpcc_cost(
             param, x, u, p_ref_t_ref,
         )
+        if proximal_weight > 0.0:
+            proximal_cost = covariance_proximal_cost(
+                x[4:8], p_proximal, proximal_weight,
+            )
+            cost_stage += proximal_cost
+            cost_terminal += proximal_cost
 
         model = AcadosModel()
         model.name = self._model_name
@@ -426,9 +408,17 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
     def _build_stage_path_parameter(self, s_value):
         return super()._build_stage_path_parameter(s_value)
 
-    def _build_stage_param(self, stage_path_param, guard_affine, mf_affine, stage_idx=0):
+    _get_covariance_proximal_weight = staticmethod(get_covariance_proximal_weight)
+
+    def _build_stage_param(
+        self, stage_path_param, guard_affine, mf_affine, stage_idx=0,
+        nominal_covariance=None,
+    ):
+        proximal_slice = self.covariance_proximal_param_slice
+        proximal_dimension = proximal_slice.stop - proximal_slice.start
         stage_param = np.zeros(
-            self.path_param_dim + self.guard_param_dim + self.mf_param_dim + 1,
+            self.path_param_dim + self.guard_param_dim + self.mf_param_dim + 1
+            + proximal_dimension,
             dtype=float,
         )
         stage_param[self.path_param_slice] = stage_path_param
@@ -437,6 +427,10 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         stage_param[self.covariance_propagation_param_slice] = float(
             stage_idx < resolve_robust_horizon(self.param)
         )
+        if proximal_dimension:
+            stage_param[proximal_slice] = build_covariance_proximal_parameters(
+                self.param, stage_idx, nominal_covariance,
+            )
         return stage_param
 
     def _build_initial_local_covariance(self, param):
@@ -641,7 +635,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 result = self.psdf_wrapper.forward_mf_icdf(
                     z_bar, epsilon, float(self.param.d_min),
                     stage_requested=requested,
-                    d_col=float(self.param.d_col),
                     return_frozen_features=bool(
                         self.param.debug_mf or self.param.debug_infeasibility
                     ),
@@ -964,6 +957,11 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         return states, inputs
 
     def _set_constraint_parameters(self, solver, stage_s_values, constraint_data):
+        proximal_slice = self.covariance_proximal_param_slice
+        proximal_enabled = proximal_slice.stop > proximal_slice.start
+        nominal_covariance = (
+            constraint_data["nominal_state"][:, 4:8] if proximal_enabled else None
+        )
         guard_rows = np.column_stack(
             (constraint_data["guard_A"][:, :3], constraint_data["guard_c"])
         )
@@ -989,6 +987,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 guard_stage_zero,
                 mf_stage_zero,
                 stage_idx=0,
+                nominal_covariance=(nominal_covariance[0] if proximal_enabled else None),
             ),
         )
         for stage in range(1, self.N + 1):
@@ -1000,6 +999,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                     guard_rows[stage],
                     mf_rows[stage],
                     stage_idx=stage,
+                    nominal_covariance=(
+                        nominal_covariance[stage] if proximal_enabled else None
+                    ),
                 ),
             )
 
@@ -1265,6 +1267,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
 
     def setup(self, param, system, reference_trajectory, obstacles):
         self.param = param
+        self._get_covariance_proximal_weight(param)
         self._normalize_epsilon_values(int(param.horizon) + 1)
         for name in ("d_min", "d_col"):
             if not np.isfinite(float(getattr(param, name))):
@@ -1289,7 +1292,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         print(
             f"{self.diagnostics_label} Row M configuration: "
             f"enabled={bool(param.use_row_mf)}, "
-            f"active only when phi > d_col={float(param.d_col):.8g}, "
+            f"active only when phi > d_min={float(param.d_min):.8g}, "
             f"configured stages={active_stages}"
         )
         if param.use_obstacle_constraint:
@@ -1388,7 +1391,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 "horizon_stage": stage,
                 "phi": phi,
                 "d_col": float(diagnostics["d_col"]),
-                "phi_gt_d_col": bool(
+                "phi_gt_d_col": phi > float(diagnostics["d_col"]),
+                "d_min": float(diagnostics["d_min"]),
+                "phi_gt_d_min": bool(
                     diagnostics["mf_domain_eligible"][stage]
                 ),
                 "mf_valid": bool(diagnostics["mf_valid"][stage]),

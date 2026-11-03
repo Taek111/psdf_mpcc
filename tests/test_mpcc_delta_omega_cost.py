@@ -182,9 +182,8 @@ class MPCCDeltaOmegaCostTest(unittest.TestCase):
                 self.setup_ocp(optimizer, param)
                 self.assertEqual(optimizer.nx, base_nx)
                 self.assertIsNone(optimizer._input_memory_slice)
-                expected_integrator = "ERK" if base_nx == 4 else "DISCRETE"
                 self.assertEqual(optimizer.ocp.solver_options.integrator_type,
-                                 expected_integrator)
+                                 "DISCRETE")
 
     def test_config_override_and_invalid_weights(self):
         for optimizer_type, param_type, _ in CONTROLLERS:

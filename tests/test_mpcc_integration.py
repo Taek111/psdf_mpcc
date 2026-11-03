@@ -95,7 +95,7 @@ class MPCCIntegrationTest(unittest.TestCase):
         self.assertEqual(planner["sample_count"], 20)
         self.assertEqual(planner["spline_bc_type"], "natural")
 
-    def test_factory_applies_only_its_own_overrides_before_spline_creation(self):
+    def test_factory_applies_common_overrides_before_spline_creation(self):
         params, _ = self.capture_factory({
             "mpcc": {"horizon": 3, "tf": 0.3, "d_min": 0.006, "v_s_max": 0.4},
         })

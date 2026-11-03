@@ -36,7 +36,8 @@ class MFInverseCDFTest(unittest.TestCase):
         phi = kwargs.pop("phi", torch.ones(d.shape[0], dtype=self.dtype, device=d.device))
         gradient = kwargs.pop("gradient", torch.zeros((d.shape[0], 3), dtype=self.dtype,
                                                     device=d.device))
-        return compute_mf_icdf(phi, gradient, d, q, mask, z, epsilon, 0.0, **kwargs)
+        d_min = kwargs.pop("d_min", 0.0)
+        return compute_mf_icdf(phi, gradient, d, q, mask, z, epsilon, d_min, **kwargs)
 
     @staticmethod
     def reference_residual(z, nominal, d, q, epsilon):
@@ -226,6 +227,18 @@ class MFInverseCDFTest(unittest.TestCase):
         torch.testing.assert_close(absent.A, torch.zeros((2, 8), dtype=self.dtype))
         self.assertTrue(torch.isnan(absent.residual).all())
 
+    def test_d_min_controls_strict_domain_gate(self):
+        phi = torch.tensor([0.00005, 0.000075, 0.0001, 0.00015], dtype=self.dtype)
+        result = self.evaluate(
+            [[0.03]] * 4, [[[1.0, 0.0, 0.0]]] * 4,
+            phi=phi, d_min=0.0001,
+        )
+        self.assertEqual(result.required.tolist(), [False, False, False, True])
+        self.assertEqual(result.valid.tolist(), [False, False, False, True])
+        self.assertTrue((result.status[:3] == MFInverseCDFStatus.DOMAIN_INACTIVE).all())
+        torch.testing.assert_close(result.A[:3], torch.zeros((3, 8), dtype=self.dtype))
+        torch.testing.assert_close(result.c[:3], torch.ones(3, dtype=self.dtype))
+
     def test_stage_gates_and_invalid_inputs_are_separate(self):
         z = self.state(6)
         z[2, 4] = float("nan")
@@ -234,7 +247,7 @@ class MFInverseCDFTest(unittest.TestCase):
         q[5] = 0.0
         mask = torch.ones((6, 1), dtype=torch.bool)
         mask[4] = False
-        phi = torch.tensor([0.0002, 1.0, 1.0, float("nan"), 1.0, 1.0], dtype=self.dtype)
+        phi = torch.tensor([0.0, 1.0, 1.0, float("nan"), 1.0, 1.0], dtype=self.dtype)
         result = self.evaluate(d, q, z, mask=mask, phi=phi,
                                stage_requested=torch.tensor([True, False, True, True, True, True]))
         expected = [MFInverseCDFStatus.DOMAIN_INACTIVE, MFInverseCDFStatus.NOT_REQUESTED,

@@ -63,7 +63,9 @@ class CCMFMultiFeatureTest(unittest.TestCase):
         self.param.a_max = self.param.alpha_max = None
         self.param.r_delta_v = 0.0
         self.param.r_delta_omega = 0.0  # Keep covariance fixtures at eight states.
+        self.param.covariance_proximal_weight = 0.0  # Proximal tests cover its own rows.
         self.param.horizon = 3
+        self.param.robust_horizon = 3
         self.param.tf = 0.3
         self.optimizer = CCMFOptimizer()
         self.optimizer.param = self.param
@@ -78,15 +80,15 @@ class CCMFMultiFeatureTest(unittest.TestCase):
     def tearDown(self):
         self.optimizer.ocp = None
 
-    def test_default_covariance_growth_scale_is_point_eight(self):
+    def test_default_noise_coefficients_match_selected_maze_tuning(self):
         self.assertAlmostEqual(self.param.covariance_growth_scale, 0.8)
         expected = {
             "alpha_f": 0.0016,
             "alpha_v": 0.00032,
-            "alpha_kappa": 0.0004,
+            "alpha_kappa": 0.0001,
             "beta_v": 0.016,
             "beta_kappa": 0.0064,
-            "beta_omega": 0.0064,
+            "beta_omega": 0.0032,
         }
         for key, value in expected.items():
             self.assertAlmostEqual(
@@ -113,7 +115,9 @@ class CCMFMultiFeatureTest(unittest.TestCase):
         pv_param.a_max = pv_param.alpha_max = None
         pv_param.r_delta_v = 0.0
         pv_param.r_delta_omega = 0.0
+        pv_param.covariance_proximal_weight = 0.0
         pv_param.horizon = self.param.horizon
+        pv_param.robust_horizon = self.param.robust_horizon
         pv_param.tf = self.param.tf
         pv_optimizer = CCSFOptimizer()
 
@@ -178,6 +182,10 @@ class CCMFMultiFeatureTest(unittest.TestCase):
                 optimizer = optimizer_type()
                 param = param_type()
                 param.horizon = 3
+                param.robust_horizon = 3
+                param.a_max = param.alpha_max = None
+                param.r_delta_v = param.r_delta_omega = 0.0
+                param.covariance_proximal_weight = 0.0
                 param.tf = 0.3
                 optimizer.param = param
                 model = optimizer.create_model(param)
@@ -754,7 +762,8 @@ class CCMFMultiFeatureTest(unittest.TestCase):
         diagnostics = {
             "constraint_stages": np.arange(1, 4),
             "d_col": 0.1,
-            "mf_activation_phi": np.array([0.0, 0.2, 0.05, 0.3]),
+            "d_min": 0.15,
+            "mf_activation_phi": np.array([0.0, 0.2, 0.125, 0.3]),
             "mf_domain_eligible": np.array([False, True, False, True]),
             "mf_valid": np.array([False, True, True, True]),
             "mf_mask": np.array([False, True, False, True]),
@@ -785,6 +794,9 @@ class CCMFMultiFeatureTest(unittest.TestCase):
         self.assertIsNone(rows[1]["row_m_residual_before_slack"])
         self.assertIsNone(rows[1]["row_m_feasible_after_slack"])
         self.assertFalse(rows[1]["row_g_feasible"])
+        self.assertEqual(rows[1]["d_min"], 0.15)
+        self.assertTrue(rows[1]["phi_gt_d_col"])
+        self.assertFalse(rows[1]["phi_gt_d_min"])
 
     def test_cycle_logs_include_inverse_cdf_metadata_and_covariance_logs_keep_eight_fields(self):
         states = np.zeros((4, 8), dtype=float)

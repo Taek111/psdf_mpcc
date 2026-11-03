@@ -262,14 +262,12 @@ class simulation_mpc:
         unknown_keys = []
         for key, value in override_config.items():
             if hasattr(opt_param, key):
+                if isinstance(getattr(opt_param, key), np.ndarray):
+                    value = np.array(value, dtype=float, copy=True)
                 setattr(opt_param, key, value)
                 applied_items.append((key, value))
             else:
                 unknown_keys.append(key)
-
-        if hasattr(opt_param, "chance_gamma") and "chance_epsilon" in override_config and "chance_gamma" not in override_config:
-            opt_param.chance_gamma = float(st.NormalDist().inv_cdf(1.0 - float(opt_param.chance_epsilon)))
-            applied_items.append(("chance_gamma", opt_param.chance_gamma))
 
         if applied_items:
             formatted_items = ", ".join(f"{key}={value}" for key, value in applied_items)
@@ -277,6 +275,64 @@ class simulation_mpc:
 
         if unknown_keys:
             print(f"Warning: ignoring unknown {block_name} config keys: {', '.join(unknown_keys)}")
+
+    @classmethod
+    def _apply_mpcc_param_overrides(cls, opt_param, config, optimizer_type):
+        """Apply shared MPCC settings, then compatible method-local overrides."""
+        from control.mpcc_optimizer import CCMPCCOptimizerParam, MPCCOptimizerParam
+
+        tracking_fields = set(vars(MPCCOptimizerParam()))
+        shared_fields = set(vars(CCMPCCOptimizerParam()))
+        shared_config = cls._get_config_block(config, "mpcc")
+        shared_overrides = {}
+        invalid_shared = []
+        unused_cc = []
+        ecs_noise = []
+        excluded_ecs_fields = set()
+        if optimizer_type == "cc_ecs":
+            from control.cc_ecs_optimizer import PROCESS_NOISE_FIELDS
+
+            excluded_ecs_fields = set(PROCESS_NOISE_FIELDS) | {"covariance_growth_scale"}
+        for key, value in shared_config.items():
+            if key not in shared_fields:
+                invalid_shared.append(key)
+            elif optimizer_type == "mpcc" and key not in tracking_fields:
+                unused_cc.append(key)
+            elif key in excluded_ecs_fields:
+                ecs_noise.append(key)
+            else:
+                shared_overrides[key] = value
+
+        if invalid_shared:
+            print(
+                "Warning: ignoring non-common keys in shared 'mpcc' config; "
+                "put controller-specific settings in that controller's block: "
+                + ", ".join(invalid_shared)
+            )
+        if unused_cc:
+            print(
+                "MPCC ignores CC-only settings in shared 'mpcc' config: "
+                + ", ".join(unused_cc)
+            )
+        if ecs_noise:
+            print(
+                "CC-ECS keeps Q=0 and ignores shared 'mpcc' process-noise settings: "
+                + ", ".join(ecs_noise)
+            )
+        label = optimizer_type.upper().replace("_", "-")
+        cls._apply_param_overrides(opt_param, shared_overrides, f"{label} shared MPCC")
+
+        if optimizer_type != "mpcc":
+            method_config = cls._get_config_block(config, optimizer_type)
+            local_common = sorted(shared_fields.intersection(method_config))
+            if local_common:
+                print(
+                    f"Warning: {optimizer_type} overrides common parameters; "
+                    "move them to 'mpcc' for matched controller settings: "
+                    + ", ".join(local_common)
+                )
+            # Retain existing experiment files: explicit local settings win.
+            cls._apply_param_overrides(opt_param, method_config, label)
 
     @staticmethod
     def _get_config_block(config, block_name):
@@ -1395,7 +1451,7 @@ class simulation_mpc:
         
         if robot_shape == "rectangle":
             vehicle_length = 0.15
-            vehicle_width = 0.12
+            vehicle_width = 0.127
             rectangle_geometry = (config or {}).get("rectangle_geometry", {})
             if not isinstance(rectangle_geometry, dict):
                 raise ValueError("rectangle_geometry must be a mapping")
@@ -1549,9 +1605,7 @@ class simulation_mpc:
             from control.mpcc_optimizer import MPCCOptimizer, MPCCOptimizerParam
 
             opt_param = MPCCOptimizerParam()
-            self._apply_param_overrides(
-                opt_param, self._get_config_block(config, "mpcc"), "MPCC",
-            )
+            self._apply_mpcc_param_overrides(opt_param, config, "mpcc")
             if config and "psdf_detection" in config:
                 print(
                     "MPCC ignores legacy 'psdf_detection' settings; "
@@ -1588,9 +1642,7 @@ class simulation_mpc:
 
             opt_param = CCMFOptimizerParam()
             # CC-MF slack penalties use quantile units.
-            self._apply_param_overrides(
-                opt_param, self._get_config_block(config, "cc_mf"), "CC-MF",
-            )
+            self._apply_mpcc_param_overrides(opt_param, config, "cc_mf")
 
             # Keep legacy configs loadable even though CC-MF does not use
             # local-window detection parameters.
@@ -1630,9 +1682,7 @@ class simulation_mpc:
             )
 
             opt_param = CCSFOptimizerParam()
-            self._apply_param_overrides(
-                opt_param, self._get_config_block(config, "cc_sf"), "CC-SF",
-            )
+            self._apply_mpcc_param_overrides(opt_param, config, "cc_sf")
 
             if config and "psdf_detection" in config:
                 print(
@@ -1670,9 +1720,7 @@ class simulation_mpc:
             from control.cc_ecs_optimizer import CCECSOptimizer, CCECSOptimizerParam
 
             opt_param = CCECSOptimizerParam()
-            self._apply_param_overrides(
-                opt_param, self._get_config_block(config, "cc_ecs"), "CC-ECS",
-            )
+            self._apply_mpcc_param_overrides(opt_param, config, "cc_ecs")
             if config and "psdf_detection" in config:
                 print(
                     "CC-ECS ignores legacy 'psdf_detection' settings; "

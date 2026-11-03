@@ -71,7 +71,9 @@ class CCECSTest(unittest.TestCase):
         self.param.a_max = self.param.alpha_max = None
         self.param.r_delta_v = 0.0
         self.param.r_delta_omega = 0.0
+        self.param.covariance_proximal_weight = 0.0
         self.param.horizon = 3
+        self.param.robust_horizon = 3
         self.param.tf = 0.3
         self.optimizer = CCECSOptimizer()
         self.addCleanup(self.optimizer.cleanup)
@@ -208,7 +210,7 @@ class CCECSTest(unittest.TestCase):
         states = self._states(xi)
         solver = self._solver(covariance_state=xi)
         data = self.optimizer._compute_constraint_data(states)
-        self.optimizer._set_ecs_parameters(solver, states[:, 3], data)
+        self.optimizer._set_ecs_parameters(solver, states[:, 3], data, states[:, 4:8])
         evaluate = self._constraint_function()
         margins = self.optimizer._compute_margins(states[:, 4:], data["gradients_local"])
         for k in range(1, self.param.horizon + 1):
@@ -266,6 +268,49 @@ class CCECSTest(unittest.TestCase):
             self.assertEqual(parameters[self.optimizer.covariance_propagation_param_slice][0], float(k < 1))
             self.assertEqual(parameters[self.optimizer.risk_margin_scale_param_slice][0], beta if k else 0)
 
+    def test_proximal_parameters_reuse_each_solvers_single_covariance_regeneration(self):
+        self.param.covariance_proximal_weight = CCECSOptimizerParam().covariance_proximal_weight
+        self.param.robust_horizon = 2
+        self.optimizer.setup_ocp(self.param, None)
+        self.optimizer.add_obstacle_avoidance_constraint(self.param, None, None)
+        self.assertEqual(self.optimizer.ocp.model.p.numel(), 35)  # 8 + 7*K + 6, K=3.
+        self.optimizer.solver = self._solver()
+        self.optimizer.backup_solver = self._solver()
+        for label, solver in (
+            ("main", self.optimizer.solver), ("backup", self.optimizer.backup_solver),
+        ):
+            with (
+                self.subTest(solver=label),
+                patch.object(
+                    self.optimizer, "_regenerate_covariance_guess",
+                    wraps=self.optimizer._regenerate_covariance_guess,
+                ) as regenerate,
+                patch.object(
+                    self.optimizer, "_evaluate_cluster_geometry",
+                    wraps=self.optimizer._evaluate_cluster_geometry,
+                ) as geometry,
+            ):
+                self.assertEqual(self.optimizer._prepare_and_solve(solver), 0)
+                regenerate.assert_called_once()
+                self.assertIs(regenerate.call_args.args[0], solver)
+                geometry.assert_called_once()
+                self.assertEqual(set(solver.parameters), set(range(4)))
+                for stage, parameters in solver.parameters.items():
+                    actual = parameters[self.optimizer.covariance_proximal_param_slice]
+                    anchor = solver.states[stage, 4:8]
+                    np.testing.assert_array_equal(actual[:4], anchor)
+                    inverse_heading_std = 1.0 / max(np.hypot(np.exp(anchor[2]), anchor[3]), 1e-6)
+                    self.assertAlmostEqual(actual[4], inverse_heading_std)
+                    self.assertEqual(actual[5], float(1 <= stage <= 2))
+                np.testing.assert_array_equal(solver.states[2, 4:8], solver.states[3, 4:8])
+
+    def test_invalid_proximal_weight_fails_before_setup_accesses_system(self):
+        for value in (-0.1, np.nan, np.inf, True, [0.01]):
+            with self.subTest(weight=value):
+                self.param.covariance_proximal_weight = value
+                with self.assertRaisesRegex(ValueError, "covariance_proximal_weight"):
+                    self.optimizer.setup(self.param, None, None, None)
+
     def test_overlap_keeps_hard_rows_active_and_large_margin_is_not_capped(self):
         gradients = np.tile([[1.0, 0.0, 0.0]], (4, 1, 1))
         self.optimizer._evaluate_cluster_geometry = lambda poses: (
@@ -274,7 +319,7 @@ class CCECSTest(unittest.TestCase):
         states = self._states(np.r_[np.log([1.0, 1.0, 1.0]), 0.0])
         solver = self._solver()
         data = self.optimizer._compute_constraint_data(states)
-        self.optimizer._set_ecs_parameters(solver, states[:, 3], data)
+        self.optimizer._set_ecs_parameters(solver, states[:, 3], data, states[:, 4:8])
         rows, _, _, _ = self._constraint_function()(states[1], solver.parameters[1])
         expected_margin = data["beta"]
         self.assertGreater(expected_margin, 2.0)
@@ -350,6 +395,10 @@ class CCECSTest(unittest.TestCase):
             fresh._evaluate_cluster_geometry(np.array([[np.nan, 0., 0.]]))
 
     def test_solver_only_time_and_backup_status(self):
+        # Exercise real recovery preparation with the shared active proximal cost.
+        self.param.covariance_proximal_weight = CCECSOptimizerParam().covariance_proximal_weight
+        self.optimizer.setup_ocp(self.param, None)
+        self.optimizer.add_obstacle_avoidance_constraint(self.param, None, None)
         clock = SimpleNamespace(value=0.0)
         def main_call(solver):
             clock.value += 0.25

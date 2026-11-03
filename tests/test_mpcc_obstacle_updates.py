@@ -42,6 +42,8 @@ class MPCCObstacleUpdatesTest(unittest.TestCase):
                 param = param_type()
                 param.horizon = 3
                 param.tf = 0.3
+                if hasattr(param, "robust_horizon"):
+                    param.robust_horizon = param.horizon
                 if hasattr(param, "enable_backup_solver"):
                     param.enable_backup_solver = True
 

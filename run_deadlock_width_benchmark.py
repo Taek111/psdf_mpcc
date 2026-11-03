@@ -37,7 +37,7 @@ def main():
     manifest = json.loads((output / "experiment.json").read_text())
     manifest["trial_process_isolation"] = True
     manifest["requested_trials"] = 280
-    manifest["failure_criteria"] = {"movement_window_sec": 4.0,
+    manifest["failure_criteria"] = {"movement_window_sec": 10.0,
         "movement_threshold_m": 0.03, "max_consecutive_solver_failures": 20}
     manifest["simulation_limit_s"] = 60.0
     manifest["animation_frame_skip"] = 5  # Same as test_nmpc.py's CLI default.

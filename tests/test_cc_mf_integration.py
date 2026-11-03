@@ -1,4 +1,4 @@
-"""Independent MPCC controller settings and canonical CC-MF log exports."""
+"""Shared MPCC factory settings and canonical CC-MF log exports."""
 
 import csv
 from pathlib import Path
@@ -23,7 +23,7 @@ class _FactoryComplete(Exception):
 
 
 class CCMFIntegrationTest(unittest.TestCase):
-    def test_factories_apply_only_their_own_overrides_before_building_planner(self):
+    def test_factories_apply_shared_settings_and_only_their_method_block_before_planning(self):
         controllers = (
             ("mpcc", "MPCCOptimizer", MPCCOptimizerParam),
             ("cc_sf", "CCSFOptimizer", CCSFOptimizerParam),
@@ -43,8 +43,21 @@ class CCMFIntegrationTest(unittest.TestCase):
                 config = {
                     name: {"horizon": 99, "vmin": -99., "chance_epsilon": .4}
                     for name, _, _ in controllers
+                    if name != "mpcc"
                 }
-                config[method] = {"horizon": 3, "tf": .3, "d_min": .006}
+                config["mpcc"] = {
+                    "horizon": 3, "tf": .3, "d_min": .006,
+                    "a_max": .25, "robust_horizon": 3, "chance_epsilon": .12,
+                    "mat_Qe": [[2., 0.], [0., 12.]],
+                }
+                if method != "mpcc":
+                    config[method] = {}
+                if method == "cc_mf":
+                    config[method]["mf_slack_linear"] = 42.
+                elif method == "cc_sf":
+                    config[method]["risk_margin_cap"] = 1.3
+                elif method == "cc_ecs":
+                    config[method]["debug_mode"] = True
                 with (
                     patch.object(simulation, "create_env", return_value=environment),
                     patch("sim.simulation_mpc.sample_start_pose", return_value=(pose, None)),
@@ -72,11 +85,21 @@ class CCMFIntegrationTest(unittest.TestCase):
                 self.assertEqual(params.horizon, 3)
                 self.assertAlmostEqual(params.tf, .3)
                 self.assertAlmostEqual(params.d_min, .006)
-                self.assertAlmostEqual(params.vmin, -.7)
+                self.assertAlmostEqual(params.a_max, .25)
+                np.testing.assert_array_equal(params.mat_Qe, [[2., 0.], [0., 12.]])
+                self.assertIsInstance(params.mat_Qe, np.ndarray)
+                self.assertAlmostEqual(params.vmin, param_type().vmin)
                 if method != "mpcc":
-                    self.assertAlmostEqual(params.chance_epsilon, .2)
+                    self.assertAlmostEqual(params.chance_epsilon, .12)
+                    self.assertEqual(params.robust_horizon, 3)
+                else:
+                    self.assertFalse(hasattr(params, "chance_epsilon"))
                 if method == "cc_mf":
-                    self.assertAlmostEqual(params.mf_slack_linear, 100.)
+                    self.assertAlmostEqual(params.mf_slack_linear, 42.)
+                elif method == "cc_sf":
+                    self.assertAlmostEqual(params.risk_margin_cap, 1.3)
+                elif method == "cc_ecs":
+                    self.assertTrue(params.debug_mode)
                 self.assertEqual(planner.call_args.kwargs["num_horizon"], 3)
                 self.assertAlmostEqual(planner.call_args.kwargs["local_path_timestep"], .1)
                 robot.set_local_planner.assert_called_with(spline)

@@ -195,6 +195,7 @@ class CCMFDiagnosticsMixin(AcadosDiagnosticsMixin):
         if constraint_data is None:
             raise RuntimeError("constraint linearization is unavailable")
         d_col = float(self.param.d_col)
+        d_min = float(self.param.d_min)
         phi_exact, _ = self._compute_exact_psdf(states[:, :3])
         phi_exact = np.asarray(phi_exact, dtype=float)
         # Risk rows depend on pose/progress/covariance, never input memory.
@@ -284,6 +285,7 @@ class CCMFDiagnosticsMixin(AcadosDiagnosticsMixin):
             "row_g_enabled": True,
             "row_mf_enabled": bool(constraint_data["row_mf_enabled"]),
             "d_col": d_col,
+            "d_min": d_min,
             "constraint_row_order": {0: "guard/recovery", 1: "MF"},
             "constraint_stages": np.arange(1, self.N + 1, dtype=int),
             "exact_current_psdf": float(constraint_data["exact_current_phi"]),
@@ -304,7 +306,7 @@ class CCMFDiagnosticsMixin(AcadosDiagnosticsMixin):
             # This is the nominal/linearization PSDF value that actually
             # decides whether Row M is installed in the OCP at each stage.
             "mf_activation_phi": constraint_data["phi"].copy(),
-            "mf_domain_eligible": constraint_data["phi"] > d_col,
+            "mf_domain_eligible": constraint_data["phi"] > d_min,
             "mf_mask": constraint_data["mf_mask"].copy(),
             "mf_fresh_mask": mf_fresh_mask,
             "exact_psdf_predicted_nodes": phi_exact,
@@ -335,8 +337,8 @@ class CCMFDiagnosticsMixin(AcadosDiagnosticsMixin):
         )
         print(f"CC-MF Row M: {row_m_status}")
         print(
-            "CC-MF Row M domain rule: phi > d_col "
-            f"({diagnostics['d_col']:.8g})"
+            "CC-MF Row M domain rule: phi > d_min "
+            f"({diagnostics['d_min']:.8g})"
         )
         print(f"CC-MF exact current PSDF: {diagnostics['exact_current_psdf']:.8g}")
         self._print_pair(

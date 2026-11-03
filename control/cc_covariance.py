@@ -17,6 +17,44 @@ from models.dd_dynamics import symbolic_dd_step as _symbolic_dd_step
 ZERO_INITIAL_STD = 1e-12
 
 
+def get_covariance_proximal_weight(param):
+    """Validate the optional CC covariance RTI regularization weight."""
+    value = getattr(param, "covariance_proximal_weight", 0.0)
+    if (
+        isinstance(value, (bool, np.bool_))
+        or not isinstance(value, (int, float, np.integer, np.floating))
+        or not np.isfinite(value)
+        or value < 0.0
+    ):
+        raise ValueError("covariance_proximal_weight must be finite and nonnegative")
+    return float(value)
+
+
+def build_covariance_proximal_parameters(param, stage_idx, nominal_covariance):
+    """Pack nominal factors, heading normalization, and the robust-horizon mask."""
+    xi_bar = np.asarray(nominal_covariance, dtype=float)
+    if xi_bar.shape != (4,) or not np.isfinite(xi_bar).all():
+        raise ValueError("Nominal proximal covariance must be four finite coordinates")
+    # The cross factor has standard-deviation units; the other coordinates are
+    # logs. Normalize it by marginal heading std, including the cross factor.
+    heading_std = float(np.hypot(np.exp(xi_bar[2]), xi_bar[3]))
+    if not np.isfinite(heading_std):
+        raise ValueError("Nominal proximal heading standard deviation must be finite")
+    active = 1 <= stage_idx <= resolve_robust_horizon(param)
+    return np.r_[xi_bar, 1.0 / max(heading_std, 1e-6), float(active)]
+
+
+def covariance_proximal_cost(xi, proximal_parameters, weight):
+    """Symbolic CC penalty around the already propagated nominal factors."""
+    import casadi as ca
+
+    delta_xi = xi - proximal_parameters[:4]
+    return weight * proximal_parameters[5] * (
+        ca.sumsqr(delta_xi[:3])
+        + (delta_xi[3] * proximal_parameters[4]) ** 2
+    )
+
+
 def _finite_array(value, trailing_shape, name):
     array = np.asarray(value, dtype=float)
     if (

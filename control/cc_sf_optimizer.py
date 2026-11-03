@@ -8,7 +8,10 @@ import torch
 from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 from control.analytic_psdf_casadi import AnalyticPSDFCasADi
 from control.cc_covariance import (
+    build_covariance_proximal_parameters,
     covariance_from_log_cholesky,
+    covariance_proximal_cost,
+    get_covariance_proximal_weight,
     initial_local_covariance,
     log_cholesky_from_covariance,
     propagate_log_cholesky,
@@ -16,23 +19,17 @@ from control.cc_covariance import (
     symbolic_dd_step,
     symbolic_log_cholesky_transition,
 )
-from control.mpcc_optimizer import MPCCOptimizer, MPCCOptimizerParam
+from control.mpcc_optimizer import CCMPCCOptimizerParam, MPCCOptimizer
 from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
 from utils.acados_diagnostics import report_solver_failure
 
 
-class CCSFOptimizerParam(MPCCOptimizerParam):
+class CCSFOptimizerParam(CCMPCCOptimizerParam):
     def __init__(self):
         super().__init__()
-        self.integrator_type = "DISCRETE"
-        # None selects min(10, horizon); set horizon for full propagation.
-        self.robust_horizon = None
-        # Optional estimator covariance in world coordinates; otherwise use sigma_*0.
-        self.initial_pose_covariance = None
-
         # Safety constraints always include the projected-variance risk margin.
-        self.chance_epsilon = 0.20 # 0.05
-        self.chance_gamma = float(NormalDist().inv_cdf(1.0 - self.chance_epsilon))
+        # None derives gamma from the current shared epsilon, including overrides.
+        self.chance_gamma = None
         self.risk_margin_floor = 0.0
         self.risk_margin_cap = 2.0
         self.debug_mode = False
@@ -40,41 +37,6 @@ class CCSFOptimizerParam(MPCCOptimizerParam):
         self.debug_risk = True
         self.debug_print_nominal_risk_heads = False
         self.debug_print_nominal_risk_head_only_active = True
-
-        # Risk and covariance
-        # None selects min(10, horizon); set to horizon for full propagation.
-        self.robust_horizon = 10
-        self.initial_pose_covariance = None  # Optional world-frame estimator covariance.
-        # Initial body-frame covariance [forward f, lateral l, heading psi]:
-        # Sigma_0 = diag([sigma_f0**2, sigma_l0**2, sigma_psi0**2]) when
-        # initial_pose_covariance is None. Std units are [m, m, rad].
-        self.sigma_f0 = 0.0002
-        self.sigma_l0 = 0.00025
-        self.sigma_psi0 = 0.000025 #  0.00025
-
-        # Per-step process covariance: Q_k = dt * diag([q_f, q_l, q_psi]),
-        # dt = tf / horizon, v = linear speed, omega = angular speed.
-        # q_f   = q_f0   + alpha_f * v**2
-        # q_l   = q_l0   + alpha_v * v**2 + alpha_kappa * abs(v * omega)
-        # q_psi = q_psi0 + beta_v * v**2 + beta_kappa * abs(v * omega)
-        #               + beta_omega * omega**2
-        # q_*0 are baseline variance rates [m**2/s, m**2/s, rad**2/s].
-        # The *_kappa terms use physical turning, not spline curvature.
-        # Propagation keeps the reduced blocks of A_k Sigma_k A_k.T + Q_k;
-        # forward/lateral and forward/heading cross-covariances are discarded.
-        self.q_f0 = 0 #1e-5
-        self.q_l0 = 0 #2.5e-5
-        self.q_psi0 = 0 #2.5e-5
-        # Coefficients include the scale at initialization; propagation uses
-        # these resolved values directly. Preserve the preceding 0.6 baseline.
-        self.covariance_growth_scale = 0.8
-        self.alpha_f = 0.002 * self.covariance_growth_scale
-        self.alpha_v = 0.0004 * self.covariance_growth_scale
-        self.alpha_kappa = 0.0005 * self.covariance_growth_scale
-        self.beta_v = 0.02 * self.covariance_growth_scale
-        self.beta_kappa = 0.008 * self.covariance_growth_scale
-        self.beta_omega = 0.008 * self.covariance_growth_scale
-        self.risk_cov_jitter = 1e-9
 
 
 class CCSFOptimizer(MPCCOptimizer):
@@ -111,6 +73,7 @@ class CCSFOptimizer(MPCCOptimizer):
         self.risk_margin_scale_param_slice = slice(0, 0)
         self.psdf_param_slice = slice(0, 0)
         self.covariance_propagation_param_slice = slice(0, 0)
+        self.covariance_proximal_param_slice = slice(0, 0)
         self._prev_predicted_s = 0.0
         self._current_s0 = 0.0
         self._has_prev_predicted_s = False
@@ -174,6 +137,7 @@ class CCSFOptimizer(MPCCOptimizer):
         self.risk_margin_scale_param_slice = slice(0, 0)
         self.psdf_param_slice = slice(0, 0)
         self.covariance_propagation_param_slice = slice(0, 0)
+        self.covariance_proximal_param_slice = slice(0, 0)
         self._prev_predicted_s = 0.0
         self._current_s0 = 0.0
         self._has_prev_predicted_s = False
@@ -231,7 +195,10 @@ class CCSFOptimizer(MPCCOptimizer):
     def record_plant_input_applied(self):
         self._plant_input_apply_count += 1
 
+    _get_covariance_proximal_weight = staticmethod(get_covariance_proximal_weight)
+
     def create_model(self, param, p_psdf_sym=None):
+        proximal_weight = self._get_covariance_proximal_weight(param)
         dt = float(param.tf) / float(max(param.horizon, 1))
         nx = 8  # [x, y, theta, s, xi_f, xi_l, xi_theta, xi_c]
         nu = 3  # [v, omega, v_s]
@@ -269,6 +236,14 @@ class CCSFOptimizer(MPCCOptimizer):
         if p_psdf_sym is not None:
             parameter_blocks.append(p_psdf_sym)
         p_all = ca.vertcat(*parameter_blocks, p_covariance_propagation)
+        proximal_start = self.covariance_propagation_param_slice.stop
+        self.covariance_proximal_param_slice = slice(
+            proximal_start, proximal_start + (6 if proximal_weight > 0.0 else 0),
+        )
+        if proximal_weight > 0.0:
+            # [nominal xi (4), inverse nominal marginal heading std, active]
+            p_proximal = ca.MX.sym("covariance_proximal", 6)
+            p_all = ca.vertcat(p_all, p_proximal)
 
         v = u[0]
         omega = u[1]
@@ -286,6 +261,12 @@ class CCSFOptimizer(MPCCOptimizer):
         cost_stage, cost_terminal = self._build_mpcc_cost(
             param, x, u, p_ref_t_ref
         )
+        if proximal_weight > 0.0:
+            proximal_cost = covariance_proximal_cost(
+                x[4:8], p_proximal, proximal_weight,
+            )
+            cost_stage += proximal_cost
+            cost_terminal += proximal_cost
 
         model = AcadosModel()
         model.name = "differential_drive_cc_sf"
@@ -298,8 +279,11 @@ class CCSFOptimizer(MPCCOptimizer):
         return self._augment_input_memory(model, param)
 
     def _build_stage_param(
-        self, stage_path_param, risk_terms, risk_margin_scale, psdf_stage=None, stage_idx=0
+        self, stage_path_param, risk_terms, risk_margin_scale, psdf_stage=None,
+        stage_idx=0, nominal_covariance=None,
     ):
+        proximal_slice = self.covariance_proximal_param_slice
+        proximal_dimension = proximal_slice.stop - proximal_slice.start
         stage_param = np.zeros(
             (
                 self.path_param_dim
@@ -307,6 +291,7 @@ class CCSFOptimizer(MPCCOptimizer):
                 + self.risk_margin_scale_param_dim
                 + self.psdf_param_dim
                 + 1
+                + proximal_dimension
             ),
             dtype=float,
         )
@@ -318,6 +303,10 @@ class CCSFOptimizer(MPCCOptimizer):
         stage_param[self.covariance_propagation_param_slice] = float(
             stage_idx < resolve_robust_horizon(self.param)
         )
+        if proximal_dimension:
+            stage_param[proximal_slice] = build_covariance_proximal_parameters(
+                self.param, stage_idx, nominal_covariance,
+            )
         return stage_param
 
     def _get_chance_gamma(self, param):
@@ -886,6 +875,7 @@ class CCSFOptimizer(MPCCOptimizer):
                 risk_margin_scale_batch[i],
                 psdf_stage=psdf_stage,
                 stage_idx=i,
+                nominal_covariance=x_guess[i, 4:8],
             )
             solver.set(i, "p", stage_param)
         terminal_path_param = self._build_stage_path_parameter(stage_s_values[self.N])
@@ -896,6 +886,7 @@ class CCSFOptimizer(MPCCOptimizer):
             risk_margin_scale_batch[-1],
             psdf_stage=psdf_terminal,
             stage_idx=self.N,
+            nominal_covariance=x_guess[self.N, 4:8],
         )
         solver.set(self.N, "p", terminal_stage_param)
 
@@ -977,6 +968,7 @@ class CCSFOptimizer(MPCCOptimizer):
 
     def setup(self, param, system, reference_trajectory, obstacles):
         self.param = param
+        self._get_covariance_proximal_weight(param)
         self.set_state(system._state)
         self._system = system
         self._system_dynamics = system._dynamics
@@ -986,7 +978,10 @@ class CCSFOptimizer(MPCCOptimizer):
         if not self._is_initialized:
             print("Setting up CC-SF optimizer...")
             if use_obstacle_constraint:
-                self.initialize_ped_model(system, obstacles, E_max=100, K_max=20, device="cuda")
+                self.initialize_ped_model(
+                    system, obstacles, E_max=100, K_max=20,
+                    device=param.augmented_psdf_device,
+                )
             else:
                 self.psdf_wrapper = None
                 self.ped_model = None
@@ -1000,27 +995,28 @@ class CCSFOptimizer(MPCCOptimizer):
                 code_export_directory=self.code_export_directory,
             )
             self.add_warm_start(param, system, solver=self.solver)
-            main_ocp = self.ocp
-            try:
-                backup_param = copy.deepcopy(param)
-                backup_param.nlp_solver_type = "SQP_WITH_FEASIBLE_QP"
-                backup_param.hpipm_mode = "ROBUST"
-                backup_param.regularize_method = "PROJECT"
-                self.setup_ocp(backup_param, reference_trajectory)
-                if use_obstacle_constraint:
-                    self.add_obstacle_avoidance_constraint(
-                        backup_param, system, obstacles, update_obstacle_data=False,
+            if param.enable_backup_solver:
+                main_ocp = self.ocp
+                try:
+                    backup_param = copy.deepcopy(param)
+                    backup_param.nlp_solver_type = "SQP_WITH_FEASIBLE_QP"
+                    backup_param.hpipm_mode = "ROBUST"
+                    backup_param.regularize_method = "PROJECT"
+                    self.setup_ocp(backup_param, reference_trajectory)
+                    if use_obstacle_constraint:
+                        self.add_obstacle_avoidance_constraint(
+                            backup_param, system, obstacles, update_obstacle_data=False,
+                        )
+                    self.backup_solver = self.create_solver(
+                        json_filename=self.backup_json_filename,
+                        code_export_directory=self.backup_code_export_directory,
                     )
-                self.backup_solver = self.create_solver(
-                    json_filename=self.backup_json_filename,
-                    code_export_directory=self.backup_code_export_directory,
-                )
-                self.add_warm_start(param, system, solver=self.backup_solver)
-            except Exception as e:
-                self.backup_solver = None
-                print(f"Warning: failed to initialize backup solver: {e}")
-            finally:
-                self.ocp = main_ocp
+                    self.add_warm_start(param, system, solver=self.backup_solver)
+                except Exception as e:
+                    self.backup_solver = None
+                    print(f"Warning: failed to initialize backup solver: {e}")
+                finally:
+                    self.ocp = main_ocp
             self._is_initialized = True
         else:
             if use_obstacle_constraint:

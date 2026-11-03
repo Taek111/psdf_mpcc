@@ -184,6 +184,7 @@ def analyze(output):
 def write_report(output, manifest, trials, summaries, issues):
     relative = output.relative_to(ROOT).as_posix()
     finished = len(trials) == 280
+    movement_window_sec = manifest.get("failure_criteria", {}).get("movement_window_sec", 4.0)
     lines = ["## Deadlock tuning 적용: robot width 0.070–0.130m, 각 10 trials", "",
         f"- 실행일: {manifest['started_at_kst'][:10]} (KST). "
         f"{'완료' if finished else '진행 중'}: **{len(trials)}/280 trials**. "
@@ -202,7 +203,7 @@ def write_report(output, manifest, trials, summaries, issues):
         "d_min은 MPCC·CC-SF·CC-ECS 1mm, CC-MF 0.2mm이며, r_delta_v=r_delta_omega=0.05다. "
         "과거 표와 tuning만 다른 통제 비교로 해석할 수 없다.",
         "- dt=0.1s, horizon=20, trial 제한 60s. 목표 위치 L1 오차 ≤ 0.02m이면 성공이다. "
-        "4초 동안 위치 변화 ≤ 0.03m 또는 solver 연속 20회 실패면 실패다. "
+        f"{movement_window_sec:g}초 동안 위치 변화 ≤ 0.03m 또는 solver 연속 20회 실패면 실패다. "
         "접촉·겹침 자체는 별도 실패 조건이 아니다.",
         "- Success Rate는 성공/완료 trial이며 timeout·failure·error도 분모에 포함한다. "
         "Mean Traversal time은 성공 trial만의 평균이다. "

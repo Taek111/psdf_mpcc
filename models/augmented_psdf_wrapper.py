@@ -358,8 +358,9 @@ class AugmentedPSDFWrapper(nn.Module):
     ) -> MFInverseCDFResult:
         """Evaluate inverse-CDF MF with the original float64 risk state.
 
-        ``stage_requested`` and ``d_col`` select required rows.  Invalid
-        required rows are reported explicitly and never disabled here.
+        ``stage_requested`` and the strict ``phi > d_min`` gate select required
+        rows.  Invalid required rows are reported explicitly and never disabled
+        here.
         """
         z_risk = torch.as_tensor(z_bar, dtype=torch.float64, device=self.A.device)
         if z_risk.ndim != 2 or z_risk.shape[1] != 8:

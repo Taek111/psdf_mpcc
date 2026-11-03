@@ -116,19 +116,41 @@ class CCMFInverseCDFControllerTest(unittest.TestCase):
         self.assertEqual(self.optimizer.psdf_wrapper.icdf_calls, 1)
         self.assertEqual(self.optimizer.psdf_wrapper.pose_calls, 0)
 
-    def test_d_col_controls_guard_and_mf_gate_after_parameter_change(self):
-        self.assertEqual(self.param.d_col, 0.0002)
-        self.assertEqual(self.param.d_min, 0.0002)
+    def test_d_col_controls_only_guard_after_parameter_change(self):
+        self.assertEqual(self.param.d_col, 0.00005)
+        self.assertEqual(self.param.d_min, 0.0001)
         self.assertFalse(hasattr(self.param, "d_mf_mask"))
         self.optimizer.psdf_wrapper.phi = 0.0003
-        for threshold, active in ((0.0004, False), (0.0002, True)):
+        for threshold in (0.0004, 0.0002):
             with self.subTest(d_col=threshold):
                 self.param.d_col = threshold
                 data = self.optimizer._compute_constraint_affine_data(self.z)
-                np.testing.assert_array_equal(data["mf_mask"], [False] + [active] * 3)
+                np.testing.assert_array_equal(data["mf_mask"], [False, True, True, True])
                 guard = np.einsum("ij,ij->i", data["guard_A"], self.z) + data["guard_c"]
                 np.testing.assert_allclose(guard, 0.0003 - threshold)
-                self.assertEqual(self.param.d_min, 0.0002)
+                self.assertEqual(self.param.d_min, 0.0001)
+
+    def test_d_min_controls_strict_mf_gate_without_changing_guard(self):
+        self.optimizer.psdf_wrapper.phi = 0.0003
+        for threshold, active in ((0.0004, False), (0.0003, False), (0.0002, True)):
+            with self.subTest(d_min=threshold):
+                self.param.d_min = threshold
+                data = self.optimizer._compute_constraint_affine_data(self.z)
+                np.testing.assert_array_equal(data["mf_mask"], [False] + [active] * 3)
+                guard = np.einsum("ij,ij->i", data["guard_A"], self.z) + data["guard_c"]
+                np.testing.assert_allclose(guard, 0.0003 - self.param.d_col)
+
+    def test_clearance_between_thresholds_retains_guard_without_mf(self):
+        phi = (self.param.d_col + self.param.d_min) / 2
+        self.optimizer.psdf_wrapper.phi = phi
+        data = self.optimizer._compute_constraint_affine_data(self.z)
+        self.assertFalse(data["mf_mask"].any())
+        np.testing.assert_array_equal(data["mf_A"], np.zeros((4, 8)))
+        np.testing.assert_array_equal(data["mf_c"], np.ones(4))
+        guard = np.einsum("ij,ij->i", data["guard_A"], self.z) + data["guard_c"]
+        np.testing.assert_allclose(guard, phi - self.param.d_col)
+        self.assertTrue(np.all(guard > 0))
+        np.testing.assert_array_equal(data["guard_A"][:, 0], np.ones(4))
 
     def test_stage_window_terminal_and_strict_domain_masks(self):
         self.param.mf_active_start_step = 2
@@ -136,7 +158,7 @@ class CCMFInverseCDFControllerTest(unittest.TestCase):
         self.param.mf_active_terminal = False
         data = self.optimizer._compute_constraint_affine_data(self.z)
         np.testing.assert_array_equal(data["mf_mask"], [False, False, True, False])
-        self.optimizer.psdf_wrapper.phi = self.param.d_col
+        self.optimizer.psdf_wrapper.phi = self.param.d_min
         data = self.optimizer._compute_constraint_affine_data(self.z)
         self.assertFalse(data["mf_mask"].any())
         np.testing.assert_array_equal(data["mf_c"], np.ones(4))
@@ -281,13 +303,16 @@ class CCMFInverseCDFControllerTest(unittest.TestCase):
             "guard_affine_residual": guard, "mf_affine_residual": mf,
             "mf_lower_slack": np.ones(4), "mf_activation_phi": data["phi"],
             "d_col": self.param.d_col,
-            "mf_domain_eligible": data["phi"] > self.param.d_col,
+            "d_min": self.param.d_min,
+            "mf_domain_eligible": data["phi"] > self.param.d_min,
             "solver": {"qp_fixed_row_lower_residual": np.column_stack((guard, mf + 1))},
         }
         self.optimizer._extend_constraint_diagnostics(diagnostics, self.z, data)
         self.optimizer._record_constraint_log(diagnostics)
         row = self.optimizer.get_constraint_log_rows()[0]
         self.assertEqual(set(row), set(self.optimizer.get_constraint_log_fields()))
+        self.assertEqual(row["d_min"], self.param.d_min)
+        self.assertTrue(row["phi_gt_d_min"])
         self.assertEqual(row["mf_probability_sum_nominal"], data["probability_sum"][1])
         self.assertEqual(row["mf_icdf_residual_nominal"], data["residual"][1])
         self.assertIsNone(row["mf_icdf_residual_frozen"])

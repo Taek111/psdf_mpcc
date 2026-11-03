@@ -1,39 +1,34 @@
-# Maze benchmark: 4 methods x 5 trials, at most 60 simulation seconds per trial.
+# Maze benchmark: 10 trials per enabled method, at most 80 simulation seconds.
 # Run from the repository root; choose a fresh --results-dir for every batch:
 # python test_nmpc.py -c config/config_benchmark.yaml --results-dir benchmark_runs/<new_run>
-# CC-MF uses the angular command-change weight selected on matched maze trials.
-trials: 5
+# Common controller defaults are defined in control/mpcc_optimizer.py from CC-MF tuning.
+# Optional common overrides belong in 'mpcc'; method blocks are for method-specific settings.
+# This benchmark uses those defaults without YAML parameter overrides.
+trials: 10
 
-# Trial seeds 0-4 are shared across methods. This perturbs the true initial pose.
+# Trial seeds 0-9 are shared across methods. This perturbs the true initial pose.
 start_perturbation:
   enabled: true
   seed: 0
   position_std: 0.02
   heading_std_deg: 2.8647889756541165  # 0.05 rad
   max_sigma: 3.0
-  min_clearance: 0.01
+  min_clearance: 0.001
   max_attempts: 1000
 
 localization_error:
   enabled: false
 
 defaults:
-  simulation_time: 60.0
+  simulation_time: 80.0
   generate_animation: true
   generate_plots: false
 
 trial_failure_criteria:
   enabled: true
-  movement_window_sec: 20.0
+  movement_window_sec: 10.0
   movement_threshold: 0.03
   max_consecutive_solver_failures: 20
-
-# cc_mf:
-#   r_delta_omega: 0.03
-# cc_sf:
-#   debug_mode: false
-# cc_ecs:
-#   debug_mode: false
 
 test_configs:
   - maze_type: maze

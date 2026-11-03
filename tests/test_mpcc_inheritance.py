@@ -16,10 +16,15 @@ from unittest.mock import patch
 import casadi as ca
 import numpy as np
 
-from control.cc_ecs_optimizer import CCECSOptimizer, CCECSOptimizerParam
+from control.cc_ecs_optimizer import (
+    CCECSOptimizer, CCECSOptimizerParam, PROCESS_NOISE_FIELDS,
+)
 from control.cc_mf_optimizer import CCMFOptimizer, CCMFOptimizerParam
 from control.cc_sf_optimizer import CCSFOptimizer, CCSFOptimizerParam
-from control.mpcc_optimizer import MPCCOptimizer, MPCCOptimizerParam
+from control.mpcc_optimizer import (
+    CCMPCCOptimizerParam, MPCCOptimizer, MPCCOptimizerParam,
+)
+from models.dd_dynamics import DifferentialDriveDynamics
 from models.geometry_utils import RectangleRegion
 from sim.simulation_mpc import simulation_mpc
 from utils.spline_path import build_cubic_spline_path_data
@@ -30,6 +35,7 @@ MPCC_TYPES = (
     (CCMFOptimizer, CCMFOptimizerParam),
     (CCSFOptimizer, CCSFOptimizerParam),
 )
+CC_PARAM_TYPES = (CCSFOptimizerParam, CCMFOptimizerParam, CCECSOptimizerParam)
 
 
 class MPCCInheritanceTest(unittest.TestCase):
@@ -45,15 +51,16 @@ class MPCCInheritanceTest(unittest.TestCase):
         self.assertFalse(issubclass(CCMFOptimizer, CCSFOptimizer))
         self.assertTrue(issubclass(CCECSOptimizer, CCSFOptimizer))
         self.assertIsNot(CCMFOptimizerParam, CCSFOptimizerParam)
-        for param_type in (CCSFOptimizerParam, CCECSOptimizerParam, CCMFOptimizerParam):
-            self.assertEqual(param_type.__bases__, (MPCCOptimizerParam,))
+        self.assertEqual(CCMPCCOptimizerParam.__bases__, (MPCCOptimizerParam,))
+        for param_type in CC_PARAM_TYPES:
+            self.assertEqual(param_type.__bases__, (CCMPCCOptimizerParam,))
         self.assertIs(CCSFOptimizer._build_mpcc_cost, MPCCOptimizer._build_mpcc_cost)
         self.assertIs(CCMFOptimizer._build_mpcc_cost, MPCCOptimizer._build_mpcc_cost)
 
     def test_common_noise_defaults_match_current_mf_tuning_but_ecs_stays_noise_free(self):
         expected = {
-            "alpha_f": 0.0012, "alpha_v": 0.00024, "alpha_kappa": 0.0003,
-            "beta_v": 0.012, "beta_kappa": 0.0048, "beta_omega": 0.0048,
+            "alpha_f": 0.0016, "alpha_v": 0.00032, "alpha_kappa": 0.0001,
+            "beta_v": 0.016, "beta_kappa": 0.0064, "beta_omega": 0.0032,
         }
         for param_type in (CCMFOptimizerParam, CCSFOptimizerParam):
             with self.subTest(method=param_type.__name__):
@@ -65,11 +72,35 @@ class MPCCInheritanceTest(unittest.TestCase):
         ecs = CCECSOptimizerParam()
         for name in expected:
             self.assertEqual(getattr(ecs, name), 0.0, msg=name)
-        self.assertEqual(MPCCOptimizerParam().integrator_type, "ERK")
+        self.assertEqual(MPCCOptimizerParam().integrator_type, "DISCRETE")
+
+    def test_all_shared_defaults_match_the_central_parameter_classes(self):
+        tracking = MPCCOptimizerParam()
+        common_cc = CCMPCCOptimizerParam()
+        for param_type in CC_PARAM_TYPES:
+            param = param_type()
+            for name, value in vars(tracking).items():
+                with self.subTest(controller=param_type.__name__, common=name):
+                    np.testing.assert_equal(getattr(param, name), value)
+            for name, value in vars(common_cc).items():
+                if param_type is CCECSOptimizerParam and name in PROCESS_NOISE_FIELDS:
+                    value = 0.0
+                with self.subTest(controller=param_type.__name__, cc_common=name):
+                    np.testing.assert_equal(getattr(param, name), value)
+        self.assertEqual(tracking.a_max, 0.3)
+        self.assertEqual(tracking.d_min, 0.0001)
+        self.assertEqual(tracking.r_delta_omega, 0.1)
+        self.assertEqual(common_cc.chance_epsilon, 0.1)
+        self.assertEqual(common_cc.robust_horizon, 10)
+        self.assertEqual(common_cc.covariance_proximal_weight, 0.01)
+        self.assertFalse(common_cc.enable_backup_solver)
+        for name in ("chance_epsilon", "sigma_f0", "alpha_kappa",
+                     "covariance_proximal_weight"):
+            self.assertFalse(hasattr(tracking, name), msg=name)
 
     def test_param_initializers_inherit_shared_defaults_and_keep_arrays_independent(self):
         params = [param_type() for _, param_type in MPCC_TYPES]
-        params.append(CCSFOptimizerParam())
+        params.append(CCECSOptimizerParam())
         for param in params:
             self.assertEqual((param.horizon, param.tf), (20, 2.0))
             np.testing.assert_array_equal(param.mat_Qe, np.diag([1.0, 10.0]))
@@ -84,7 +115,7 @@ class MPCCInheritanceTest(unittest.TestCase):
             for field in ("use_soft_constraint", "slack_weight", "detection_frequency"):
                 self.assertEqual(getattr(param, field), getattr(params[0], field), msg=field)
         self.assertFalse(hasattr(params[1], "use_risk_margin"))
-        self.assertFalse(hasattr(params[2], "enable_backup_solver"))
+        self.assertFalse(params[2].enable_backup_solver)
         self.assertFalse(hasattr(params[2], "mf_active_terminal"))
 
     def test_cc_initializers_inherit_changed_shared_defaults(self):
@@ -94,6 +125,10 @@ class MPCCInheritanceTest(unittest.TestCase):
             original_init(param)
             param.q_s = 3.25
             param.qp_solver_iter_max = 71
+            param.r_delta_omega = 0.27
+            param.a_max = 0.17
+            param.alpha_max = 2.75
+            param.d_min = 0.003
 
         with patch.object(MPCCOptimizerParam, "__init__", tuned_defaults):
             for param_type in (CCSFOptimizerParam, CCECSOptimizerParam, CCMFOptimizerParam):
@@ -101,7 +136,76 @@ class MPCCInheritanceTest(unittest.TestCase):
                     param = param_type()
                     self.assertEqual(param.q_s, 3.25)
                     self.assertEqual(param.qp_solver_iter_max, 71)
+                    self.assertEqual(param.r_delta_omega, 0.27)
+                    self.assertEqual(param.a_max, 0.17)
+                    self.assertEqual(param.alpha_max, 2.75)
+                    self.assertEqual(param.d_min, 0.003)
                     self.assertEqual(param.integrator_type, "DISCRETE")
+
+    def test_cc_initializers_inherit_changed_covariance_defaults(self):
+        original_init = CCMPCCOptimizerParam.__init__
+
+        def tuned_defaults(param):
+            original_init(param)
+            param.chance_epsilon = 0.07
+            param.sigma_psi0 = 0.002
+            param.robust_horizon = 7
+            param.covariance_proximal_weight = 0.04
+            param.beta_omega = 0.0021
+            param.enable_backup_solver = True
+
+        with patch.object(CCMPCCOptimizerParam, "__init__", tuned_defaults):
+            for param_type in CC_PARAM_TYPES:
+                with self.subTest(controller=param_type.__name__):
+                    param = param_type()
+                    self.assertEqual(param.chance_epsilon, 0.07)
+                    self.assertEqual(param.sigma_psi0, 0.002)
+                    self.assertEqual(param.robust_horizon, 7)
+                    self.assertEqual(param.covariance_proximal_weight, 0.04)
+                    self.assertTrue(param.enable_backup_solver)
+                    self.assertEqual(
+                        param.beta_omega,
+                        0.0 if param_type is CCECSOptimizerParam else 0.0021,
+                    )
+
+    def test_sf_default_gamma_tracks_the_current_common_epsilon(self):
+        from statistics import NormalDist
+
+        optimizer = self.make_optimizer(CCSFOptimizer, CCSFOptimizerParam)
+        self.assertIsNone(optimizer.param.chance_gamma)
+        for epsilon in (0.1, 0.07, 0.2):
+            optimizer.param.chance_epsilon = epsilon
+            self.assertAlmostEqual(
+                optimizer._get_chance_gamma(optimizer.param),
+                NormalDist().inv_cdf(1.0 - epsilon),
+            )
+        optimizer.param.chance_gamma = 2.5
+        self.assertEqual(optimizer._get_chance_gamma(optimizer.param), 2.5)
+
+    def test_sf_setup_respects_the_shared_backup_solver_switch(self):
+        system = SimpleNamespace(
+            _state=SimpleNamespace(_x=np.zeros(3), _u=np.zeros(2)),
+            _dynamics=DifferentialDriveDynamics,
+        )
+        for enabled in (False, True):
+            with self.subTest(backup=enabled):
+                optimizer = self.make_optimizer(CCSFOptimizer, CCSFOptimizerParam)
+                param = optimizer.param
+                param.horizon = param.robust_horizon = 3
+                param.tf = 0.3
+                param.use_obstacle_constraint = False
+                param.enable_backup_solver = enabled
+                with (
+                    patch.object(
+                        optimizer, "create_solver", side_effect=lambda **_: object(),
+                    ) as create,
+                    patch.object(optimizer, "add_warm_start") as warm_start,
+                    redirect_stdout(io.StringIO()),
+                ):
+                    optimizer.setup(param, system, None, [])
+                self.assertEqual(create.call_count, 2 if enabled else 1)
+                self.assertEqual(warm_start.call_count, create.call_count)
+                self.assertEqual(optimizer.backup_solver is not None, enabled)
 
     def test_removed_sf_window_keys_are_ignored_by_config_loader(self):
         param = CCSFOptimizerParam()
@@ -121,10 +225,16 @@ class MPCCInheritanceTest(unittest.TestCase):
         controls = np.array([0.35, -0.25, 0.3])
         path = np.array([0.8, -0.1, 0.0, 2.0, 0.5])
         reference_derivatives = None
-        for optimizer_type, param_type in MPCC_TYPES:
+        controllers = (*MPCC_TYPES, (CCECSOptimizer, CCECSOptimizerParam))
+        for optimizer_type, param_type in controllers:
             with self.subTest(method=optimizer_type.__name__):
                 optimizer = self.make_optimizer(optimizer_type, param_type)
                 param = optimizer.param
+                # Compare only tracking costs, without either augmentation.
+                param.r_delta_v = param.r_delta_omega = 0.0
+                param.a_max = param.alpha_max = None
+                if hasattr(param, "covariance_proximal_weight"):
+                    param.covariance_proximal_weight = 0.0
                 model = optimizer.create_model(param)
                 values = np.zeros(int(model.p.numel()))
                 values[:5] = path
@@ -144,7 +254,7 @@ class MPCCInheritanceTest(unittest.TestCase):
                 contour = (state[0] - path[0]) * tangent_length
                 lag = (path[1] + 0.2 * tangent_length - state[1]) * tangent_length
                 tracking = contour**2 + 10.0 * lag**2 + 2.0 * 0.2**2
-                stage = tracking + 0.35**2 + 0.01 * 0.25**2 + 0.625 * 0.3**2 - 0.3
+                stage = tracking + 0.35**2 + 0.01 * 0.25**2 + 0.5 * 0.3**2 - 0.3
                 np.testing.assert_allclose(np.asarray(actual).ravel(), [stage, 5.0 * tracking])
                 dx, du = np.asarray(dx), np.asarray(du)
                 if reference_derivatives is None:
@@ -249,6 +359,8 @@ class MPCCSolverTimingTest(unittest.TestCase):
         optimizer.param = MPCCOptimizerParam()
         optimizer.param.horizon = optimizer.N = 2
         optimizer.param.tf = 0.2
+        optimizer.param.r_delta_v = optimizer.param.r_delta_omega = 0.0
+        optimizer.param.a_max = optimizer.param.alpha_max = None
         optimizer.state = SimpleNamespace(_x=np.zeros(3), _u=np.zeros(2))
         optimizer.create_model(optimizer.param)
         clock = SimpleNamespace(value=0.0)

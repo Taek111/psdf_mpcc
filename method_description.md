@@ -629,7 +629,7 @@ At each control cycle, the controller performs the following operations.
 
 1. Receive the current pose and covariance. Transform the covariance to the body frame and apply $\mathcal C$ to initialize $\xi_0$. Prepare nominal pose/input trajectories and shift the previous progress solution. Regenerate $\bar\xi_i$ from this current initial covariance with $F_{\xi,i}$, including the frozen tail; do not shift the previous covariance trajectory.
 2. Set $s_i^{\mathrm{ref}}=\bar s_i$ for $i=0,\ldots,N$ and evaluate the global spline outside the solver to refresh every component of $\pi_i$. Use the extended PSDF computation at all stages to assemble the PSDF-based safety guard data together with the MF probabilities, analytic derivatives, and affine coefficients at the regenerated nominal state.
-3. Transfer the PSDF-based safety guard data, MF coefficients, path parameters, and fixed robust-horizon schedule to the solver. In the implemented CC-MF family, stage 0 safety rows are inactive; its exact signed PSDF instead triggers `safe_stop_stage0` before solving when below `d_col`. Future stages $1,\ldots,N$ retain the hard guard. The soft MF row uses its configured stage window, terminal switch, and strict nominal domain gate $\bar\phi_i>d_{\mathrm{col}}$ (by default stages $1,\ldots,N-1$ and terminal $N$). Linearize the dynamics and perform one SQP-RTI preparation and feedback step, holding the complete anchor tuples and nominal geometry fixed.
+3. Transfer the PSDF-based safety guard data, MF coefficients, path parameters, and fixed robust-horizon schedule to the solver. In the implemented CC-MF family, stage 0 safety rows are inactive; its exact signed PSDF instead triggers `safe_stop_stage0` before solving when below `d_col`. Future stages $1,\ldots,N$ retain the hard guard. The soft MF row uses its configured stage window, terminal switch, and strict nominal domain gate $\bar\phi_i>d_{\min}$ (by default stages $1,\ldots,N-1$ and terminal $N$). Linearize the dynamics and perform one SQP-RTI preparation and feedback step, holding the complete anchor tuples and nominal geometry fixed.
 4. Apply the first physical input. Reconstruct returned covariances from their log-Cholesky states and monitor nonlinear dynamics defects separately. Log MF slack activation and magnitude alongside unrelaxed MF residuals and PSDF values. Reinitialize and regenerate the nominal covariance at the next cycle.
 
 Offline validation should compare analytic feature and MF derivatives with finite differences and automatic differentiation. These checks are separate from the online computation; the document revisions do not establish that code-level validation has been completed.
@@ -714,17 +714,48 @@ This document retains its independent detailed structure, including valid Sectio
 [^robust-horizon]: E. Bradford and L. Imsland, "Economic Stochastic Model Predictive Control Using the Unscented Kalman Filter," *IFAC-PapersOnLine*, vol. 51, no. 18, pp. 417–422, 2018. DOI: 10.1016/j.ifacol.2018.09.336. Section 3.2 and Algorithm 1, Eq. (10e), hold the covariance square root constant beyond the robust horizon. Eq. (15) states the covariance freeze for untransformed variables. The present method adapts this strategy to its reduced body-fixed covariance without adopting the paper's UKF propagation or state-variable log transformation.
 
 
-### Controller parameter inheritance (2026-10-28)
+### Controller parameter inheritance (2026-11-03)
 
-`MPCCOptimizerParam.__init__()` owns the common tracking, cost, input-bound and solver defaults. `CCSFOptimizerParam`, `CCECSOptimizerParam`, and `CCMFOptimizerParam` each directly inherit it, call `super().__init__()`, then set method-specific overrides and safety/covariance fields in their own initializer. The former `initialize_mpcc_tracking_params`, `initialize_mpcc_solver_params`, and `initialize_cc_noise_params` mutation helpers have been removed. CC covariance models override the base integrator with `DISCRETE`; ECS keeps its process-noise coefficients at zero. Each simulation applies only its own YAML block (`mpcc`, `cc_sf`, `cc_ecs`, or `cc_mf`).
+`control/mpcc_optimizer.py` owns the common defaults, using the selected CC-MF
+tuning. `MPCCOptimizerParam` defines tracking costs, input bounds, distance
+threshold, solver settings and the shared RK4 `DISCRETE` integrator.
+`CCMPCCOptimizerParam` extends it with uncertainty parameters used by the CC
+controllers. `CCSFOptimizerParam`, `CCMFOptimizerParam` and
+`CCECSOptimizerParam` inherit this CC base and declare only method-specific
+settings. Deterministic MPCC has no covariance state or uncertainty parameters.
 
-### Shared geometric threshold (2026-10-28)
+All four use `r_delta_v=0.05`, `r_delta_omega=0.1`, `a_max=0.3`,
+`alpha_max=5.0` and `d_min=0.0001`. All CC variants use
+`chance_epsilon=0.1`, `robust_horizon=10`, initial standard deviations
+`[0.0002, 0.00025, 0.00025]`, `covariance_proximal_weight=0.01` and
+`enable_backup_solver=False`. SF derives its normal quantile from the current
+epsilon unless `chance_gamma` is explicitly supplied. SF/MF share the selected
+process noise coefficients, including `alpha_kappa=0.0001` and
+`beta_omega=0.0032`. `covariance_growth_scale` is an initialization scale;
+runtime propagation reads the resolved coefficients directly.
 
-The CC-MF implementation uses `d_col` for the strict nominal MF activation gate ($\bar\phi_i>d_{\mathrm{col}}$), the hard affine PSDF guard clearance, and the stage-0 pre-solve stop criterion ($\phi(x_0)<d_{\mathrm{col}}$). Stage 0 OCP safety rows remain inactive. The separate `d_mf_mask` parameter has been removed. Defaults are `d_col = d_min = 0.0002 m` (0.2 mm); `d_min` remains the chance-model distance threshold. At equality, the MF row is inactive and the stage-0 check permits solving. Earlier benchmark records retain their original thresholds.
+ECS explicitly overrides all process noise coefficients to zero, as required
+by its formulation. Its epsilon is a **whole-horizon** budget, divided by N;
+SF/MF epsilon is a **per-node** budget. Matching the scalar default therefore
+does not equate these probabilistic guarantees. MF retains its additional
+`d_col=0.00005` hard guard and quantile slack settings.
+
+The simulation first applies shared YAML settings from `mpcc`, then the
+selected controller's block. CC-only shared keys are ignored for deterministic
+MPCC; shared process-noise overrides do not change ECS's required Q=0.
+Controller-specific keys belong only in their own block. Legacy common keys in
+a controller block remain accepted with a warning to move them to `mpcc`;
+this preserves old experiment configurations while exposing unequal tuning.
+The benchmark configuration contains no parameter overrides. Historical result
+snapshots retain the parameters with which they were collected.
+
+### Separate geometric and MF thresholds (2026-10-30)
+
+The CC-MF implementation uses `d_min` for both the chance-model distance threshold and the strict nominal MF activation gate ($\bar\phi_i>d_{\min}$). The hard affine PSDF guard clearance and stage-0 pre-solve stop criterion ($\phi(x_0)<d_{\mathrm{col}}$) use `d_col`. Stage 0 OCP safety rows remain inactive. There is no separate `d_mf_mask` parameter. Defaults are `d_min = 0.0001 m` (0.1 mm) and `d_col = 0.00005 m` (0.05 mm). At $\bar\phi_i=d_{\min}$ the MF row is inactive; future stages in $d_{\mathrm{col}}\le\bar\phi_i\le d_{\min}$ retain only the hard guard. The stage-0 check permits solving at $\phi(x_0)=d_{\mathrm{col}}$. Constraint logs record both thresholds and their separate strict comparisons. Earlier benchmark records retain their original thresholds.
 
 ### Optional input-rate constraints (2026-10-28)
 
-`MPCCOptimizerParam`, `CCSFOptimizerParam`, `CCMFOptimizerParam`, and `CCECSOptimizerParam` expose `a_max` [m/s²] and `alpha_max` [rad/s²]. All four inherit the shared deadlock tuning: `a_max=0.5`, `alpha_max=5.0`, `vmin=-1.0`, `vmax=1.0`, `v_s_target=1.0`, `omegamin=-1.0`, and `omegamax=1.0`. Setting either rate-limit parameter to `None` disables that axis's rate limit. A finite nonnegative value enables a symmetric hard bound; zero holds the corresponding input constant. Configure these before solver setup; changing them afterward requires `reset()` and setup again.
+`MPCCOptimizerParam`, `CCSFOptimizerParam`, `CCMFOptimizerParam`, and `CCECSOptimizerParam` expose `a_max` [m/s²] and `alpha_max` [rad/s²]. All four inherit the shared deadlock tuning: `a_max=0.3`, `alpha_max=5.0`, `vmin=-1.0`, `vmax=1.0`, `v_s_target=1.0`, `omegamin=-1.0`, and `omegamax=1.0`. Setting either rate-limit parameter to `None` disables that axis's rate limit. A finite nonnegative value enables a symmetric hard bound; zero holds the corresponding input constant. Configure these before solver setup; changing them afterward requires `reset()` and setup again.
 
 When either limit is enabled, append the deterministic input-memory state $r_i=[v_{i-1},\omega_{i-1}]^\top$ to the existing state. Initialize $r_0$ from the last input actually applied to the plant (`state._u[:2]`), and use $r_{i+1}=[v_i,\omega_i]^\top$. For every interval $i=0,\ldots,N-1$, enforce the configured rows
 
@@ -737,12 +768,130 @@ $$
 
 These are hard general linear acados constraints, independent of obstacle slacks. The physical input remains $[v,\omega]$; virtual progress speed $v_s$ has no added rate constraint. State dimension becomes 6 for MPCC and 10 for the CC variants. Covariance and MF calculations retain their existing four log-Cholesky coordinates and eight-state risk interface. With memory enabled, MPCC uses the equivalent four-stage RK4 discrete map to support the exact memory shift; CC models already use discrete dynamics.
 
-For example, set the following under the chosen controller's YAML key (`mpcc`, `cc_sf`, `cc_mf`, or `cc_ecs`), or assign the same fields on its Parameter instance:
+For example, configure the shared YAML block once for all four controllers, or
+assign the same fields on their Parameter instances:
 
 ```yaml
-cc_mf:
+mpcc:
   a_max: 0.2       # m/s²; example tuning value
   alpha_max: 3.0   # rad/s²; example tuning value
 ```
 
 At $\Delta t=0.1$ s these values allow changes of at most 0.02 m/s and 0.3 rad/s per interval. They constrain changes between held velocity commands, rather than introducing continuous acceleration dynamics. Existing emergency zero-input safe stops remain immediate and bypass these rate limits; the next solve initializes memory from the resulting actual input.
+
+### Optional RTI covariance regularization experiments (2026-10-30)
+
+The CC-SF, CC-MF and CC-ECS covariance proximal costs share the same implementation and
+default weight of 0.01. Setting the weight to zero disables the cost and its extra
+stage parameters. This regularization does not guarantee chance feasibility.
+It reuses the nominal covariance regeneration in
+Section 5.2; it does not add a rollout of the candidate solution, another GPU
+risk evaluation, or another SQP iteration within the control cycle.
+
+For a scalar noise-dominated channel, write
+$\sigma_+(u)=\sqrt{P_b+qu^2}$ and linearize $\log\sigma_+$ at $\bar u$.
+At $u=-\bar u$, the ratio of the reconstructed tangent prediction to the exact
+standard deviation is
+
+$$
+\frac{\sigma_{\mathrm{RTI}}(-\bar u)}{\sigma_+(-\bar u)}
+=\exp\!\left(-2\frac{q\bar u^2}{P_b+q\bar u^2}\right).
+$$
+
+It approaches $e^{-2}$ when the input-dependent noise dominates. The ordinary
+input-change penalty for this reversal, $4r\bar u^2$, vanishes as the amplitude
+decreases. This scalar calculation explains the mechanism; it is not an exact
+formula for the coupled lateral–heading block at every stage.
+
+The shared `mpcc.covariance_proximal_weight` setting for CC controllers sets
+$\rho\ge0$ (default 0.01). Positive values
+add the following cost at stages $1,\ldots,N_R$, with the normal acados stage-cost
+scaling (and a terminal contribution only if $N_R=N$):
+
+$$
+\ell_{\mathrm{prox},i}=\rho\left[
+\sum_{j=1}^{3}(\xi_{i,j}-\bar\xi_{i,j})^2+
+\left(\frac{\xi_{i,4}-\bar\xi_{i,4}}
+{\max(\sqrt{e^{2\bar\xi_{i,3}}+\bar\xi_{i,4}^2},10^{-6})}\right)^2
+\right].
+$$
+
+The cross factor has standard-deviation units, so it is normalized separately.
+The penalty vanishes with zero gradient at the nominal point, preserves the
+original covariance transition and CC constraint sensitivities, and adds a positive
+semidefinite cost Hessian. A log-coordinate change of $-2$ costs $4\rho$ before
+stage scaling regardless of input amplitude. Excessive weights can inhibit
+necessary changes; a small normalization denominator can worsen QP conditioning.
+The optional cost adds six stage parameters and no decision variables.
+
+The reproducible experiment entry point is `run_cc_mf_oscillation.py`.
+`analyze_cc_mf_oscillation.py` reconstructs exact covariance trajectories **after**
+the runs, using the recorded inputs, saved parameters, and source snapshot.
+Goal attainment, oscillation metrics, covariance defects, signed footprint
+clearance, and complete controller latency must be assessed separately.
+
+#### Recorded oscillation experiment
+
+The 2026-10-30 comparison used the current 0.150 × 0.125 m rectangle, DD,
+maze, A*, matched realized start poses for seeds 0–9, 0.1 s control intervals,
+60 s trial limits, and a 20 s / 0.03 m stagnation check. Localization noise,
+animation, and online debug risk evaluations were disabled. It is not a direct
+replication of the older 0.120 m-wide baseline. The default controller settings
+are unchanged by these optional experiments.
+
+| Setting | Trials | Reached goal | Stagnation | Stage-0 stop | Sampled penetration trials |
+|---|---:|---:|---:|---:|---:|
+| Current baseline, `r_delta_omega=0.03` | 10 | 2 | 5 | 3 | 1 |
+| Archived MF covariance sensitivity 0 | 10 | 0 | 3 | 7 | 6 |
+| Archived combined candidate | 10 | 5 | 0 | 5 | 4 |
+
+Covariance-sensitivity damping and input trust boxes have also been removed
+from the current controller, together with their dedicated configurations and
+tests. Their original experiment snapshots remain available for reproduction.
+
+The archived combined candidate used proximal weight 0.003 and a 1.5 mm
+future-guard buffer. The buffer option, implementation and tests have since
+been removed. Its original source snapshots and run manifests are retained as
+historical evidence. The current candidate configuration contains only the
+proximal change and has not been rerun; the 5/10 result does not validate it.
+
+Five additional three-seed pilots bring the total to 45 runs. The combined
+candidate reduced the maximum consecutive simultaneous sign reversals from
+189 to 1 adjacent pairs, counting all nonzero amplitudes. Successful-cycle
+stage-1 heading standard-deviation exact/predicted p95 fell from 34.929 to
+1.385. These observations support suppression of this oscillation mechanism,
+**not a complete or safer navigation solution**: sampled penetration occurred
+in four candidate trials, with minimum signed clearance −0.841 mm. Goal arrival
+is the existing success metric; penetration is audited separately.
+
+Full-controller p95 excluding the first initialization cycle of each trial was
+54.73 ms (baseline) and 56.58 ms (candidate). Candidate control exceeded 100 ms
+in 7 of 3,537 such cycles, so these measurements do not establish a hard
+deadline guarantee. The candidate retains the original single SQP-RTI solve
+and nominal covariance regeneration. All candidate-solution covariance replay
+used for these statistics was offline.
+
+See [all configurations and metrics](benchmark_runs/cc_mf_oscillation_20261030_comparison/comparison.csv),
+[original candidate manifest](benchmark_runs/cc_mf_oscillation_20261030_candidate/results/run_manifest.yaml), and
+[input and covariance figure](benchmark_runs/cc_mf_oscillation_20261030_comparison/seed1_controls.png).
+The proximal-only candidate configuration is retained for further
+investigation, not enabled as a production default.
+
+Follow-up offline replay of the five archived candidate stopping events found
+that stage-1 MF was active in every case, with negligible logged slack. At the
+reconstructed QP solutions the affine MF residuals remained positive
+(0.491–1.984), while evaluating the nonlinear probability sum using the **same
+frozen nominal features** gave 0.585–0.780, above the budget 0.2. In seed 9,
+the feature that became most dangerous was already included: its nominal
+probability was $5.67\times10^{-15}$ and rose to 0.746 at the QP solution.
+The aggregate nominal gradient gave this initially negligible-risk feature
+very little weight. Replacing the returned covariance with exact one-step
+propagation still gave a frozen-feature sum of 0.785. Thus covariance
+regularization alone does not address this finite-step MF linearization error.
+
+These are offline model diagnostics, not measurements of physical collision
+probability. The stage-1 poses are reconstructed assuming a unit RTI step and
+negligible QP dynamics residual; the nominal probability sums match the logs
+within $2.86\times10^{-7}$. See the
+[MF replay script](benchmark_runs/cc_mf_oscillation_20261030_comparison/replay_failure_mf.py)
+and [replay values and assumptions](benchmark_runs/cc_mf_oscillation_20261030_comparison/failure_mf_replay.json).

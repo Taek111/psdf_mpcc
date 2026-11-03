@@ -78,6 +78,7 @@ def snapshot_sources(destination):
     sources.extend(ROOT / name for name in (
         "run_deadlock_width_benchmark.py", "analyze_deadlock_width_benchmark.py",
         "recover_width_benchmark_animations.py",
+        "run_width_sweep.py", "analyze_width_sweep.py",
     ) if (ROOT / name).is_file())
     for directory in ("control", "models", "planning", "sim", "utils", "config"):
         sources.extend(path for path in (ROOT / directory).rglob("*")
@@ -232,11 +233,12 @@ def run_benchmark(output, trials, *, resume=False, generate_animation=False,
         write_json(output / "experiment.json", manifest)
     recorded = {(float(row["width_m"]), row["method"], int(row["seed"])) for row in all_trials}
     widths = tuple(manifest["widths_m"])
-    total = len(widths) * len(METHODS) * trials
+    methods = tuple(manifest.get("methods", METHODS))
+    total = len(widths) * len(methods) * trials
     for width in widths:
         # Rotate controller order between seeds, keeping execution sequential.
         for seed in range(trials):
-            order = METHODS[seed % len(METHODS):] + METHODS[:seed % len(METHODS)]
+            order = methods[seed % len(methods):] + methods[:seed % len(methods)]
             for method in order:
                 if (width, method, seed) in recorded:
                     continue
@@ -257,13 +259,15 @@ def run_benchmark(output, trials, *, resume=False, generate_animation=False,
                         "max_attempts": 1000},
                     "localization_error": {"enabled": False},
                     "trial_failure_criteria": {"enabled": True,
-                        "movement_window_sec": 4.0, "movement_threshold": 0.03,
+                        "movement_window_sec": 10.0, "movement_threshold": 0.03,
                         "max_consecutive_solver_failures": 20},
                     "defaults": {"simulation_time": 60.0, "generate_animation": generate_animation,
                                  "generate_plots": False},
                     "output_root_dir": str(run_dir),
                     "output_suffix": f"width{round(width * 1000)}mm_seed{seed}",
                 }
+                config["defaults"]["simulation_time"] = manifest.get("simulation_limit_s", 60.0)
+                config["trial_failure_criteria"].update(manifest.get("failure_criteria", {}))
                 if method != "mpcc" and not manifest.get("current_defaults", False):
                     config[method] = {"sigma_f0": 0.0002, "sigma_l0": 0.0,
                                       "sigma_psi0": 0.0}
@@ -288,7 +292,8 @@ def run_benchmark(output, trials, *, resume=False, generate_animation=False,
                     with capture_run_log(log):
                         try:
                             simulation.mpc_test("maze", "rectangle", method,
-                                "differential_drive", "astar", 60.0, config)
+                                "differential_drive", "astar",
+                                config["defaults"]["simulation_time"], config)
                             outcome = dict(simulation.last_run_outcome or {})
                             if generate_animation:
                                 def animation_path(name, method_name=None):

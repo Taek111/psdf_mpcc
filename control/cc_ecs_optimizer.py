@@ -19,7 +19,7 @@ from scipy.stats import chi2
 
 from control.cc_covariance import covariance_from_log_cholesky, resolve_robust_horizon
 from control.cc_sf_optimizer import AcadosSolution, CCSFOptimizer
-from control.mpcc_optimizer import MPCCOptimizerParam
+from control.mpcc_optimizer import CCMPCCOptimizerParam
 from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
 from models.geometry_utils import polygon_to_edges
 from utils.acados_diagnostics import report_solver_failure
@@ -31,39 +31,18 @@ PROCESS_NOISE_FIELDS = (
 )
 
 
-class CCECSOptimizerParam(MPCCOptimizerParam):
+class CCECSOptimizerParam(CCMPCCOptimizerParam):
     """MPCC tracking with bounded input rates and noise-free covariance."""
 
     def __init__(self):
         super().__init__()
 
-        self.chance_epsilon = 0.20  # Entire future horizon, not per obstacle/node.
-        self.robust_horizon = None  # Same min(10, horizon) default as CC-MF.
-        self.initial_pose_covariance = None
-        # Initial body-frame covariance [forward f, lateral l, heading psi]:
-        # Sigma_0 = diag([sigma_f0**2, sigma_l0**2, sigma_psi0**2]) when
-        # initial_pose_covariance is None. Std units are [m, m, rad].
-        self.sigma_f0 = 0.0002
-        self.sigma_l0 = 0.00025
-        self.sigma_psi0 = 0.00025
-
-        # Per-step process covariance: Q_k = dt * diag([q_f, q_l, q_psi]),
-        # dt = tf / horizon, v = linear speed, omega = angular speed.
-        # q_f   = q_f0   + alpha_f * v**2
-        # q_l   = q_l0   + alpha_v * v**2 + alpha_kappa * abs(v * omega)
-        # q_psi = q_psi0 + beta_v * v**2 + beta_kappa * abs(v * omega)
-        #               + beta_omega * omega**2
-        # q_*0 are baseline variance rates [m**2/s, m**2/s, rad**2/s].
-        # The *_kappa terms use physical turning, not spline curvature.
-        # ECS requires every coefficient below to be zero, so Q_k = 0.
+        # ECS uses the inherited chance_epsilon as an entire-horizon budget.
+        # Its method-specific covariance model requires Q_k = 0.
         # Initial uncertainty still propagates through A_k Sigma_k A_k.T,
         # retaining only the forward and lateral/heading covariance blocks.
         for name in PROCESS_NOISE_FIELDS:
             setattr(self, name, 0.0)
-
-        self.integrator_type = "DISCRETE"
-        self.enable_backup_solver = False
-        self.augmented_psdf_device = "cuda"
         self.debug_mode = False
 
 
@@ -91,7 +70,8 @@ class CCECSOptimizer(CCSFOptimizer):
     """Reuse CC-SF MPCC dynamics/progress/warm start, specialize all safety paths.
 
     The parameter blocks retain the CC-SF plumbing: path(6), local gradients
-    (3*K), ECS beta(1), affine PSDF planes(4*K), covariance propagation flag(1).
+    (3*K), ECS beta(1), affine PSDF planes(4*K), covariance propagation flag(1),
+    and the optional shared covariance proximal parameters(6).
     Only nominal geometry is frozen. L(xi) stays symbolic in every hard row.
     """
 
@@ -152,6 +132,7 @@ class CCECSOptimizer(CCSFOptimizer):
         self._last_solve_mode = "uninitialized"
         self._last_risk_margins = self._last_local_covariances = None
         self._last_risk_tensors = self._last_risk_clearances = None
+        self.covariance_proximal_param_slice = slice(0, 0)
         self.N = self.nx = self.nu = None
         self._clear_ecs_data()
         self.obstacle_capacity = 1
@@ -184,6 +165,7 @@ class CCECSOptimizer(CCSFOptimizer):
 
     @classmethod
     def _validate_param(cls, param):
+        cls._get_covariance_proximal_weight(param)
         cls._risk_allocation(param)
         if not np.isfinite(param.tf) or param.tf <= 0:
             raise ValueError("tf must be finite and positive")
@@ -362,7 +344,7 @@ class CCECSOptimizer(CCSFOptimizer):
             "epsilon_stage": stage_epsilon, "beta": beta,
         }
 
-    def _set_ecs_parameters(self, solver, stage_s_values, data):
+    def _set_ecs_parameters(self, solver, stage_s_values, data, nominal_covariances):
         count = data["distances"].shape[1]
         if count > self.obstacle_capacity:
             raise ValueError("CC-ECS constraint data exceeds solver obstacle capacity")
@@ -382,6 +364,7 @@ class CCECSOptimizer(CCSFOptimizer):
                 self._build_stage_path_parameter(stage_s_values[stage]),
                 gradients_local.ravel(), data["beta"] if active else 0.0,
                 psdf_stage=planes.ravel(), stage_idx=stage,
+                nominal_covariance=nominal_covariances[stage],
             ))
 
     def _prepare_and_solve(self, solver):
@@ -420,7 +403,9 @@ class CCECSOptimizer(CCSFOptimizer):
         stage_s = self._predict_stage_s_values(self._current_s0, s_lower, s_upper, solver)
         states = self._regenerate_covariance_guess(solver, stage_s)
         self._constraint_data = self._compute_constraint_data(states)
-        self._set_ecs_parameters(solver, stage_s, self._constraint_data)
+        self._set_ecs_parameters(
+            solver, stage_s, self._constraint_data, states[:, 4:8],
+        )
         started = time.perf_counter()
         try:
             status = solver.solve()

@@ -12,6 +12,7 @@ import torch
 from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 
 from control.analytic_psdf_casadi import AnalyticPSDFCasADi
+from models.dd_dynamics import symbolic_dd_step
 from models.geometry_utils import polygon_to_edges
 from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
 from utils.acados_diagnostics import report_solver_failure
@@ -26,10 +27,11 @@ from utils.spline_path import (
 
 
 class MPCCOptimizerParam:
+    """Common experiment defaults, using the selected CC-MF tuning."""
+
     def __init__(self):
         # Deterministic MPCC has no pose-covariance or process-noise model.
-        # CC subclasses define sigma_*0 (initial std) and q_*/alpha_*/beta_*
-        # (process-noise rates) in their own parameter initializers.
+        # The CC-only shared defaults live in CCMPCCOptimizerParam below.
         self.horizon = 20
         self.tf = 0.1 * self.horizon
         self.mat_Qe = np.diag([1.0, 10.0])  # [contour, lag]
@@ -38,7 +40,7 @@ class MPCCOptimizerParam:
         # r_delta_omega * (omega - omega_prev)^2, independent of hard rate limits.
         # Set either weight to zero to disable its command-change penalty.
         self.r_delta_v = 0.05
-        self.r_delta_omega = 0.05
+        self.r_delta_omega = 0.1
         self.q_s = 1.0
         self.terminal_weight = 5.0
         self.v_s_target = 1.0
@@ -60,19 +62,19 @@ class MPCCOptimizerParam:
         self.vmin, self.vmax = -1.0, 1.0
         self.omegamin, self.omegamax = -1.0, 1.0
         # Optional symmetric command-rate limits (m/s^2 and rad/s^2).
-        self.a_max = 0.5
+        self.a_max = 0.3
         self.alpha_max = 5.0
 
         self.qp_solver = "PARTIAL_CONDENSING_HPIPM"
         self.hessian_approx = "GAUSS_NEWTON"
-        self.integrator_type = "ERK"
+        self.integrator_type = "DISCRETE"
         self.nlp_solver_type = "SQP_RTI"
         self.qp_solver_iter_max = 50
         self.nlp_solver_max_iter = 50
         self.tol = 1e-4
 
         # Safety constraints (PSDF style)
-        self.d_min = 0.001
+        self.d_min = 0.0001
         self.use_obstacle_constraint = True
         self.use_soft_constraint = False
         self.slack_weight = 1e16
@@ -82,6 +84,54 @@ class MPCCOptimizerParam:
         self.detection_window_height = 4.0
         self.detection_safety_margin = 0.05
         self.detection_frequency = 10.0
+
+
+class CCMPCCOptimizerParam(MPCCOptimizerParam):
+    """Shared CC covariance/risk settings; subclasses add method-specific rows.
+
+    Defaults match the selected CC-MF experiment. ECS alone overrides the
+    process-noise coefficients with zero to retain its noise-free formulation.
+    Deterministic MPCC does not inherit these unused uncertainty parameters.
+    """
+
+    def __init__(self):
+        super().__init__()
+        # SF/MF use a node risk budget; ECS allocates this over the horizon.
+        self.chance_epsilon = 0.10
+        # None selects min(10, horizon); set to horizon for full propagation.
+        self.robust_horizon = 10
+        self.initial_pose_covariance = None  # Optional world-frame covariance.
+        # Body-frame initial standard deviations [m, m, rad].
+        self.sigma_f0 = 0.0002
+        self.sigma_l0 = 0.00025
+        self.sigma_psi0 = 0.00025
+
+        # Q_k = dt * diag([q_f, q_l, q_psi]), with dt = tf / horizon.
+        # q_f   = q_f0   + alpha_f * v**2
+        # q_l   = q_l0   + alpha_v * v**2 + alpha_kappa * abs(v * omega)
+        # q_psi = q_psi0 + beta_v * v**2 + beta_kappa * abs(v * omega)
+        #               + beta_omega * omega**2
+        # Baseline rates have units [m**2/s, m**2/s, rad**2/s]. Turning uses
+        # physical v * omega, not spline curvature. Propagation retains the
+        # forward and lateral/heading blocks of A_k Sigma_k A_k.T + Q_k.
+        self.q_f0 = 0.0
+        self.q_l0 = 0.0
+        self.q_psi0 = 0.0
+        # Initialization scale only: propagation reads the resolved coefficients.
+        self.covariance_growth_scale = 0.8
+        self.alpha_f = 0.002 * self.covariance_growth_scale
+        self.alpha_v = 0.0004 * self.covariance_growth_scale
+        self.alpha_kappa = 0.0001
+        self.beta_v = 0.02 * self.covariance_growth_scale
+        self.beta_kappa = 0.008 * self.covariance_growth_scale
+        self.beta_omega = 0.0032
+        self.risk_cov_jitter = 1e-9
+
+        # RTI regularization around regenerated nominal covariance factors.
+        # Zero disables both the cost and the six extra stage parameters.
+        self.covariance_proximal_weight = 0.01
+        self.enable_backup_solver = False
+        self.augmented_psdf_device = "cuda"
 
 
 class MPCCOptimizer(AcadosCodegenMixin):
@@ -257,6 +307,12 @@ class MPCCOptimizer(AcadosCodegenMixin):
         model.p = p_all
         model.f_expl_expr = f_expl
         model.f_impl_expr = xdot - f_expl
+        # Also provide the shared RK4 map when input memory is disabled.
+        # This keeps DISCRETE valid for every combination of rate/cost settings.
+        dt = float(param.tf) / float(param.horizon)
+        model.disc_dyn_expr = ca.vertcat(
+            symbolic_dd_step(x[:3], u[0], u[1], dt), x[3] + dt * u[2],
+        )
         model.cost_expr_ext_cost = cost_stage
         model.cost_expr_ext_cost_e = cost_terminal
         return self._augment_input_memory(model, param)

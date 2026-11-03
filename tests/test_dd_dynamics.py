@@ -149,6 +149,7 @@ class MPCIntegrationTest(unittest.TestCase):
             step = ca.Function("augmented_step", [model.x, model.u, model.p], [model.disc_dyn_expr])
             for _ in range(64):
                 state = np.r_[rng.uniform(-2.0, 2.0, 4), np.log([0.02, 0.03, 0.04]), -0.01]
+                state = optimizer._with_input_memory(state)
                 control = rng.uniform([-0.7, -1.2, 0.0], [0.7, 1.2, 0.7])
                 actual = np.asarray(step(state, control, optimizer.ocp.parameter_values)).reshape(-1)
                 expected = DifferentialDriveDynamics.forward_dynamics(state[:3], control, dt)

@@ -50,6 +50,10 @@ class _NominalSolver:
 class CCSFLogCholeskyTest(unittest.TestCase):
     def setUp(self):
         self.param = CCSFOptimizerParam()
+        # Isolate the covariance/risk rows from input memory and proximal cost.
+        self.param.a_max = self.param.alpha_max = None
+        self.param.r_delta_v = self.param.r_delta_omega = 0.0
+        self.param.covariance_proximal_weight = 0.0
         self.param.horizon = 3
         self.param.tf = 0.3
         self.param.robust_horizon = 1
@@ -187,7 +191,9 @@ class CCSFLogCholeskyTest(unittest.TestCase):
         terms = self.optimizer._extract_projected_variance_terms(gradients)
         margins = self.optimizer._compute_margin_from_risk_terms(states, terms, self.param)
         factor = np.array([[0.03, 0.0, 0.0], [0.0, 0.07, 0.0], [0.0, -0.04, 0.02]])
-        expected = self.param.chance_gamma * np.linalg.norm(gradients @ factor, axis=1)
+        expected = self.optimizer._get_chance_gamma(self.param) * np.linalg.norm(
+            gradients @ factor, axis=1,
+        )
         np.testing.assert_allclose(margins, expected, rtol=1e-14, atol=1e-16)
 
     def test_initial_margin_and_zero_gradient_have_finite_derivatives(self):
@@ -296,7 +302,9 @@ class CCSFLogCholeskyTest(unittest.TestCase):
         )
         stage_value, initial_value, jacobian = evaluate(state, parameters)
         factor = np.array([[0.03, 0.0, 0.0], [0.0, 0.07, 0.0], [0.0, -0.04, 0.02]])
-        margin = self.param.chance_gamma * np.linalg.norm(gradient @ factor)
+        margin = self.optimizer._get_chance_gamma(self.param) * np.linalg.norm(
+            gradient @ factor,
+        )
         self.assertGreater(margin, 0.0)
         self.assertAlmostEqual(float(stage_value), 0.8 - self.param.d_min - margin)
         self.assertAlmostEqual(float(initial_value), float(stage_value))

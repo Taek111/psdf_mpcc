@@ -1,0 +1,88 @@
+% Add to the manuscript preamble:
+% \usepackage{graphicx}
+% \usepackage{subcaption}
+%
+% From the repository/manuscript root:
+% \input{figures/paper_heatmaps/maze_width070mm_seed0/heatmaps_individual.tex}
+% If the assets are elsewhere, define \heatmapindividualdir before this input.
+\providecommand{\heatmapindividualdir}{figures/paper_heatmaps/maze_width070mm_seed0/individual}
+
+% The images contain no panel names or colorbars. LaTeX owns the subcaptions;
+% the separately exported colorbar retains the same normalization as all maps.
+% Keep all four panel widths equal. Do not crop/stretch individual colorbars.
+% This 178 mm layout is intended to span both columns of a two-column paper.
+% For a single-column manuscript use figure instead of figure*.
+
+\begin{figure*}[t]
+  \centering
+  \captionsetup[subfigure]{font=small,labelformat=parens,labelsep=space,justification=centering}
+  \includegraphics[width=0.60\textwidth]{\heatmapindividualdir/clearance_colorbar.pdf}\par
+  \vspace{1mm}
+  \begin{subfigure}[t]{0.21\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{\heatmapindividualdir/clearance_mpcc.pdf}
+    \caption{MPCC}\label{fig:clearance-individual-mpcc}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.21\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{\heatmapindividualdir/clearance_cc_ecs.pdf}
+    \caption{CC-ECS}\label{fig:clearance-individual-cc-ecs}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.21\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{\heatmapindividualdir/clearance_cc_sf.pdf}
+    \caption{CC-SF}\label{fig:clearance-individual-cc-sf}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.21\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{\heatmapindividualdir/clearance_cc_mf.pdf}
+    \caption{CC-MF}\label{fig:clearance-individual-cc-mf}
+  \end{subfigure}
+  \caption{Clearance along the closed-loop trajectories in the maze for a
+    differential-drive robot with a $150\times70$ mm rectangular footprint.
+    Each method shows one trial with the same initial pose (seed 0).
+    Clearance is the minimum of the exact footprint--obstacle distance and
+    the signed map-boundary margin. All panels share the magma color scale
+    over $0$--$40$ mm. A power-law color normalization ($\gamma=0.35$) is
+    used to emphasize small clearances. Open circles and filled black stars
+    mark the start and end positions, respectively.}
+  \label{fig:clearance-individual}
+\end{figure*}
+
+\begin{figure*}[t]
+  \centering
+  \captionsetup[subfigure]{font=small,labelformat=parens,labelsep=space,justification=centering}
+  \includegraphics[width=0.60\textwidth]{\heatmapindividualdir/velocity_colorbar.pdf}\par
+  \vspace{1mm}
+  \begin{subfigure}[t]{0.21\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{\heatmapindividualdir/velocity_mpcc.pdf}
+    \caption{MPCC}\label{fig:velocity-individual-mpcc}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.21\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{\heatmapindividualdir/velocity_cc_ecs.pdf}
+    \caption{CC-ECS}\label{fig:velocity-individual-cc-ecs}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.21\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{\heatmapindividualdir/velocity_cc_sf.pdf}
+    \caption{CC-SF}\label{fig:velocity-individual-cc-sf}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.21\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{\heatmapindividualdir/velocity_cc_mf.pdf}
+    \caption{CC-MF}\label{fig:velocity-individual-cc-mf}
+  \end{subfigure}
+  \caption{Applied linear velocity along the closed-loop trajectories for
+    the same maze trials (seed 0, differential-drive robot,
+    $150\times70$ mm rectangular footprint).
+    Each trajectory segment is colored by the linear velocity applied
+    during that interval. All panels share a linear color scale over
+    $0$--$0.18$ m/s. Open circles and filled black stars mark the start and
+    end positions, respectively.}
+  \label{fig:velocity-individual}
+\end{figure*}
+
+% Reference a whole figure: Fig.~\ref{fig:clearance-individual}.
+% Reference a panel: Fig.~\ref{fig:clearance-individual}\subref{fig:clearance-individual-mpcc}.

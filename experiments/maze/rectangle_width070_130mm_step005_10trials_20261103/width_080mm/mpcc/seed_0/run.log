@@ -1,0 +1,540 @@
+Start perturbation: seed=0, pose=[0.07751460442186786, 0.7923579027341738, -1.5387751942727323], delta=[0.002514604421867866, -0.0026420972658260378, 0.03202113252216411], clearance=0.030105 m, attempts=1
+Start pose saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_080mm/mpcc/seed_0/data/start_pose_MPC_mpcc_rectangle_maze_width80mm_seed0_widthbench_20261103_100138_startseed0.json
+Resetting mpcc optimizer for clean state...
+Trial failure criteria enabled: movement_window_sec=10.0, movement_threshold=0.03, max_consecutive_solver_failures=20
+generating global path with A* + Line of Sight
+시작 위치: [0.07751 0.79236]
+목적지: [1.8  0.09]
+도착 판정 기준: position L1 <= 0.02m
+Setting up MPCC optimizer...
+/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/source_snapshot/models/geometry_utils.py:246: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at /opt/conda/conda-bld/pytorch_1724789122112/work/torch/csrc/utils/tensor_new.cpp:278.)
+  edgesA = torch.tensor(edgesA, dtype=torch.float32)
+Added HARD obstacle avoidance constraint with d_min = 0.0001
+field AcadosOcpDims.N has been migrated to AcadosOcpOptions.N_horizon. setting AcadosOcpOptions.N_horizon = N. For future comppatibility, please use AcadosOcpOptions.N_horizon directly.
+
+WARNING: Gauss-Newton Hessian approximation with EXTERNAL cost type not well defined!
+got cost_type EXTERNAL for cost_type_0, cost_type, cost_type_e, hessian_approx: 'GAUSS_NEWTON'.
+With this setting, acados will proceed computing the exact Hessian for the cost term and no Hessian contribution from constraints and dynamics.
+If the external cost is a linear least squares cost, this coincides with the Gauss-Newton Hessian.
+Note: There is also the option to use the external cost module with a numerical Hessian approximation (see `ext_cost_num_hess`).
+OR the option to provide a symbolic custom Hessian approximation (see `cost_expr_ext_cost_custom_hess`).
+
+rm -f libacados_ocp_solver_differential_drive_mpcc.so
+rm -f differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun_jac_uxt_zt.o differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac.o acados_solver_differential_drive_mpcc.o
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun_jac_uxt_zt.o differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun_jac_uxt_zt.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun.o differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac_hess.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac_hess.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac_hess.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o acados_solver_differential_drive_mpcc.o acados_solver_differential_drive_mpcc.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun.o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun_jac.o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun_jac.c
+/usr/bin/gcc-10 -fPIC -std=c99   -O2 -I/home/taek111/projects/acados/include -I/home/taek111/projects/acados/include/acados -I/home/taek111/projects/acados/include/blasfeo/include -I/home/taek111/projects/acados/include/hpipm/include  -c -o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun_jac_hess.o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun_jac_hess.c
+/usr/bin/gcc-10 -shared differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun_jac_uxt_zt.o differential_drive_mpcc_constraints/differential_drive_mpcc_constr_h_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_0_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_fun_jac.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac_hess.o differential_drive_mpcc_cost/differential_drive_mpcc_cost_ext_cost_e_fun_jac.o acados_solver_differential_drive_mpcc.o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun.o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun_jac.o differential_drive_mpcc_model/differential_drive_mpcc_dyn_disc_phi_fun_jac_hess.o -o libacados_ocp_solver_differential_drive_mpcc.so -L/home/taek111/projects/acados/lib -lacados -lhpipm -lblasfeo -lm  \
+-L -l
+acados was compiled without OpenMP.
+solver time: 0.0005811000000903732, path_s: 0.013892097265826187
+plant_input_stage0: full=[ 0.03    -0.       0.05216], pose=[ 0.07751  0.79236 -1.53878]
+solver time: 0.0006058000003577035, path_s: 0.01689055931602335
+plant_input_stage0: full=[0.06    0.0302  0.06771], pose=[ 0.07761  0.78936 -1.53878]
+solver time: 0.0006365000003825116, path_s: 0.022887184264510196
+plant_input_stage0: full=[0.09    0.06015 0.07759], pose=[ 0.07781  0.78336 -1.53575]
+solver time: 0.0006871000000501226, path_s: 0.026532287165523038
+plant_input_stage0: full=[0.12    0.02355 0.1019 ], pose=[ 0.07815  0.77437 -1.52974]
+solver time: 0.0005556999999498657, path_s: 0.040254148959546265
+plant_input_stage0: full=[0.12952 0.00843 0.09047], pose=[ 0.07866  0.76238 -1.52739]
+solver time: 0.0005730000002586166, path_s: 0.04119755441268466
+plant_input_stage0: full=[ 0.12366 -0.0101   0.1268 ], pose=[ 0.07923  0.74944 -1.52654]
+solver time: 0.0006298999996943166, path_s: 0.05538779464869555
+plant_input_stage0: full=[0.12981 0.00157 0.11594], pose=[ 0.07977  0.73709 -1.52755]
+solver time: 0.0006215999997039034, path_s: 0.07087266892239179
+plant_input_stage0: full=[0.13889 0.03634 0.10552], pose=[ 0.08033  0.72412 -1.52739]
+solver time: 0.0006912999997439329, path_s: 0.07267813013505528
+plant_input_stage0: full=[0.13225 0.09788 0.14539], pose=[ 0.08096  0.71024 -1.52376]
+solver time: 0.0007476999999198597, path_s: 0.08808260191360714
+plant_input_stage0: full=[0.1381  0.18487 0.13834], pose=[ 0.08165  0.69704 -1.51397]
+solver time: 0.0007726999997430539, path_s: 0.10533535998800315
+plant_input_stage0: full=[0.14334 0.28904 0.12947], pose=[ 0.08256  0.68326 -1.49549]
+solver time: 0.0006835999997747422, path_s: 0.12365649960110389
+plant_input_stage0: full=[0.14557 0.40265 0.121  ], pose=[ 0.08384  0.66898 -1.46658]
+solver time: 0.0006502999999611347, path_s: 0.1271512139384762
+plant_input_stage0: full=[0.1327  0.51061 0.16413], pose=[ 0.08565  0.65454 -1.42632]
+solver time: 0.0006626999997934035, path_s: 0.14480201308594332
+plant_input_stage0: full=[0.13108 0.61639 0.15755], pose=[ 0.08789  0.64146 -1.37526]
+solver time: 0.0007218999999167863, path_s: 0.16513920040690971
+plant_input_stage0: full=[0.12899 0.71943 0.14657], pose=[ 0.09083  0.62869 -1.31362]
+solver time: 0.0005876000000171189, path_s: 0.18694401887354925
+plant_input_stage0: full=[0.12483 0.81685 0.13282], pose=[ 0.09456  0.61634 -1.24167]
+solver time: 0.0005885000000489526, path_s: 0.20154402529739945
+plant_input_stage0: full=[0.11583 0.8981  0.14057], pose=[ 0.09907  0.60471 -1.15999]
+solver time: 0.0006731999997100502, path_s: 0.21468041241690017
+plant_input_stage0: full=[0.10862 0.95721 0.1466 ], pose=[ 0.10417  0.59431 -1.07018]
+solver time: 0.0005415000000539294, path_s: 0.23905564715629
+plant_input_stage0: full=[0.10712 0.98893 0.10946], pose=[ 0.10983  0.58504 -0.97446]
+solver time: 0.0005507000000761764, path_s: 0.25125006773782244
+plant_input_stage0: full=[0.10037 1.      0.10972], pose=[ 0.11627  0.57649 -0.87557]
+solver time: 0.0006253000001379405, path_s: 0.26529161799635415
+plant_input_stage0: full=[0.12467 1.      0.10695], pose=[ 0.12308  0.56912 -0.77557]
+solver time: 0.0005903000001126202, path_s: 0.26811877957904695
+plant_input_stage0: full=[0.12542 1.      0.14277], pose=[ 0.1324   0.56085 -0.67557]
+solver time: 0.0008164999999280553, path_s: 0.2807396248999751
+plant_input_stage0: full=[0.13464 0.99971 0.14457], pose=[ 0.14256  0.55351 -0.57557]
+solver time: 0.0007027999999991152, path_s: 0.2962745275857226
+plant_input_stage0: full=[0.14828 0.94628 0.1402 ], pose=[ 0.15421  0.54676 -0.47559]
+solver time: 0.0005903000001126202, path_s: 0.30799880122495116
+plant_input_stage0: full=[0.15616 0.8593  0.15156], pose=[ 0.16769  0.5406  -0.38097]
+solver time: 0.0009087999997063889, path_s: 0.3236078202064554
+plant_input_stage0: full=[0.16457 0.75761 0.15025], pose=[ 0.18242  0.53542 -0.29504]
+solver time: 0.0005456000003505324, path_s: 0.3400265903293483
+plant_input_stage0: full=[0.16787 0.62122 0.14422], pose=[ 0.19833  0.53124 -0.21928]
+solver time: 0.0006309000000328524, path_s: 0.35215167519849644
+plant_input_stage0: full=[0.16626 0.54158 0.15477], pose=[ 0.21482  0.5281  -0.15715]
+solver time: 0.0005083999999442312, path_s: 0.36863513957045024
+plant_input_stage0: full=[0.17037 0.46319 0.15121], pose=[ 0.2313   0.52594 -0.10299]
+solver time: 0.0005597999997917213, path_s: 0.3840981898449368
+plant_input_stage0: full=[0.1724  0.4023  0.15222], pose=[ 0.24828  0.52458 -0.05668]
+solver time: 0.0005869000001439417, path_s: 0.3991588665134443
+plant_input_stage0: full=[0.17314 0.35483 0.15528], pose=[ 0.26551  0.52395 -0.01645]
+solver time: 0.0006876000002193905, path_s: 0.41497306210132706
+plant_input_stage0: full=[0.17345 0.32115 0.15608], pose=[0.28282 0.52398 0.01904]
+solver time: 0.0006355999998959305, path_s: 0.43163478011976164
+plant_input_stage0: full=[0.16671 0.29214 0.14852], pose=[0.30015 0.52458 0.05115]
+solver time: 0.0007164000003285764, path_s: 0.44909312470054535
+plant_input_stage0: full=[0.15822 0.26732 0.13457], pose=[0.31679 0.52568 0.08037]
+solver time: 0.0005904999998165295, path_s: 0.4673782561034625
+plant_input_stage0: full=[0.16536 0.28557 0.12957], pose=[0.33254 0.52716 0.1071 ]
+solver time: 0.0005941999997958192, path_s: 0.4709353317200108
+plant_input_stage0: full=[0.14936 0.27058 0.16935], pose=[0.34895 0.52916 0.13566]
+solver time: 0.0006100999999034684, path_s: 0.488549531687149
+plant_input_stage0: full=[0.15113 0.29975 0.16221], pose=[0.36372 0.53138 0.16271]
+solver time: 0.0006250999999792839, path_s: 0.5088817117020641
+plant_input_stage0: full=[0.15531 0.32191 0.14926], pose=[0.3786  0.53405 0.19269]
+solver time: 0.0006898999999975786, path_s: 0.5306465178799
+plant_input_stage0: full=[0.15544 0.36484 0.13256], pose=[0.39379 0.53727 0.22488]
+solver time: 0.0006284999999479624, path_s: 0.5361727376445846
+plant_input_stage0: full=[0.1434  0.41241 0.17124], pose=[0.40888 0.54102 0.26136]
+solver time: 0.0006500999998024781, path_s: 0.556498686117028
+plant_input_stage0: full=[0.14437 0.46271 0.15746], pose=[0.42265 0.54501 0.30261]
+solver time: 0.0006072000001040578, path_s: 0.5736619322255913
+plant_input_stage0: full=[0.14258 0.50603 0.1563 ], pose=[0.43633 0.54962 0.34888]
+solver time: 0.0005939000002399553, path_s: 0.5869319602413663
+plant_input_stage0: full=[0.13207 0.52446 0.16362], pose=[0.4496  0.55484 0.39948]
+solver time: 0.0005869000001439417, path_s: 0.6094835475848881
+plant_input_stage0: full=[0.12487 0.53366 0.13585], pose=[0.46162 0.56029 0.45193]
+solver time: 0.0006334999998216517, path_s: 0.622623745981425
+plant_input_stage0: full=[0.14216 0.50501 0.14726], pose=[0.47271 0.56604 0.50529]
+solver time: 0.000589600000239443, path_s: 0.63674757824776
+plant_input_stage0: full=[0.14959 0.40241 0.1547 ], pose=[0.48497 0.57323 0.55579]
+solver time: 0.0005968000000393658, path_s: 0.6516711627171798
+plant_input_stage0: full=[0.15544 0.24883 0.15896], pose=[0.49751 0.58138 0.59603]
+solver time: 0.0005912999999964086, path_s: 0.6672049640626593
+plant_input_stage0: full=[0.15894 0.06811 0.16   ], pose=[0.51027 0.59026 0.62092]
+solver time: 0.0006583999997928913, path_s: 0.683096411921323
+plant_input_stage0: full=[ 0.15364 -0.1291   0.15393], pose=[0.52316 0.59955 0.62773]
+solver time: 0.0006558999998560466, path_s: 0.6984566884102786
+plant_input_stage0: full=[ 0.15542 -0.27953  0.15158], pose=[0.53565 0.6085  0.61482]
+solver time: 0.0005871999996998056, path_s: 0.7139837627102875
+plant_input_stage0: full=[ 0.15324 -0.42323  0.14811], pose=[0.54847 0.61728 0.58686]
+solver time: 0.0006346999998640968, path_s: 0.7306272950930734
+plant_input_stage0: full=[ 0.15094 -0.55124  0.14074], pose=[0.56141 0.6255  0.54454]
+solver time: 0.0008386000004065863, path_s: 0.744232170282719
+plant_input_stage0: full=[ 0.14305 -0.66028  0.14014], pose=[0.57453 0.63296 0.48942]
+solver time: 0.0007153999999900407, path_s: 0.7582852648677884
+plant_input_stage0: full=[ 0.13904 -0.69292  0.13515], pose=[0.58737 0.63926 0.42339]
+solver time: 0.0005906000001232314, path_s: 0.7717376078720696
+plant_input_stage0: full=[ 0.13348 -0.67456  0.12994], pose=[0.60023 0.64453 0.3541 ]
+solver time: 0.0006318000000646862, path_s: 0.7843921404948591
+plant_input_stage0: full=[ 0.12624 -0.62891  0.12498], pose=[0.6129  0.64873 0.28664]
+solver time: 0.0006779999998798303, path_s: 0.7999464626078379
+plant_input_stage0: full=[ 0.12143 -0.57207  0.10792], pose=[0.62511 0.65192 0.22375]
+solver time: 0.0007358000002568588, path_s: 0.8118572541735816
+plant_input_stage0: full=[ 0.11326 -0.51514  0.1015 ], pose=[0.63702 0.65427 0.16654]
+solver time: 0.0007053999997879146, path_s: 0.8200065180912091
+plant_input_stage0: full=[ 0.10256 -0.46167  0.10499], pose=[0.64823 0.65586 0.11503]
+solver time: 0.0006352999998853193, path_s: 0.8332813027632164
+plant_input_stage0: full=[ 0.09799 -0.41617  0.08863], pose=[0.65845 0.6568  0.06886]
+solver time: 0.0007055000000946166, path_s: 0.8430686326188023
+plant_input_stage0: full=[ 0.11131 -0.47049  0.10333], pose=[0.66823 0.65727 0.02724]
+solver time: 0.0006564000000253145, path_s: 0.8541989133466776
+plant_input_stage0: full=[ 0.11791 -0.50101  0.11134], pose=[ 0.67936  0.65731 -0.0198 ]
+solver time: 0.0006462999999712338, path_s: 0.865053838575502
+plant_input_stage0: full=[ 0.12091 -0.54438  0.12167], pose=[ 0.69114  0.65678 -0.06991]
+solver time: 0.0006653000000369502, path_s: 0.8780095780598477
+plant_input_stage0: full=[ 0.12234 -0.56209  0.12156], pose=[ 0.70317  0.65561 -0.12434]
+solver time: 0.0006321999999272521, path_s: 0.8900996061401558
+plant_input_stage0: full=[ 0.1223  -0.5853   0.12731], pose=[ 0.71526  0.65375 -0.18055]
+solver time: 0.000629799999842362, path_s: 0.9020597108883386
+plant_input_stage0: full=[ 0.12392 -0.60073  0.13462], pose=[ 0.72722  0.65121 -0.23908]
+solver time: 0.0005436000001282082, path_s: 0.9179725730375652
+plant_input_stage0: full=[ 0.12273 -0.61224  0.12763], pose=[ 0.73917  0.64791 -0.29916]
+solver time: 0.0006759000002602988, path_s: 0.9256136456673838
+plant_input_stage0: full=[ 0.12049 -0.61956  0.15125], pose=[ 0.75078  0.64394 -0.36038]
+solver time: 0.0005473000001074979, path_s: 0.9391947780587131
+plant_input_stage0: full=[ 0.11523 -0.60894  0.15116], pose=[ 0.76191  0.63934 -0.42234]
+solver time: 0.0005927000001975102, path_s: 0.9563535357622251
+plant_input_stage0: full=[ 0.133   -0.56244  0.14382], pose=[ 0.77227  0.6343  -0.48323]
+solver time: 0.0005723000003854395, path_s: 0.9727543847036445
+plant_input_stage0: full=[ 0.14122 -0.46779  0.1403 ], pose=[ 0.78387  0.6278  -0.53947]
+solver time: 0.0005928000000494649, path_s: 0.9868288230303126
+plant_input_stage0: full=[ 0.14571 -0.32547  0.14446], pose=[ 0.79581  0.62026 -0.58625]
+solver time: 0.0006188000002111949, path_s: 1.0013868652225182
+plant_input_stage0: full=[ 0.14926 -0.1505   0.1464 ], pose=[ 0.80782  0.612   -0.6188 ]
+solver time: 0.0005935999997745967, path_s: 1.0163106160395246
+plant_input_stage0: full=[0.15129 0.03759 0.14656], pose=[ 0.81991  0.60326 -0.63385]
+solver time: 0.0006948000000193133, path_s: 1.0316925323270472
+plant_input_stage0: full=[0.14535 0.23718 0.14035], pose=[ 0.83212  0.59432 -0.63009]
+solver time: 0.0005928999999014195, path_s: 1.0459694546921026
+plant_input_stage0: full=[0.14539 0.3815  0.13879], pose=[ 0.84396  0.58589 -0.60637]
+solver time: 0.0006898999999975786, path_s: 1.0604845454667549
+plant_input_stage0: full=[0.14356 0.51155 0.13773], pose=[ 0.85606  0.57784 -0.56823]
+solver time: 0.0005879000000277301, path_s: 1.0747655878638018
+plant_input_stage0: full=[0.14045 0.62746 0.13815], pose=[ 0.86836  0.57043 -0.51707]
+solver time: 0.0005955000001449662, path_s: 1.0886338447181263
+plant_input_stage0: full=[0.14931 0.71182 0.14357], pose=[ 0.88078  0.56387 -0.45432]
+solver time: 0.0006481000000349013, path_s: 1.1031864338154422
+plant_input_stage0: full=[0.15367 0.74988 0.14827], pose=[ 0.89441  0.5578  -0.38314]
+solver time: 0.000701299999946059, path_s: 1.1178730224920945
+plant_input_stage0: full=[0.15    0.73744 0.14771], pose=[ 0.90887  0.5526  -0.30815]
+solver time: 0.0006997999998930027, path_s: 1.1310854122563143
+plant_input_stage0: full=[0.14082 0.68854 0.14687], pose=[ 0.92332  0.54858 -0.23441]
+solver time: 0.0007290000003195019, path_s: 1.1494505405813649
+plant_input_stage0: full=[0.13701 0.62695 0.126  ], pose=[ 0.93712  0.54578 -0.16556]
+solver time: 0.0005999999998493877, path_s: 1.1630265963948327
+plant_input_stage0: full=[0.14123 0.62674 0.13295], pose=[ 0.95069  0.54395 -0.10286]
+solver time: 0.0006177000000207045, path_s: 1.1771111870890116
+plant_input_stage0: full=[0.14777 0.61502 0.13996], pose=[ 0.96478  0.54294 -0.04019]
+solver time: 0.0005909999999857973, path_s: 1.1918852503127855
+plant_input_stage0: full=[0.14541 0.62338 0.14121], pose=[0.97955 0.5428  0.02131]
+solver time: 0.0006059000002096582, path_s: 1.206403744735752
+plant_input_stage0: full=[0.14315 0.63207 0.14226], pose=[0.99407 0.54356 0.08365]
+solver time: 0.0007543000001533073, path_s: 1.220620923742672
+plant_input_stage0: full=[0.13978 0.64302 0.14381], pose=[1.00829 0.54521 0.14686]
+solver time: 0.0006819000000177766, path_s: 1.2367708880238428
+plant_input_stage0: full=[0.13839 0.65522 0.13915], pose=[1.02204 0.54769 0.21116]
+solver time: 0.0005891999999221298, path_s: 1.247800173249324
+plant_input_stage0: full=[0.1294  0.64674 0.14606], pose=[1.03546 0.55104 0.27668]
+solver time: 0.0006226999998943938, path_s: 1.2601255539406102
+plant_input_stage0: full=[0.12927 0.64568 0.15679], pose=[1.04779 0.55497 0.34136]
+solver time: 0.0005439000001388195, path_s: 1.2761473171600302
+plant_input_stage0: full=[0.12441 0.62145 0.1518 ], pose=[1.05982 0.55969 0.40593]
+solver time: 0.0005593999999291555, path_s: 1.293841455523164
+plant_input_stage0: full=[0.14569 0.56552 0.14722], pose=[1.07109 0.56495 0.46807]
+solver time: 0.00052380000033736, path_s: 1.310092223146422
+plant_input_stage0: full=[0.15389 0.461   0.14874], pose=[1.0839  0.57189 0.52462]
+solver time: 0.000499000000218075, path_s: 1.3254094283437827
+plant_input_stage0: full=[0.15863 0.32087 0.15295], pose=[1.09704 0.5799  0.57072]
+solver time: 0.000565199999982724, path_s: 1.341245955894353
+plant_input_stage0: full=[0.16166 0.15961 0.15446], pose=[1.11025 0.58869 0.60281]
+solver time: 0.0005486000000018976, path_s: 1.3574032991001417
+plant_input_stage0: full=[ 0.16285 -0.00964  0.15404], pose=[1.12349 0.59796 0.61877]
+solver time: 0.000545700000202487, path_s: 1.3736832942338353
+plant_input_stage0: full=[ 0.16217 -0.17395  0.15255], pose=[1.13676 0.6074  0.61781]
+solver time: 0.0005758000002060726, path_s: 1.3898908697574606
+plant_input_stage0: full=[ 0.16013 -0.32015  0.15118], pose=[1.15006 0.61668 0.60041]
+solver time: 0.0005941999997958192, path_s: 1.4058700858613569
+plant_input_stage0: full=[ 0.15958 -0.43429  0.15172], pose=[1.16342 0.62551 0.5684 ]
+solver time: 0.0006297000004451547, path_s: 1.4217571615268771
+plant_input_stage0: full=[ 0.16229 -0.49772  0.15399], pose=[1.17705 0.6338  0.52497]
+solver time: 0.0005918000001656765, path_s: 1.4378179359666108
+plant_input_stage0: full=[ 0.16306 -0.52222  0.15651], pose=[1.19129 0.64159 0.4752 ]
+solver time: 0.0006157000002531277, path_s: 1.4538151069896288
+plant_input_stage0: full=[ 0.16242 -0.52974  0.15946], pose=[1.20598 0.64866 0.42297]
+solver time: 0.0005963999997220526, path_s: 1.4706124831337801
+plant_input_stage0: full=[ 0.16282 -0.51416  0.15995], pose=[1.22096 0.65494 0.37   ]
+solver time: 0.0005678000002262706, path_s: 1.4865007914320543
+plant_input_stage0: full=[ 0.15961 -0.49129  0.16053], pose=[1.23628 0.66043 0.31858]
+solver time: 0.000552100000277278, path_s: 1.5022310647854518
+plant_input_stage0: full=[ 0.15487 -0.45538  0.15768], pose=[1.25156 0.66506 0.26945]
+solver time: 0.0005437999998321175, path_s: 1.5176008010002124
+plant_input_stage0: full=[ 0.15021 -0.40645  0.15306], pose=[1.26657 0.66884 0.22392]
+solver time: 0.0005880999997316394, path_s: 1.532573436515047
+plant_input_stage0: full=[ 0.1534  -0.32274  0.15391], pose=[1.28128 0.67187 0.18327]
+solver time: 0.0005896999996366503, path_s: 1.5478985044604952
+plant_input_stage0: full=[ 0.15663 -0.25506  0.15414], pose=[1.29641 0.67443 0.151  ]
+solver time: 0.0005949999999756983, path_s: 1.563559208851527
+plant_input_stage0: full=[ 0.15978 -0.18599  0.15355], pose=[1.31192 0.67658 0.12549]
+solver time: 0.0006316000003607769, path_s: 1.5795362286627466
+plant_input_stage0: full=[ 0.16341 -0.1186   0.1528 ], pose=[1.32779 0.67844 0.10689]
+solver time: 0.0005882000000383414, path_s: 1.5958724754400422
+plant_input_stage0: full=[ 0.16666 -0.04937  0.15155], pose=[1.34405 0.68008 0.09503]
+solver time: 0.0005904999998165295, path_s: 1.6125302666022447
+plant_input_stage0: full=[0.16839 0.0196  0.14914], pose=[1.36064 0.68162 0.0901 ]
+solver time: 0.0006379999999808206, path_s: 1.629360312721449
+plant_input_stage0: full=[0.16023 0.06825 0.13839], pose=[1.37741 0.68316 0.09206]
+solver time: 0.0006839000002401008, path_s: 1.6453762368247247
+plant_input_stage0: full=[0.15557 0.11536 0.13134], pose=[1.39336 0.68468 0.09888]
+solver time: 0.0006322999997792067, path_s: 1.6583146892854914
+plant_input_stage0: full=[0.15278 0.20621 0.1396 ], pose=[1.40883 0.68631 0.11042]
+solver time: 0.0006269000000429514, path_s: 1.6762077044344625
+plant_input_stage0: full=[0.15997 0.28063 0.13527], pose=[1.424   0.68815 0.13104]
+solver time: 0.0006134999998721469, path_s: 1.684930121947772
+plant_input_stage0: full=[0.15105 0.3607  0.16071], pose=[1.43983 0.69046 0.1591 ]
+solver time: 0.0006336000001283537, path_s: 1.7066205428770946
+plant_input_stage0: full=[0.14787 0.41553 0.13483], pose=[1.4547  0.69312 0.19517]
+solver time: 0.0005470000000968867, path_s: 1.7220073562181746
+plant_input_stage0: full=[0.14412 0.49325 0.13841], pose=[1.46914 0.69629 0.23673]
+solver time: 0.0005640999997922336, path_s: 1.7362831468933815
+plant_input_stage0: full=[0.13781 0.54536 0.14298], pose=[1.48306 0.70001 0.28605]
+solver time: 0.000586000000112108, path_s: 1.749816682382051
+plant_input_stage0: full=[0.12588 0.58814 0.1481 ], pose=[1.49617 0.70426 0.34059]
+solver time: 0.0005873000000065076, path_s: 1.7671008231003715
+plant_input_stage0: full=[0.11546 0.63239 0.13818], pose=[1.5079  0.70881 0.3994 ]
+solver time: 0.0005439000001388195, path_s: 1.782563657583999
+plant_input_stage0: full=[0.13244 0.6085  0.13944], pose=[1.51839 0.71363 0.46264]
+solver time: 0.0005599000000984233, path_s: 1.7971994704900267
+plant_input_stage0: full=[0.13957 0.50577 0.14356], pose=[1.53006 0.7199  0.52349]
+solver time: 0.0005621999998766114, path_s: 1.8114677666203596
+plant_input_stage0: full=[0.14322 0.35411 0.14733], pose=[1.54196 0.72718 0.57407]
+solver time: 0.0005438999996840721, path_s: 1.8264481237832895
+plant_input_stage0: full=[0.1449  0.18364 0.14656], pose=[1.55385 0.73517 0.60948]
+solver time: 0.001029000000016822, path_s: 1.8421931394200217
+plant_input_stage0: full=[0.14565 0.0043  0.14165], pose=[1.56565 0.74357 0.62784]
+solver time: 0.0006066000000828353, path_s: 1.8587357493364294
+plant_input_stage0: full=[ 0.14725 -0.1627   0.13349], pose=[1.57744 0.75213 0.62827]
+solver time: 0.0006536999999298132, path_s: 1.876123936505181
+plant_input_stage0: full=[ 0.14852 -0.31256  0.122  ], pose=[1.58942 0.76069 0.612  ]
+solver time: 0.0006904000001668464, path_s: 1.8824550993038225
+plant_input_stage0: full=[ 0.14173 -0.43245  0.14866], pose=[1.60171 0.76903 0.58074]
+solver time: 0.0006625999999414489, path_s: 1.8965761655696718
+plant_input_stage0: full=[ 0.14576 -0.49823  0.14807], pose=[1.61372 0.77655 0.5375 ]
+solver time: 0.0006349000000227534, path_s: 1.915024182793499
+plant_input_stage0: full=[ 0.15395 -0.54693  0.13444], pose=[1.62642 0.7837  0.48768]
+solver time: 0.0007049999999253487, path_s: 1.9261613951930219
+plant_input_stage0: full=[ 0.15472 -0.58686  0.14775], pose=[1.64021 0.79053 0.43298]
+solver time: 0.0006943999997020001, path_s: 1.9411885756474765
+plant_input_stage0: full=[ 0.15792 -0.62784  0.14692], pose=[1.65444 0.79661 0.3743 ]
+solver time: 0.0007261999999172986, path_s: 1.9562696496688228
+plant_input_stage0: full=[ 0.15997 -0.67304  0.14593], pose=[1.66931 0.80192 0.31151]
+solver time: 0.001042899999902147, path_s: 1.971231144182817
+plant_input_stage0: full=[ 0.16041 -0.72189  0.14484], pose=[1.68469 0.80631 0.24421]
+solver time: 0.0007130999997571053, path_s: 1.9847848132291777
+plant_input_stage0: full=[ 0.15817 -0.77095  0.1482 ], pose=[1.70038 0.80962 0.17202]
+solver time: 0.0009214000001520617, path_s: 1.9990089655834564
+plant_input_stage0: full=[ 0.15548 -0.81825  0.14898], pose=[1.71605 0.81172 0.09493]
+solver time: 0.0009603999997125356, path_s: 2.0139687547433214
+plant_input_stage0: full=[ 0.15245 -0.86246  0.1477 ], pose=[1.73158 0.81256 0.0131 ]
+solver time: 0.0006357000002026325, path_s: 2.0297099355205406
+plant_input_stage0: full=[ 0.14896 -0.90264  0.14493], pose=[ 1.74681  0.81211 -0.07314]
+solver time: 0.000706499999978405, path_s: 2.0462874357006537
+plant_input_stage0: full=[ 0.14465 -0.93901  0.14098], pose=[ 1.7616   0.81035 -0.16341]
+solver time: 0.0006367000000864209, path_s: 2.0637640094278504
+plant_input_stage0: full=[ 0.13886 -0.97041  0.13561], pose=[ 1.77574  0.80733 -0.25731]
+solver time: 0.000613100000009581, path_s: 2.078642575576577
+plant_input_stage0: full=[ 0.13064 -0.98925  0.13992], pose=[ 1.78897  0.80315 -0.35435]
+solver time: 0.0006514000001516251, path_s: 2.1011183432663425
+plant_input_stage0: full=[ 0.1244  -1.       0.11731], pose=[ 1.80098  0.79802 -0.45327]
+solver time: 0.0005949000001237437, path_s: 2.119743373672559
+plant_input_stage0: full=[ 0.11333 -1.       0.10402], pose=[ 1.81187  0.79202 -0.55327]
+solver time: 0.0005427999999483291, path_s: 2.1287905391651707
+plant_input_stage0: full=[ 0.10427 -1.       0.11691], pose=[ 1.8212   0.7856  -0.65327]
+solver time: 0.0005850999996255268, path_s: 2.1376993633620094
+plant_input_stage0: full=[ 0.11235 -1.       0.12993], pose=[ 1.82915  0.77885 -0.75327]
+solver time: 0.0005458000000544416, path_s: 2.1490904839123433
+plant_input_stage0: full=[ 0.12231 -1.       0.13488], pose=[ 1.83695  0.77077 -0.85327]
+solver time: 0.0007196999999905529, path_s: 2.163835882345214
+plant_input_stage0: full=[ 0.13484 -1.       0.12972], pose=[ 1.84452  0.76117 -0.95327]
+solver time: 0.0007093999997778155, path_s: 2.1794685069037265
+plant_input_stage0: full=[ 0.14853 -0.98049  0.12466], pose=[ 1.85176  0.74981 -1.05327]
+solver time: 0.0005704999998670246, path_s: 2.187094541001859
+plant_input_stage0: full=[ 0.15315 -0.90917  0.14978], pose=[ 1.85847  0.73656 -1.15132]
+solver time: 0.0006303000000116299, path_s: 2.2023836593995236
+plant_input_stage0: full=[ 0.16221 -0.81495  0.1485 ], pose=[ 1.86406  0.72231 -1.24224]
+solver time: 0.000584299999900395, path_s: 2.2185908804232524
+plant_input_stage0: full=[ 0.16721 -0.68873  0.14346], pose=[ 1.86866  0.70676 -1.32374]
+solver time: 0.0006689000001642853, path_s: 2.2303389779644966
+plant_input_stage0: full=[ 0.16176 -0.56773  0.15111], pose=[ 1.87219  0.69042 -1.39261]
+solver time: 0.0005674000003637047, path_s: 2.2463315829360435
+plant_input_stage0: full=[ 0.16143 -0.52144  0.14427], pose=[ 1.87461  0.67442 -1.44938]
+solver time: 0.0006518999998661457, path_s: 2.2623997495167356
+plant_input_stage0: full=[ 0.16071 -0.40978  0.13564], pose=[ 1.87614  0.65836 -1.50153]
+solver time: 0.0006044000001566019, path_s: 2.2784508335010143
+plant_input_stage0: full=[ 0.16163 -0.38927  0.12991], pose=[ 1.87693  0.6423  -1.5425 ]
+solver time: 0.0006063999999241787, path_s: 2.29461232699927
+plant_input_stage0: full=[ 0.16304 -0.32893  0.12425], pose=[ 1.87707  0.62614 -1.58143]
+solver time: 0.0006158999999570369, path_s: 2.299509421532601
+plant_input_stage0: full=[ 0.14577 -0.27832  0.15135], pose=[ 1.87663  0.60985 -1.61432]
+solver time: 0.0006336999999803083, path_s: 2.3151513616752393
+plant_input_stage0: full=[ 0.13761 -0.23649  0.13495], pose=[ 1.87579  0.59529 -1.64216]
+solver time: 0.0007029999997030245, path_s: 2.332292679901533
+plant_input_stage0: full=[ 0.13179 -0.20379  0.11216], pose=[ 1.87465  0.58158 -1.66581]
+solver time: 0.0006829999997535197, path_s: 2.334893629501075
+plant_input_stage0: full=[ 0.11203 -0.17571  0.13626], pose=[ 1.87326  0.56847 -1.68618]
+solver time: 0.0007528999999522057, path_s: 2.351308294259745
+plant_input_stage0: full=[ 0.10787 -0.15751  0.10906], pose=[ 1.87188  0.55736 -1.70376]
+solver time: 0.0007289000000127999, path_s: 2.3699275045769195
+plant_input_stage0: full=[ 0.13249 -0.2142   0.09899], pose=[ 1.87036  0.54668 -1.71951]
+solver time: 0.0007315999996535538, path_s: 2.3738902436210734
+plant_input_stage0: full=[ 0.12277 -0.23093  0.13177], pose=[ 1.86826  0.5336  -1.74093]
+solver time: 0.0006795999997848412, path_s: 2.392020892519607
+plant_input_stage0: full=[ 0.13512 -0.28961  0.12297], pose=[ 1.86604  0.52152 -1.76402]
+solver time: 0.0006548000001203036, path_s: 2.396333625726978
+plant_input_stage0: full=[ 0.13215 -0.31961  0.16378], pose=[ 1.86325  0.5083  -1.79298]
+solver time: 0.0005954999996902188, path_s: 2.415064941091791
+plant_input_stage0: full=[ 0.13563 -0.35981  0.15251], pose=[ 1.86014  0.49546 -1.82494]
+solver time: 0.0006773000000066531, path_s: 2.432161254820697
+plant_input_stage0: full=[ 0.13707 -0.40108  0.15047], pose=[ 1.85649  0.4824  -1.86092]
+solver time: 0.0006317000002127315, path_s: 2.449257568549603
+plant_input_stage0: full=[ 0.13543 -0.43924  0.14833], pose=[ 1.85231  0.46934 -1.90103]
+solver time: 0.0005446000000119966, path_s: 2.466353882278509
+plant_input_stage0: full=[ 0.12957 -0.47273  0.1443 ], pose=[ 1.84764  0.45663 -1.94495]
+solver time: 0.0006327000000965199, path_s: 2.483450196007415
+plant_input_stage0: full=[ 0.11901 -0.51686  0.13703], pose=[ 1.84262  0.44469 -1.99223]
+solver time: 0.0005879000000277301, path_s: 2.4986053361017224
+plant_input_stage0: full=[ 0.13042 -0.53364  0.13815], pose=[ 1.83747  0.43396 -2.04391]
+solver time: 0.0005683000003955385, path_s: 2.5115114207844935
+plant_input_stage0: full=[ 0.13662 -0.46071  0.14816], pose=[ 1.83122  0.42251 -2.09728]
+solver time: 0.0005161000003681693, path_s: 2.5316407449894487
+plant_input_stage0: full=[ 0.14733 -0.33078  0.13354], pose=[ 1.82409  0.41086 -2.14335]
+solver time: 0.0006158999999570369, path_s: 2.542174558718355
+plant_input_stage0: full=[ 0.14729 -0.17217  0.15136], pose=[ 1.8159   0.39862 -2.17643]
+solver time: 0.0006033999998180661, path_s: 2.5632421861761667
+plant_input_stage0: full=[ 0.15295 -0.00017  0.12961], pose=[ 1.80741  0.38658 -2.19364]
+solver time: 0.0005881000001863868, path_s: 2.573775999905073
+plant_input_stage0: full=[0.14905 0.15833 0.14406], pose=[ 1.79849  0.37416 -2.19366]
+solver time: 0.000632599999789818, path_s: 2.594843627362885
+plant_input_stage0: full=[0.15192 0.30639 0.11911], pose=[ 1.78989  0.36198 -2.17783]
+solver time: 0.0006630999996559694, path_s: 2.605377441091791
+plant_input_stage0: full=[0.14443 0.41208 0.12819], pose=[ 1.78142  0.34937 -2.14719]
+solver time: 0.0006281000000853965, path_s: 2.615911254820697
+plant_input_stage0: full=[0.13444 0.48606 0.13245], pose=[ 1.7738   0.3371  -2.10598]
+solver time: 0.0006350000003294554, path_s: 2.627619353004987
+plant_input_stage0: full=[0.12752 0.54026 0.12995], pose=[ 1.76722  0.32538 -2.05737]
+solver time: 0.0007052000000840053, path_s: 2.6401545872086194
+plant_input_stage0: full=[0.12446 0.55212 0.12338], pose=[ 1.76157  0.31395 -2.00335]
+solver time: 0.0005900999999539636, path_s: 2.652246172852512
+plant_input_stage0: full=[0.12054 0.54772 0.11685], pose=[ 1.75667  0.30251 -1.94813]
+solver time: 0.0006587999996554572, path_s: 2.6637832596091244
+plant_input_stage0: full=[0.11673 0.53281 0.11117], pose=[ 1.75253  0.29119 -1.89336]
+solver time: 0.0006446000002142682, path_s: 2.674756549158062
+plant_input_stage0: full=[0.11251 0.51266 0.10602], pose=[ 1.74913  0.28003 -1.84008]
+solver time: 0.0007036000001789944, path_s: 2.6886981175316365
+plant_input_stage0: full=[0.11165 0.48541 0.08964], pose=[ 1.74642  0.26911 -1.78882]
+solver time: 0.000593499999922642, path_s: 2.6945444312605424
+plant_input_stage0: full=[0.10226 0.46114 0.09996], pose=[ 1.74427  0.25815 -1.74028]
+solver time: 0.0006121999999777472, path_s: 2.706237058718355
+plant_input_stage0: full=[0.0994  0.4417  0.08818], pose=[ 1.74277  0.24804 -1.69416]
+solver time: 0.0006719000002703979, path_s: 2.712083372447261
+plant_input_stage0: full=[0.09149 0.42071 0.09592], pose=[ 1.74177  0.23815 -1.64999]
+solver time: 0.000671299999794428, path_s: 2.723775999905073
+plant_input_stage0: full=[0.08964 0.40183 0.08206], pose=[ 1.74124  0.22902 -1.60792]
+solver time: 0.0006326000002445653, path_s: 2.729622313633979
+plant_input_stage0: full=[0.08237 0.38794 0.08815], pose=[ 1.74108  0.22006 -1.56774]
+solver time: 0.0006505000001197914, path_s: 2.741314941091791
+plant_input_stage0: full=[0.08127 0.37663 0.07325], pose=[ 1.74127  0.21182 -1.52894]
+solver time: 0.0006701000002067303, path_s: 2.747161254820697
+plant_input_stage0: full=[0.07482 0.36515 0.07854], pose=[ 1.74176  0.20371 -1.49128]
+solver time: 0.000693299999966257, path_s: 2.753007568549603
+plant_input_stage0: full=[0.06863 0.35728 0.08199], pose=[ 1.74249  0.19626 -1.45477]
+solver time: 0.000688099999933911, path_s: 2.764700196007415
+plant_input_stage0: full=[0.0686  0.34849 0.06558], pose=[ 1.74341  0.18946 -1.41904]
+solver time: 0.0006515000000035798, path_s: 2.770546509736321
+plant_input_stage0: full=[0.06286 0.34408 0.06957], pose=[ 1.74456  0.1827  -1.38419]
+solver time: 0.0007545999997091712, path_s: 2.7763928234652275
+plant_input_stage0: full=[0.05794 0.3367  0.07179], pose=[ 1.74584  0.17655 -1.34978]
+solver time: 0.000630999999884807, path_s: 2.787339411830325
+plant_input_stage0: full=[0.05743 0.33536 0.05694], pose=[ 1.7472   0.17092 -1.31611]
+solver time: 0.0006894999996802653, path_s: 2.792871529823132
+plant_input_stage0: full=[0.05261 0.33062 0.06058], pose=[ 1.74874  0.16538 -1.28258]
+solver time: 0.0006348000001707987, path_s: 2.7997780783808515
+plant_input_stage0: full=[0.04907 0.32981 0.05784], pose=[ 1.75032  0.16037 -1.24951]
+solver time: 0.0007101999999576947, path_s: 2.8056243921097574
+plant_input_stage0: full=[0.04568 0.32522 0.05777], pose=[ 1.75195  0.15574 -1.21653]
+solver time: 0.0006886999999551335, path_s: 2.8114707058386634
+plant_input_stage0: full=[0.0424  0.32163 0.05628], pose=[ 1.7536   0.15148 -1.18401]
+solver time: 0.0006771000003027439, path_s: 2.81731701956757
+plant_input_stage0: full=[0.03993 0.3177  0.0537 ], pose=[ 1.75526  0.14758 -1.15185]
+solver time: 0.0006763999999748194, path_s: 2.823163333296476
+plant_input_stage0: full=[0.03792 0.31185 0.04985], pose=[ 1.75694  0.14396 -1.12008]
+solver time: 0.0007259999997586419, path_s: 2.829009647025382
+plant_input_stage0: full=[0.03594 0.30579 0.04448], pose=[ 1.75865  0.14057 -1.08889]
+solver time: 0.0006811000002926448, path_s: 2.8353907449894487
+plant_input_stage0: full=[0.03422 0.3039  0.03594], pose=[ 1.76036  0.13741 -1.05831]
+solver time: 0.0008069999998951971, path_s: 2.839583372447261
+plant_input_stage0: full=[0.03163 0.3035  0.03359], pose=[ 1.76209  0.13446 -1.02792]
+solver time: 0.0006572999996024009, path_s: 2.844669266840788
+plant_input_stage0: full=[0.02988 0.30165 0.02658], pose=[ 1.76376  0.13177 -0.99757]
+solver time: 0.0006336000001283537, path_s: 2.847968627362885
+plant_input_stage0: full=[0.02616 0.29785 0.02432], pose=[ 1.76542  0.12929 -0.96741]
+solver time: 0.0006791999999222753, path_s: 2.850064941091791
+plant_input_stage0: full=[0.02256 0.29849 0.02488], pose=[ 1.76693  0.12715 -0.93762]
+solver time: 0.0006357000002026325, path_s: 2.852161254820697
+plant_input_stage0: full=[0.02178 0.29204 0.02515], pose=[ 1.7683   0.12536 -0.90777]
+solver time: 0.0006057999999029562, path_s: 2.854257568549603
+plant_input_stage0: full=[0.02122 0.28109 0.02514], pose=[ 1.76966  0.12366 -0.87857]
+solver time: 0.0005940999999438645, path_s: 2.858450196007415
+plant_input_stage0: full=[0.02269 0.26772 0.01813], pose=[ 1.77104  0.12205 -0.85046]
+solver time: 0.000615600000401173, path_s: 2.8605465097363214
+plant_input_stage0: full=[0.0221  0.25286 0.01839], pose=[ 1.77256  0.12036 -0.82369]
+solver time: 0.0005467000000862754, path_s: 2.8626428234652272
+plant_input_stage0: full=[0.02142 0.23738 0.01809], pose=[ 1.77408  0.11876 -0.7984 ]
+solver time: 0.0005861999998160172, path_s: 2.8647391371941335
+plant_input_stage0: full=[0.02079 0.22187 0.01747], pose=[ 1.77559  0.11724 -0.77467]
+solver time: 0.0005879999998796848, path_s: 2.8668354509230394
+plant_input_stage0: full=[0.02022 0.20675 0.01658], pose=[ 1.77709  0.1158  -0.75248]
+solver time: 0.000596299999870098, path_s: 2.868931764651945
+plant_input_stage0: full=[0.01971 0.19228 0.01547], pose=[ 1.77858  0.11444 -0.7318 ]
+solver time: 0.0006074999996599217, path_s: 2.8710280783808515
+plant_input_stage0: full=[0.01925 0.17859 0.01415], pose=[ 1.78006  0.11314 -0.71258]
+solver time: 0.0006037000002834247, path_s: 2.8710280783808515
+plant_input_stage0: full=[0.01677 0.16562 0.01949], pose=[ 1.78153  0.11189 -0.69472]
+solver time: 0.0006155999999464257, path_s: 2.8731243921097573
+plant_input_stage0: full=[0.01651 0.15364 0.01705], pose=[ 1.78283  0.11083 -0.67815]
+solver time: 0.000607899999977235, path_s: 2.8752207058386636
+plant_input_stage0: full=[0.01646 0.14259 0.01474], pose=[ 1.78412  0.1098  -0.66279]
+solver time: 0.0006805000002714223, path_s: 2.8773170195675695
+plant_input_stage0: full=[0.01643 0.13243 0.01241], pose=[ 1.78543  0.1088  -0.64853]
+solver time: 0.0006994999998823914, path_s: 2.8773170195675695
+plant_input_stage0: full=[0.0143  0.12298 0.01691], pose=[ 1.78674  0.10781 -0.63529]
+solver time: 0.0006769999999960419, path_s: 2.8794133332964758
+plant_input_stage0: full=[0.01437 0.11438 0.01373], pose=[ 1.7879   0.10697 -0.62299]
+solver time: 0.0006573999999091029, path_s: 2.8815096470253816
+plant_input_stage0: full=[0.01461 0.10651 0.01076], pose=[ 1.78907  0.10614 -0.61155]
+solver time: 0.000713000000359898, path_s: 2.8815096470253816
+plant_input_stage0: full=[0.01272 0.09922 0.01474], pose=[ 1.79027  0.10531 -0.6009 ]
+solver time: 0.0006819000000177766, path_s: 2.883605960754288
+plant_input_stage0: full=[0.013  0.0926 0.0111], pose=[ 1.79132  0.10459 -0.59098]
+solver time: 0.0007061999999677937, path_s: 2.883605960754288
+plant_input_stage0: full=[0.01131 0.08647 0.01463], pose=[ 1.79241  0.10388 -0.58172]
+solver time: 0.0007301999999071995, path_s: 2.8857022744831937
+plant_input_stage0: full=[0.0118  0.08092 0.01061], pose=[ 1.79335  0.10326 -0.57307]
+solver time: 0.0006998990002102801, path_s: 2.8877985882121
+plant_input_stage0: full=[0.01243 0.07583 0.00693], pose=[ 1.79435  0.10262 -0.56498]
+solver time: 0.0007521000002270739, path_s: 2.8877985882121
+plant_input_stage0: full=[0.01084 0.07106 0.01031], pose=[ 1.7954   0.10196 -0.5574 ]
+solver time: 0.0006483000001935579, path_s: 2.889894901941006
+plant_input_stage0: full=[0.0114  0.0667  0.00616], pose=[ 1.79632  0.10139 -0.55029]
+solver time: 0.0006987000001572596, path_s: 2.889894901941006
+plant_input_stage0: full=[0.00993 0.06261 0.00924], pose=[ 1.7973   0.1008  -0.54362]
+solver time: 0.000707599999714148, path_s: 2.889894901941006
+plant_input_stage0: full=[0.00847 0.05884 0.01175], pose=[ 1.79815  0.10029 -0.53736]
+solver time: 0.0007008000002315384, path_s: 2.891991215669912
+plant_input_stage0: full=[0.00935 0.05544 0.00696], pose=[ 1.79888  0.09985 -0.53148]
+solver time: 0.0006376999999702093, path_s: 2.891991215669912
+plant_input_stage0: full=[0.00819 0.05225 0.00952], pose=[ 1.79969  0.09938 -0.52593]
+solver time: 0.0006570999998984917, path_s: 2.894087529398818
+plant_input_stage0: full=[0.00916 0.04935 0.00471], pose=[ 1.80039  0.09897 -0.52071]
+solver time: 0.000630999999884807, path_s: 2.894087529398818
+plant_input_stage0: full=[0.00801 0.04657 0.0072 ], pose=[ 1.80119  0.09852 -0.51577]
+solver time: 0.0006340999998428742, path_s: 2.894087529398818
+plant_input_stage0: full=[0.00683 0.044   0.00922], pose=[ 1.80189  0.09813 -0.51112]
+solver time: 0.0006843999999546213, path_s: 2.8961838431277243
+plant_input_stage0: full=[0.00799 0.04167 0.00405], pose=[ 1.80248  0.09779 -0.50672]
+목적지에 도착했습니다! 현재 위치: [1.80318 0.09741], 시간: 24.30초
+Using mpcc optimizer with differential_drive dynamics:
+median:  0.0006322999997792067
+std:  7.628281183358226e-05
+min:  0.000499000000218075
+max:  0.001042899999902147
+Simulation finished.
+Run outcome: status=success, reason=None, final_time=24.300000000000075, distance_to_goal=0.019223492649987572
+Trial history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_080mm/mpcc/seed_0/data/trial_history_MPC_mpcc_rectangle_maze_width80mm_seed0_widthbench_20261103_100138_startseed0.csv
+Pose-SDF data saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_080mm/mpcc/seed_0/data/pose_sdf_MPC_mpcc_rectangle_maze_width80mm_seed0_widthbench_20261103_100138_startseed0.csv
+Total data points: 243
+SDF statistics - Min: 0.0002, Max: 0.0327, Mean: 0.0084
+Trial history saved to /home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_080mm/mpcc/seed_0/data/trial_history.csv

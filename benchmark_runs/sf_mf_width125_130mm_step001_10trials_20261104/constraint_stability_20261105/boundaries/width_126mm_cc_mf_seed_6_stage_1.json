@@ -1,0 +1,744 @@
+{
+  "width_mm": 126,
+  "method": "cc_mf",
+  "seed": 6,
+  "stage": 1,
+  "selection_counts": {
+    "cycles": 479,
+    "valid_nominal_cycles": 478,
+    "valid_adjacent_pairs": 477,
+    "valid_nominal_native_row_replay_invalid_cycles": 3,
+    "selector_changed_pairs": 79,
+    "selector_unchanged_pairs": 398,
+    "changed_both_separated_pairs": 79,
+    "cache_selector_disagreement_pairs": 0,
+    "zero_motion_pairs": 0,
+    "cache_separated_selector_comparison_cycles": 478,
+    "cache_separated_selector_disagreement_cycles": 0,
+    "cache_selector_disagreement_changed_pairs": 0,
+    "cache_selector_disagreement_unchanged_pairs": 0,
+    "compact_extractor_verified_points": 16,
+    "initial_separated_switch_brackets": 90
+  },
+  "offset_summaries": [
+    {
+      "width_mm": 126,
+      "method": "cc_mf",
+      "seed": 6,
+      "stage": 1,
+      "offset_um": 5,
+      "subset": "all_valid",
+      "candidate_events": 90,
+      "accepted_events": 85,
+      "exclusion_counts": {
+        "same_canonical_at_finite_offsets": 5
+      },
+      "ordinary_inverse_cdf_events": 85,
+      "within_initial_grid_bracket_events": 82,
+      "mask_changed_events": 0,
+      "internal_selector_changed_events": 58,
+      "mf_branch_pair_counts": {
+        "1:1": 85
+      },
+      "mf_abs_quantile_change_smaller_count": 78,
+      "metrics": {
+        "delta_sf_quantile": {
+          "n": 85,
+          "mean_abs": 0.6320586593427208,
+          "p95_abs": 2.354518589078956,
+          "rms": 1.0966005111174524,
+          "mean_signed": 0.3050037481853176,
+          "max_abs": 4.798094590585577
+        },
+        "delta_mf_quantile": {
+          "n": 85,
+          "mean_abs": 0.002151186409017399,
+          "p95_abs": 0.009925604250275553,
+          "rms": 0.0037853291180327954,
+          "mean_signed": -0.00019845670049800906,
+          "max_abs": 0.014169793416821008
+        },
+        "delta_p_selected": {
+          "n": 85,
+          "mean_abs": 0.0001693180899929513,
+          "p95_abs": 0.0006618756660798225,
+          "rms": 0.0006143649322529502,
+          "mean_signed": 1.3281508928456447e-06,
+          "max_abs": 0.0041771498475235425
+        },
+        "delta_probability_sum": {
+          "n": 85,
+          "mean_abs": 1.1960755403841016e-05,
+          "p95_abs": 6.844746807431806e-06,
+          "rms": 7.957535921333194e-05,
+          "mean_signed": 4.949311353534962e-06,
+          "max_abs": 0.0006834824717132926
+        },
+        "delta_sf_probability_margin": {
+          "n": 85,
+          "mean_abs": 0.0001693180899929513,
+          "p95_abs": 0.0006618756660798225,
+          "rms": 0.0006143649322529502,
+          "mean_signed": -1.3281508928456447e-06,
+          "max_abs": 0.0041771498475235425
+        },
+        "delta_mf_probability_margin": {
+          "n": 85,
+          "mean_abs": 1.1960755403841016e-05,
+          "p95_abs": 6.844746807431806e-06,
+          "rms": 7.957535921333194e-05,
+          "mean_signed": -4.949311353534962e-06,
+          "max_abs": 0.0006834824717132926
+        },
+        "delta_sf_native_mm": {
+          "n": 85,
+          "mean_abs": 0.08615938187107428,
+          "p95_abs": 0.2871606803930359,
+          "rms": 0.12698578124121057,
+          "mean_signed": 0.028495898763425544,
+          "max_abs": 0.3305529936506563
+        }
+      }
+    },
+    {
+      "width_mm": 126,
+      "method": "cc_mf",
+      "seed": 6,
+      "stage": 1,
+      "offset_um": 5,
+      "subset": "ordinary_inverse_cdf",
+      "candidate_events": 90,
+      "accepted_events": 85,
+      "exclusion_counts": {
+        "same_canonical_at_finite_offsets": 5
+      },
+      "ordinary_inverse_cdf_events": 85,
+      "within_initial_grid_bracket_events": 82,
+      "mask_changed_events": 0,
+      "internal_selector_changed_events": 58,
+      "mf_branch_pair_counts": {
+        "1:1": 85
+      },
+      "mf_abs_quantile_change_smaller_count": 78,
+      "metrics": {
+        "delta_sf_quantile": {
+          "n": 85,
+          "mean_abs": 0.6320586593427208,
+          "p95_abs": 2.354518589078956,
+          "rms": 1.0966005111174524,
+          "mean_signed": 0.3050037481853176,
+          "max_abs": 4.798094590585577
+        },
+        "delta_mf_quantile": {
+          "n": 85,
+          "mean_abs": 0.002151186409017399,
+          "p95_abs": 0.009925604250275553,
+          "rms": 0.0037853291180327954,
+          "mean_signed": -0.00019845670049800906,
+          "max_abs": 0.014169793416821008
+        },
+        "delta_p_selected": {
+          "n": 85,
+          "mean_abs": 0.0001693180899929513,
+          "p95_abs": 0.0006618756660798225,
+          "rms": 0.0006143649322529502,
+          "mean_signed": 1.3281508928456447e-06,
+          "max_abs": 0.0041771498475235425
+        },
+        "delta_probability_sum": {
+          "n": 85,
+          "mean_abs": 1.1960755403841016e-05,
+          "p95_abs": 6.844746807431806e-06,
+          "rms": 7.957535921333194e-05,
+          "mean_signed": 4.949311353534962e-06,
+          "max_abs": 0.0006834824717132926
+        },
+        "delta_sf_probability_margin": {
+          "n": 85,
+          "mean_abs": 0.0001693180899929513,
+          "p95_abs": 0.0006618756660798225,
+          "rms": 0.0006143649322529502,
+          "mean_signed": -1.3281508928456447e-06,
+          "max_abs": 0.0041771498475235425
+        },
+        "delta_mf_probability_margin": {
+          "n": 85,
+          "mean_abs": 1.1960755403841016e-05,
+          "p95_abs": 6.844746807431806e-06,
+          "rms": 7.957535921333194e-05,
+          "mean_signed": -4.949311353534962e-06,
+          "max_abs": 0.0006834824717132926
+        },
+        "delta_sf_native_mm": {
+          "n": 85,
+          "mean_abs": 0.08615938187107428,
+          "p95_abs": 0.2871606803930359,
+          "rms": 0.12698578124121057,
+          "mean_signed": 0.028495898763425544,
+          "max_abs": 0.3305529936506563
+        }
+      }
+    },
+    {
+      "width_mm": 126,
+      "method": "cc_mf",
+      "seed": 6,
+      "stage": 1,
+      "offset_um": 5,
+      "subset": "within_initial_grid_bracket",
+      "candidate_events": 87,
+      "accepted_events": 82,
+      "exclusion_counts": {
+        "same_canonical_at_finite_offsets": 5
+      },
+      "ordinary_inverse_cdf_events": 82,
+      "within_initial_grid_bracket_events": 82,
+      "mask_changed_events": 0,
+      "internal_selector_changed_events": 57,
+      "mf_branch_pair_counts": {
+        "1:1": 82
+      },
+      "mf_abs_quantile_change_smaller_count": 76,
+      "metrics": {
+        "delta_sf_quantile": {
+          "n": 82,
+          "mean_abs": 0.6517772242670151,
+          "p95_abs": 2.374193013346515,
+          "rms": 1.116133517169367,
+          "mean_signed": 0.31901022546647606,
+          "max_abs": 4.798094590585577
+        },
+        "delta_mf_quantile": {
+          "n": 82,
+          "mean_abs": 0.0020018726654434126,
+          "p95_abs": 0.009130258898415816,
+          "rms": 0.0035014635146528917,
+          "mean_signed": 2.229837387546771e-05,
+          "max_abs": 0.013358917063428066
+        },
+        "delta_p_selected": {
+          "n": 82,
+          "mean_abs": 0.00017548740292568123,
+          "p95_abs": 0.0006825489671663584,
+          "rms": 0.0006255023229518782,
+          "mean_signed": 1.3514904438644016e-06,
+          "max_abs": 0.0041771498475235425
+        },
+        "delta_probability_sum": {
+          "n": 82,
+          "mean_abs": 1.2224972002696776e-05,
+          "p95_abs": 4.513477505828585e-06,
+          "rms": 8.100271863081806e-05,
+          "mean_signed": 4.957011706647819e-06,
+          "max_abs": 0.0006834824717132926
+        },
+        "delta_sf_probability_margin": {
+          "n": 82,
+          "mean_abs": 0.00017548740292568123,
+          "p95_abs": 0.0006825489671663584,
+          "rms": 0.0006255023229518782,
+          "mean_signed": -1.3514904438644016e-06,
+          "max_abs": 0.0041771498475235425
+        },
+        "delta_mf_probability_margin": {
+          "n": 82,
+          "mean_abs": 1.2224972002696776e-05,
+          "p95_abs": 4.513477505828585e-06,
+          "rms": 8.100271863081806e-05,
+          "mean_signed": -4.957011706647819e-06,
+          "max_abs": 0.0006834824717132926
+        },
+        "delta_sf_native_mm": {
+          "n": 82,
+          "mean_abs": 0.08882627876478193,
+          "p95_abs": 0.29105012614349624,
+          "rms": 0.1292249083556195,
+          "mean_signed": 0.029972971950044416,
+          "max_abs": 0.3305529936506563
+        }
+      }
+    },
+    {
+      "width_mm": 126,
+      "method": "cc_mf",
+      "seed": 6,
+      "stage": 1,
+      "offset_um": 10,
+      "subset": "all_valid",
+      "candidate_events": 90,
+      "accepted_events": 90,
+      "exclusion_counts": {},
+      "ordinary_inverse_cdf_events": 90,
+      "within_initial_grid_bracket_events": 86,
+      "mask_changed_events": 0,
+      "internal_selector_changed_events": 68,
+      "mf_branch_pair_counts": {
+        "1:1": 90
+      },
+      "mf_abs_quantile_change_smaller_count": 77,
+      "metrics": {
+        "delta_sf_quantile": {
+          "n": 90,
+          "mean_abs": 0.6014413161145011,
+          "p95_abs": 2.321913988601243,
+          "rms": 1.0664253622480973,
+          "mean_signed": 0.2913935157138587,
+          "max_abs": 4.795829729720114
+        },
+        "delta_mf_quantile": {
+          "n": 90,
+          "mean_abs": 0.004492618534146109,
+          "p95_abs": 0.019343160769331465,
+          "rms": 0.007806830896067285,
+          "mean_signed": -5.179598541752305e-05,
+          "max_abs": 0.02953408982763106
+        },
+        "delta_p_selected": {
+          "n": 90,
+          "mean_abs": 0.00016706240003191696,
+          "p95_abs": 0.0006803062434829805,
+          "rms": 0.0006017418545664919,
+          "mean_signed": 3.27594635639034e-07,
+          "max_abs": 0.004178636345154368
+        },
+        "delta_probability_sum": {
+          "n": 90,
+          "mean_abs": 2.1276009488399498e-05,
+          "p95_abs": 1.1484148618872975e-05,
+          "rms": 0.00014007904636580715,
+          "mean_signed": 6.954962627460557e-06,
+          "max_abs": 0.0011986331394686633
+        },
+        "delta_sf_probability_margin": {
+          "n": 90,
+          "mean_abs": 0.00016706240003191696,
+          "p95_abs": 0.0006803062434829805,
+          "rms": 0.0006017418545664919,
+          "mean_signed": -3.27594635639034e-07,
+          "max_abs": 0.004178636345154368
+        },
+        "delta_mf_probability_margin": {
+          "n": 90,
+          "mean_abs": 2.1276009488399498e-05,
+          "p95_abs": 1.1484148618872975e-05,
+          "rms": 0.00014007904636580715,
+          "mean_signed": -6.954962627460557e-06,
+          "max_abs": 0.0011986331394686633
+        },
+        "delta_sf_native_mm": {
+          "n": 90,
+          "mean_abs": 0.08277571871536224,
+          "p95_abs": 0.28104733973237367,
+          "rms": 0.12393023195993239,
+          "mean_signed": 0.027902693771476323,
+          "max_abs": 0.33100320349406737
+        }
+      }
+    },
+    {
+      "width_mm": 126,
+      "method": "cc_mf",
+      "seed": 6,
+      "stage": 1,
+      "offset_um": 10,
+      "subset": "ordinary_inverse_cdf",
+      "candidate_events": 90,
+      "accepted_events": 90,
+      "exclusion_counts": {},
+      "ordinary_inverse_cdf_events": 90,
+      "within_initial_grid_bracket_events": 86,
+      "mask_changed_events": 0,
+      "internal_selector_changed_events": 68,
+      "mf_branch_pair_counts": {
+        "1:1": 90
+      },
+      "mf_abs_quantile_change_smaller_count": 77,
+      "metrics": {
+        "delta_sf_quantile": {
+          "n": 90,
+          "mean_abs": 0.6014413161145011,
+          "p95_abs": 2.321913988601243,
+          "rms": 1.0664253622480973,
+          "mean_signed": 0.2913935157138587,
+          "max_abs": 4.795829729720114
+        },
+        "delta_mf_quantile": {
+          "n": 90,
+          "mean_abs": 0.004492618534146109,
+          "p95_abs": 0.019343160769331465,
+          "rms": 0.007806830896067285,
+          "mean_signed": -5.179598541752305e-05,
+          "max_abs": 0.02953408982763106
+        },
+        "delta_p_selected": {
+          "n": 90,
+          "mean_abs": 0.00016706240003191696,
+          "p95_abs": 0.0006803062434829805,
+          "rms": 0.0006017418545664919,
+          "mean_signed": 3.27594635639034e-07,
+          "max_abs": 0.004178636345154368
+        },
+        "delta_probability_sum": {
+          "n": 90,
+          "mean_abs": 2.1276009488399498e-05,
+          "p95_abs": 1.1484148618872975e-05,
+          "rms": 0.00014007904636580715,
+          "mean_signed": 6.954962627460557e-06,
+          "max_abs": 0.0011986331394686633
+        },
+        "delta_sf_probability_margin": {
+          "n": 90,
+          "mean_abs": 0.00016706240003191696,
+          "p95_abs": 0.0006803062434829805,
+          "rms": 0.0006017418545664919,
+          "mean_signed": -3.27594635639034e-07,
+          "max_abs": 0.004178636345154368
+        },
+        "delta_mf_probability_margin": {
+          "n": 90,
+          "mean_abs": 2.1276009488399498e-05,
+          "p95_abs": 1.1484148618872975e-05,
+          "rms": 0.00014007904636580715,
+          "mean_signed": -6.954962627460557e-06,
+          "max_abs": 0.0011986331394686633
+        },
+        "delta_sf_native_mm": {
+          "n": 90,
+          "mean_abs": 0.08277571871536224,
+          "p95_abs": 0.28104733973237367,
+          "rms": 0.12393023195993239,
+          "mean_signed": 0.027902693771476323,
+          "max_abs": 0.33100320349406737
+        }
+      }
+    },
+    {
+      "width_mm": 126,
+      "method": "cc_mf",
+      "seed": 6,
+      "stage": 1,
+      "offset_um": 10,
+      "subset": "within_initial_grid_bracket",
+      "candidate_events": 86,
+      "accepted_events": 86,
+      "exclusion_counts": {},
+      "ordinary_inverse_cdf_events": 86,
+      "within_initial_grid_bracket_events": 86,
+      "mask_changed_events": 0,
+      "internal_selector_changed_events": 64,
+      "mf_branch_pair_counts": {
+        "1:1": 86
+      },
+      "mf_abs_quantile_change_smaller_count": 75,
+      "metrics": {
+        "delta_sf_quantile": {
+          "n": 86,
+          "mean_abs": 0.6260114072264567,
+          "p95_abs": 2.347772699189397,
+          "rms": 1.090601876892552,
+          "mean_signed": 0.3077407706195661,
+          "max_abs": 4.795829729720114
+        },
+        "delta_mf_quantile": {
+          "n": 86,
+          "mean_abs": 0.004196891571308709,
+          "p95_abs": 0.01749123993039059,
+          "rms": 0.007267308155531377,
+          "mean_signed": 0.0003419469363419871,
+          "max_abs": 0.028267247298009224
+        },
+        "delta_p_selected": {
+          "n": 86,
+          "mean_abs": 0.00017476962871143086,
+          "p95_abs": 0.0006845412924984751,
+          "rms": 0.000615576533021844,
+          "mean_signed": 2.7971608741908815e-07,
+          "max_abs": 0.004178636345154368
+        },
+        "delta_probability_sum": {
+          "n": 86,
+          "mean_abs": 2.1919197346100786e-05,
+          "p95_abs": 7.03160168725563e-06,
+          "rms": 0.00014326366737578484,
+          "mean_signed": 6.932055282327474e-06,
+          "max_abs": 0.0011986331394686633
+        },
+        "delta_sf_probability_margin": {
+          "n": 86,
+          "mean_abs": 0.00017476962871143086,
+          "p95_abs": 0.0006845412924984751,
+          "rms": 0.000615576533021844,
+          "mean_signed": -2.7971608741908815e-07,
+          "max_abs": 0.004178636345154368
+        },
+        "delta_mf_probability_margin": {
+          "n": 86,
+          "mean_abs": 2.1919197346100786e-05,
+          "p95_abs": 7.03160168725563e-06,
+          "rms": 0.00014326366737578484,
+          "mean_signed": -6.932055282327474e-06,
+          "max_abs": 0.0011986331394686633
+        },
+        "delta_sf_native_mm": {
+          "n": 86,
+          "mean_abs": 0.08611199990151608,
+          "p95_abs": 0.28621742661161265,
+          "rms": 0.12671557735787994,
+          "mean_signed": 0.029623918269395314,
+          "max_abs": 0.33100320349406737
+        }
+      }
+    },
+    {
+      "width_mm": 126,
+      "method": "cc_mf",
+      "seed": 6,
+      "stage": 1,
+      "offset_um": 50,
+      "subset": "all_valid",
+      "candidate_events": 90,
+      "accepted_events": 90,
+      "exclusion_counts": {},
+      "ordinary_inverse_cdf_events": 90,
+      "within_initial_grid_bracket_events": 60,
+      "mask_changed_events": 0,
+      "internal_selector_changed_events": 73,
+      "mf_branch_pair_counts": {
+        "1:1": 90
+      },
+      "mf_abs_quantile_change_smaller_count": 76,
+      "metrics": {
+        "delta_sf_quantile": {
+          "n": 90,
+          "mean_abs": 0.6102517518327499,
+          "p95_abs": 2.3250396033776672,
+          "rms": 1.0689779631931957,
+          "mean_signed": 0.2905068168038586,
+          "max_abs": 4.775992711173209
+        },
+        "delta_mf_quantile": {
+          "n": 90,
+          "mean_abs": 0.022349885755862338,
+          "p95_abs": 0.09691240088566573,
+          "rms": 0.039029717878081086,
+          "mean_signed": -0.00040464334310724346,
+          "max_abs": 0.14987156064922003
+        },
+        "delta_p_selected": {
+          "n": 90,
+          "mean_abs": 0.00021181021745868343,
+          "p95_abs": 0.0012921233808664177,
+          "rms": 0.0007012861317179657,
+          "mean_signed": 5.845173908021347e-06,
+          "max_abs": 0.004190057697910185
+        },
+        "delta_probability_sum": {
+          "n": 90,
+          "mean_abs": 9.851733951182094e-05,
+          "p95_abs": 5.759482730429444e-05,
+          "rms": 0.0006456605355768665,
+          "mean_signed": 3.2470908865303193e-05,
+          "max_abs": 0.0055277831242858955
+        },
+        "delta_sf_probability_margin": {
+          "n": 90,
+          "mean_abs": 0.00021181021745868343,
+          "p95_abs": 0.0012921233808664177,
+          "rms": 0.0007012861317179657,
+          "mean_signed": -5.845173908021347e-06,
+          "max_abs": 0.004190057697910185
+        },
+        "delta_mf_probability_margin": {
+          "n": 90,
+          "mean_abs": 9.851733951182094e-05,
+          "p95_abs": 5.759482730429444e-05,
+          "rms": 0.0006456605355768665,
+          "mean_signed": -3.2470908865303193e-05,
+          "max_abs": 0.0055277831242858955
+        },
+        "delta_sf_native_mm": {
+          "n": 90,
+          "mean_abs": 0.08765659326301477,
+          "p95_abs": 0.28589018393210547,
+          "rms": 0.12707837699403216,
+          "mean_signed": 0.029403735333171692,
+          "max_abs": 0.34728488149625336
+        }
+      }
+    },
+    {
+      "width_mm": 126,
+      "method": "cc_mf",
+      "seed": 6,
+      "stage": 1,
+      "offset_um": 50,
+      "subset": "ordinary_inverse_cdf",
+      "candidate_events": 90,
+      "accepted_events": 90,
+      "exclusion_counts": {},
+      "ordinary_inverse_cdf_events": 90,
+      "within_initial_grid_bracket_events": 60,
+      "mask_changed_events": 0,
+      "internal_selector_changed_events": 73,
+      "mf_branch_pair_counts": {
+        "1:1": 90
+      },
+      "mf_abs_quantile_change_smaller_count": 76,
+      "metrics": {
+        "delta_sf_quantile": {
+          "n": 90,
+          "mean_abs": 0.6102517518327499,
+          "p95_abs": 2.3250396033776672,
+          "rms": 1.0689779631931957,
+          "mean_signed": 0.2905068168038586,
+          "max_abs": 4.775992711173209
+        },
+        "delta_mf_quantile": {
+          "n": 90,
+          "mean_abs": 0.022349885755862338,
+          "p95_abs": 0.09691240088566573,
+          "rms": 0.039029717878081086,
+          "mean_signed": -0.00040464334310724346,
+          "max_abs": 0.14987156064922003
+        },
+        "delta_p_selected": {
+          "n": 90,
+          "mean_abs": 0.00021181021745868343,
+          "p95_abs": 0.0012921233808664177,
+          "rms": 0.0007012861317179657,
+          "mean_signed": 5.845173908021347e-06,
+          "max_abs": 0.004190057697910185
+        },
+        "delta_probability_sum": {
+          "n": 90,
+          "mean_abs": 9.851733951182094e-05,
+          "p95_abs": 5.759482730429444e-05,
+          "rms": 0.0006456605355768665,
+          "mean_signed": 3.2470908865303193e-05,
+          "max_abs": 0.0055277831242858955
+        },
+        "delta_sf_probability_margin": {
+          "n": 90,
+          "mean_abs": 0.00021181021745868343,
+          "p95_abs": 0.0012921233808664177,
+          "rms": 0.0007012861317179657,
+          "mean_signed": -5.845173908021347e-06,
+          "max_abs": 0.004190057697910185
+        },
+        "delta_mf_probability_margin": {
+          "n": 90,
+          "mean_abs": 9.851733951182094e-05,
+          "p95_abs": 5.759482730429444e-05,
+          "rms": 0.0006456605355768665,
+          "mean_signed": -3.2470908865303193e-05,
+          "max_abs": 0.0055277831242858955
+        },
+        "delta_sf_native_mm": {
+          "n": 90,
+          "mean_abs": 0.08765659326301477,
+          "p95_abs": 0.28589018393210547,
+          "rms": 0.12707837699403216,
+          "mean_signed": 0.029403735333171692,
+          "max_abs": 0.34728488149625336
+        }
+      }
+    },
+    {
+      "width_mm": 126,
+      "method": "cc_mf",
+      "seed": 6,
+      "stage": 1,
+      "offset_um": 50,
+      "subset": "within_initial_grid_bracket",
+      "candidate_events": 60,
+      "accepted_events": 60,
+      "exclusion_counts": {},
+      "ordinary_inverse_cdf_events": 60,
+      "within_initial_grid_bracket_events": 60,
+      "mask_changed_events": 0,
+      "internal_selector_changed_events": 48,
+      "mf_branch_pair_counts": {
+        "1:1": 60
+      },
+      "mf_abs_quantile_change_smaller_count": 51,
+      "metrics": {
+        "delta_sf_quantile": {
+          "n": 60,
+          "mean_abs": 0.5315764204251551,
+          "p95_abs": 2.226147853167047,
+          "rms": 0.8412397378233916,
+          "mean_signed": 0.15735595957315762,
+          "max_abs": 2.61115108565767
+        },
+        "delta_mf_quantile": {
+          "n": 60,
+          "mean_abs": 0.015400115815081534,
+          "p95_abs": 0.053332115509005996,
+          "rms": 0.027107078601081597,
+          "mean_signed": -0.0002678486503298753,
+          "max_abs": 0.14333408029984263
+        },
+        "delta_p_selected": {
+          "n": 60,
+          "mean_abs": 0.00023374334356334592,
+          "p95_abs": 0.0012484569484535358,
+          "rms": 0.0007546997758386694,
+          "mean_signed": -4.761782263092408e-05,
+          "max_abs": 0.004190057697910185
+        },
+        "delta_probability_sum": {
+          "n": 60,
+          "mean_abs": 5.187513057128023e-05,
+          "p95_abs": 3.8321113646346844e-05,
+          "rms": 0.0003400102292778113,
+          "mean_signed": -4.567563762275873e-05,
+          "max_abs": 0.0026267839698047857
+        },
+        "delta_sf_probability_margin": {
+          "n": 60,
+          "mean_abs": 0.00023374334356334592,
+          "p95_abs": 0.0012484569484535358,
+          "rms": 0.0007546997758386694,
+          "mean_signed": 4.761782263092408e-05,
+          "max_abs": 0.004190057697910185
+        },
+        "delta_mf_probability_margin": {
+          "n": 60,
+          "mean_abs": 5.187513057128023e-05,
+          "p95_abs": 3.8321113646346844e-05,
+          "rms": 0.0003400102292778113,
+          "mean_signed": 4.567563762275873e-05,
+          "max_abs": 0.0026267839698047857
+        },
+        "delta_sf_native_mm": {
+          "n": 60,
+          "mean_abs": 0.08583640130208216,
+          "p95_abs": 0.24558428748278555,
+          "rms": 0.1217028083699021,
+          "mean_signed": 0.01713607674095382,
+          "max_abs": 0.33111551926202193
+        }
+      }
+    }
+  ],
+  "elapsed_s": 0.7115145110001322,
+  "sources": {
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/sf_mf_width125_130mm_step001_10trials_20261104/constraint_stability_20261105/cycle_cache/width_126mm_cc_mf_seed_6_stage_1.npz": "7d7d889f1c16ee167bd0352de03cea3f803c12a00e814a1a729376988c3dbf11",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/sf_mf_width125_130mm_step001_10trials_20261104/width_126mm/cc_mf/seed_6/optimizer_parameters.json": "c248556fb2357b4c4e531b026cf8ecc4eeb6c200eba1b477df2fc8ef19b5ba01",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/sf_mf_width125_130mm_step001_10trials_20261104/width_126mm/cc_mf/seed_6/config.yaml": "75f1e70fab53ec9e47719b87e9bcb781bf441b5eec050f55ed6787c73797ca15",
+    "/home/taek111/projects/psdf_mpcc/benchmark_runs/sf_mf_width125_130mm_step001_10trials_20261104/width_126mm/cc_sf/seed_6/optimizer_parameters.json": "e61e3d2a257f9d62a4c7cb931b09cba691910761afcff457ca3a909b96b527cc"
+  },
+  "chance_epsilon": 0.1,
+  "d_min_m": 0.0001,
+  "offsets_um": [
+    5,
+    10,
+    50
+  ],
+  "analysis_source_sha256": "e7578df9bb12e6b9279ffde92eae558456d7d392773173712da64004c2b3f33b",
+  "reference_sf_risk_margin_floor_m": 0.0,
+  "reference_sf_risk_margin_cap_m": 2.0,
+  "cache_selector_disagreement_records": [],
+  "geometry_device": "cuda",
+  "center_tolerance_um": 0.25
+}

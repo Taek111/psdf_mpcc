@@ -196,24 +196,27 @@ class CCSFLogCholeskyTest(unittest.TestCase):
         )
         np.testing.assert_allclose(margins, expected, rtol=1e-14, atol=1e-16)
 
-    def test_initial_margin_and_zero_gradient_have_finite_derivatives(self):
+    def test_future_guard_and_margin_have_finite_derivatives_and_initial_is_inactive(self):
         # The bridge can build symbolic expressions without a numeric PSDF backend.
         self.optimizer.ped_model = AnalyticPSDFCasADi(None, name="test_sf_factor_margin")
         self.optimizer.setup_ocp(self.param, None)
         self.optimizer.add_obstacle_avoidance_constraint(self.param, None, None)
         model = self.optimizer.ocp.model
-        self.assertEqual(self.optimizer.ocp.dims.nh_0, 1)
-        self.assertEqual(self.optimizer.ocp.dims.nh, 1)
-        self.assertEqual(self.optimizer.ocp.dims.nh_e, 0)
-        self.assertEqual(model.con_h_expr_e.numel(), 0)
-        self.assertEqual(self.optimizer.ocp.constraints.lh_e.size, 0)
-        self.assertEqual(self.optimizer.ocp.constraints.uh_e.size, 0)
+        self.assertEqual(self.optimizer.ocp.dims.nh_0, 2)
+        self.assertEqual(self.optimizer.ocp.dims.nh, 2)
+        self.assertEqual(self.optimizer.ocp.dims.nh_e, 2)
+        self.assertEqual(model.con_h_expr_e.numel(), 2)
+        np.testing.assert_array_equal(self.optimizer.ocp.constraints.lh_e, np.zeros(2))
+        np.testing.assert_array_equal(self.optimizer.ocp.constraints.uh_e, np.full(2, 1e8))
+        self.assertEqual(self.optimizer.ocp.dims.nsh, 0)
+        self.assertEqual(self.optimizer.ocp.dims.nsh_e, 0)
         self.assertEqual(self.optimizer.N, self.param.horizon)
         self.assertEqual(self.optimizer.ocp.solver_options.tf, self.param.tf)
         evaluate = ca.Function(
             "sf_initial_factor_margin",
             [model.x, model.p],
-            [model.con_h_expr, model.con_h_expr_0,
+            [model.con_h_expr, model.con_h_expr_0, model.con_h_expr_e,
+             ca.jacobian(model.con_h_expr, model.x),
              ca.jacobian(model.con_h_expr_0, model.x)],
         )
         state = np.r_[np.zeros(4), np.log([0.03, 0.07, 0.02]), -0.04]
@@ -227,17 +230,23 @@ class CCSFLogCholeskyTest(unittest.TestCase):
                     psdf_stage=np.r_[np.zeros(3), 0.8, gradient],
                     stage_idx=0,
                 )
-                stage_value, initial_value, jacobian = evaluate(state, parameters)
+                stage_value, initial_value, terminal_value, jacobian, initial_jacobian = evaluate(
+                    state, parameters,
+                )
                 margin = self.optimizer._compute_margin_from_risk_terms(
                     state[None, 4:], terms[None, :], self.param
                 )[0]
-                self.assertAlmostEqual(float(initial_value), 0.8 - self.param.d_min - margin)
-                self.assertAlmostEqual(float(stage_value), float(initial_value))
+                self.assertAlmostEqual(float(stage_value[0]), 0.8 - self.param.d_col)
+                self.assertAlmostEqual(float(stage_value[1]), 0.8 - self.param.d_min - margin)
+                np.testing.assert_array_equal(initial_value, np.ones((2, 1)))
+                np.testing.assert_array_equal(initial_jacobian, np.zeros((2, 8)))
+                np.testing.assert_array_equal(stage_value, terminal_value)
                 self.assertTrue(np.isfinite(np.asarray(jacobian)).all())
+                np.testing.assert_array_equal(np.asarray(jacobian)[0, 4:], np.zeros(4))
                 if not np.any(gradient):
-                    np.testing.assert_array_equal(np.asarray(jacobian), np.zeros((1, 8)))
+                    np.testing.assert_array_equal(np.asarray(jacobian), np.zeros((2, 8)))
                 else:
-                    self.assertGreater(np.linalg.norm(np.asarray(jacobian)[0, 4:]), 0.0)
+                    self.assertGreater(np.linalg.norm(np.asarray(jacobian)[1, 4:]), 0.0)
 
     def test_preparation_regenerates_frozen_tail_and_keeps_risk_active(self):
         self.optimizer.create_model(self.param)
@@ -273,10 +282,10 @@ class CCSFLogCholeskyTest(unittest.TestCase):
         )
         np.testing.assert_array_equal(
             self.optimizer.get_risk_margin_active_stage_mask(),
-            np.ones(self.param.horizon + 1, dtype=bool),
+            np.r_[False, np.ones(self.param.horizon, dtype=bool)],
         )
 
-    def test_risk_margin_is_always_applied_to_initial_and_future_constraints(self):
+    def test_risk_margin_is_hard_at_future_stages_without_geometric_domain_gate(self):
         self.assertFalse(hasattr(self.param, "use_risk_margin"))
         self.assertFalse(hasattr(self.param, "use_projected_variance_margin"))
         self.optimizer.ped_model = AnalyticPSDFCasADi(None, name="test_sf_risk_always")
@@ -287,15 +296,17 @@ class CCSFLogCholeskyTest(unittest.TestCase):
             "sf_risk_always",
             [model.x, model.p],
             [model.con_h_expr, model.con_h_expr_0,
-             ca.jacobian(model.con_h_expr_0, model.x)],
+             ca.jacobian(model.con_h_expr, model.x)],
         )
         gradient = np.array([0.6, -0.8, 0.2])
         terms = self.optimizer._extract_projected_variance_terms(gradient)
         parameters = self.optimizer._build_stage_param(
             np.array([0.0, 0.0, 1.0, 0.0, 0.0, 0.0]),
             terms, 1.0,
-            psdf_stage=np.r_[np.zeros(3), 0.8, gradient],
-            stage_idx=0,
+            # The geometric guard is satisfied but phi <= d_min. SF must
+            # retain its hard chance row here, unlike MF's domain gating.
+            psdf_stage=np.r_[np.zeros(3), self.param.d_col, gradient],
+            stage_idx=1,
         )
         state = self.optimizer._with_input_memory(
             np.r_[np.zeros(4), np.log([0.03, 0.07, 0.02]), -0.04]
@@ -306,13 +317,66 @@ class CCSFLogCholeskyTest(unittest.TestCase):
             gradient @ factor,
         )
         self.assertGreater(margin, 0.0)
-        self.assertAlmostEqual(float(stage_value), 0.8 - self.param.d_min - margin)
-        self.assertAlmostEqual(float(initial_value), float(stage_value))
-        self.assertGreater(np.linalg.norm(np.asarray(jacobian)[0, 4:8]), 0.0)
+        self.assertAlmostEqual(float(stage_value[0]), 0.0)
+        self.assertAlmostEqual(float(stage_value[1]), self.param.d_col - self.param.d_min - margin)
+        self.assertLess(float(stage_value[1]), 0.0)
+        np.testing.assert_array_equal(initial_value, np.ones((2, 1)))
+        self.assertGreater(np.linalg.norm(np.asarray(jacobian)[1, 4:8]), 0.0)
         np.testing.assert_array_equal(
             self.optimizer.get_risk_margin_active_stage_mask(),
-            np.ones(self.param.horizon + 1, dtype=bool),
+            np.r_[False, np.ones(self.param.horizon, dtype=bool)],
         )
+
+    def test_exact_current_guard_skips_solver_only_below_threshold(self):
+        self.optimizer.create_model(self.param, ca.MX.sym("stage0_guard_psdf", 7))
+        self.optimizer.state._x = np.array([.2, -.1, .4])
+        self.optimizer.backup_solver = Mock()
+        for phi in (self.param.d_col * .5, self.param.d_col, self.param.d_min * .75):
+            with self.subTest(phi=phi):
+                called = Mock()
+                self.optimizer.solver = self._runtime_solver(on_solve=called)
+                self.optimizer.ped_model = SimpleNamespace(get_params=Mock(
+                    side_effect=lambda poses: np.column_stack((
+                        poses, np.full(len(poses), phi),
+                        np.tile([1., 0., 0.], (len(poses), 1)),
+                    )),
+                ))
+                with redirect_stdout(io.StringIO()):
+                    solution = self.optimizer.solve_nlp()
+                if phi < self.param.d_col:
+                    called.assert_not_called()
+                    np.testing.assert_array_equal(solution.get_input_trajectory(), np.zeros((3, 3)))
+                    np.testing.assert_array_equal(
+                        solution.get_state_trajectory()[:3].T,
+                        np.tile(self.optimizer.state._x, (4, 1)),
+                    )
+                    self.assertEqual(solution.stats(), {
+                        "return_status": "safe_stop_stage0", "status_code": None,
+                        "success": False, "solver_called": False,
+                    })
+                    self.assertIsNone(solution.solver.status)
+                    self.assertEqual(self.optimizer.solver_times[-1], 0.0)
+                else:
+                    called.assert_called_once()
+                    self.assertEqual(solution.stats()["return_status"], "success")
+                    self.assertTrue(solution.stats()["solver_called"])
+                self.assertAlmostEqual(self.optimizer._current_psdf, phi)
+        self.optimizer.backup_solver.reset.assert_not_called()
+        stats = self.optimizer.get_runtime_stats()
+        self.assertEqual(stats["safe_stop_count"], 1)
+        self.assertEqual(stats["stage0_guard_stop_count"], 1)
+        self.assertEqual(stats["main_solver_failure_count"], 0)
+
+    def test_stage0_stop_installation_failure_cannot_return_stale_control(self):
+        self.optimizer.create_model(self.param)
+        self.optimizer.solver = self._runtime_solver()
+        with (
+            patch.object(self.optimizer, "_prepare_and_solve", return_value=None),
+            patch.object(self.optimizer.solver, "set", side_effect=RuntimeError("cannot install")),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "safe-stop plan"):
+                self.optimizer.solve_nlp()
+        self.assertEqual(self.optimizer.get_runtime_stats()["safe_stop_count"], 0)
 
     def test_global_obstacle_disable_reports_no_active_margin(self):
         self.param.use_obstacle_constraint = False

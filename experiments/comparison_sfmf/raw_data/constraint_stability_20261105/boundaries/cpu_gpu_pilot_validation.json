@@ -1,0 +1,107 @@
+{
+  "pilot": "width126mm_cc_sf_seed5_stage1",
+  "center_tolerance_um": 0.25,
+  "CPU_geometry": "float32",
+  "GPU_geometry": "float32 CUDA",
+  "risk_arithmetic": "float64",
+  "per_offset": [
+    {
+      "offset_um": 5,
+      "candidate_events_cpu": 33,
+      "candidate_events_gpu": 33,
+      "accepted_cpu": 30,
+      "accepted_gpu": 30,
+      "acceptance_agreement": true,
+      "endpoint_canonical_agreement": true,
+      "numerical_differences": {
+        "delta_sf_quantile": {
+          "max_abs": 0.002487608168084021,
+          "mean_abs": 0.000220796325419285
+        },
+        "delta_mf_quantile": {
+          "max_abs": 0.0010228627490804776,
+          "mean_abs": 9.006554432744821e-05
+        },
+        "delta_p_selected": {
+          "max_abs": 0.00015434947039934255,
+          "mean_abs": 8.038291125570211e-06
+        },
+        "delta_probability_sum": {
+          "max_abs": 0.00015904414541501044,
+          "mean_abs": 8.69253055483027e-06
+        }
+      }
+    },
+    {
+      "offset_um": 10,
+      "candidate_events_cpu": 33,
+      "candidate_events_gpu": 33,
+      "accepted_cpu": 32,
+      "accepted_gpu": 32,
+      "acceptance_agreement": true,
+      "endpoint_canonical_agreement": true,
+      "numerical_differences": {
+        "delta_sf_quantile": {
+          "max_abs": 0.0025806267748373912,
+          "mean_abs": 0.0002174378704411159
+        },
+        "delta_mf_quantile": {
+          "max_abs": 0.001036252929735193,
+          "mean_abs": 9.791709512274593e-05
+        },
+        "delta_p_selected": {
+          "max_abs": 0.00016255342481140758,
+          "mean_abs": 8.38171566858929e-06
+        },
+        "delta_probability_sum": {
+          "max_abs": 0.0001708332918810146,
+          "mean_abs": 9.147971509959517e-06
+        }
+      }
+    },
+    {
+      "offset_um": 50,
+      "candidate_events_cpu": 33,
+      "candidate_events_gpu": 33,
+      "accepted_cpu": 32,
+      "accepted_gpu": 32,
+      "acceptance_agreement": true,
+      "endpoint_canonical_agreement": true,
+      "numerical_differences": {
+        "delta_sf_quantile": {
+          "max_abs": 0.002437258940164,
+          "mean_abs": 0.00020338780951043023
+        },
+        "delta_mf_quantile": {
+          "max_abs": 0.000937660139980645,
+          "mean_abs": 8.127889807982291e-05
+        },
+        "delta_p_selected": {
+          "max_abs": 0.00017084879526787708,
+          "mean_abs": 9.298498628612255e-06
+        },
+        "delta_probability_sum": {
+          "max_abs": 0.00022166450907901147,
+          "mean_abs": 1.2930679284895238e-05
+        }
+      }
+    }
+  ],
+  "warm_gpu_benchmark_s": [
+    1.5974941969980136,
+    0.7145563989979564
+  ],
+  "same_trial_cpu_benchmark_s": 11.264373398997122,
+  "limitations": [
+    "Different devices may resolve geometric ties differently; all full-run cache endpoint selector disagreements are excluded and counted.",
+    "16 separated points per trial validate compact vs original canonical extractor on same device; this is a sampled extraction verification.",
+    "CPU/GPU numerical differences are finite precision sensitivity, not a proof of cross-device identity.",
+    "Old fixed18-bisection pilot had different accepted coverage from adaptive0.25um; optimized CPU/GPU compared here use identical adaptive localization."
+  ],
+  "evidence_hashes": {
+    "cpu_optimized_pilot_metadata.json": "e076f7ebd9c790cdd79e0dc9fa99ec05c9e007254ed7116fa235b684d33851c5",
+    "cpu_optimized_pilot_events.json": "19ec03a7b5d3bd52806b37dd7df88b843abbbb50896752155f77df280e0db3dd",
+    "gpu_optimized_pilot_metadata.json": "a6e03967b3dcd864b57b3fc37b2e2a44b1c4f28482aeebd73d9c218f600e57c2",
+    "gpu_optimized_pilot_events.json": "696c4dca7a21311a491e4f6fe881b9ebb54072356b1a93e8bdfec1d36983b69b"
+  }
+}

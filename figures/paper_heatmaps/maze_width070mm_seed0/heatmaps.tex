@@ -1,0 +1,44 @@
+% In the manuscript preamble:
+% \usepackage{graphicx}
+%
+% Insert this file from the manuscript root with:
+% \input{figures/paper_heatmaps/maze_width070mm_seed0/heatmaps.tex}
+% Paths below are relative to the manuscript compilation directory.
+% If the PDFs are copied elsewhere, redefine \heatmapdir before this input.
+\providecommand{\heatmapdir}{figures/paper_heatmaps/maze_width070mm_seed0}
+
+% Each PDF already contains all four panels, one shared colorbar, and (a)--(d).
+% Do not add separate colorbars or duplicate panel labels in LaTeX.
+% The PDFs are 178 mm wide with 8--9 pt labels: use both columns in a
+% two-column manuscript to retain readable labels.
+% For a single-column manuscript, replace figure* with figure and
+% \textwidth with \linewidth. Avoid shrinking this four-panel layout to
+% one narrow column; a dedicated 2-by-2 layout would be preferable there.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{\heatmapdir/clearance_heatmap.pdf}
+  \caption{Clearance along the closed-loop trajectories in the maze for a
+    differential-drive robot with a $150\times70$ mm rectangular footprint.
+    Each method shows one trial with the same initial pose (seed 0).
+    Clearance is the minimum of the exact footprint--obstacle distance and
+    the signed map-boundary margin. All panels share the magma color scale
+    over $0$--$40$ mm. A power-law color normalization ($\gamma=0.35$) is
+    used to emphasize small clearances.}
+  \label{fig:clearance-heatmap}
+\end{figure*}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{\heatmapdir/velocity_heatmap.pdf}
+  \caption{Applied linear velocity along the closed-loop trajectories for
+    the same maze trials (seed 0, differential-drive robot,
+    $150\times70$ mm rectangular footprint).
+    Each trajectory segment is colored by the linear velocity applied
+    during that interval. All panels share a linear color scale over
+    $0$--$0.18$ m/s.}
+  \label{fig:velocity-heatmap}
+\end{figure*}
+
+% Reference an embedded panel, for example: Fig.~\ref{fig:clearance-heatmap}(a).
+% The figure environments float independently; [t] requests top placement.

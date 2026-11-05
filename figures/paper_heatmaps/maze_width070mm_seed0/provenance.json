@@ -1,0 +1,284 @@
+{
+  "experiment": {
+    "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/experiment.json",
+    "sha256": "5f9586bc0c458915dbedfe66f84a4f03eea1589475a35f7b0d60668c8565dbc3"
+  },
+  "geometry_source": {
+    "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/source_snapshot/sim/simulation_mpc.py",
+    "sha256": "fe0bd08df6a92827facd6f74dec26dfe0cd21e7e0805db0529223252ef47f582"
+  },
+  "generator": {
+    "path": "plot_benchmark_heatmaps.py",
+    "sha256": "bfbe49d4694ca03fc7d90cf7882a2427cfdec83467844787c11d92ec4016273e"
+  },
+  "width_mm": 70,
+  "seed": 0,
+  "rectangle_geometry_m": {
+    "length": 0.15,
+    "width": 0.07
+  },
+  "methods": [
+    "mpcc",
+    "cc_ecs",
+    "cc_sf",
+    "cc_mf"
+  ],
+  "initial_pose": [
+    0.07751460442186786,
+    0.7923579027341738,
+    -1.5387751942727323
+  ],
+  "world_bounds_m": [
+    [
+      0.0,
+      0.0
+    ],
+    [
+      1.95,
+      0.8999999999999999
+    ]
+  ],
+  "display_transform": "(x,y) -> (y_max-y,x-x_min)",
+  "endpoint_markers": {
+    "start": "open circle",
+    "end": "filled black star"
+  },
+  "selection": "User-selected width 70 mm, seed 0",
+  "population": "One paired trial per method; no trial averaging or success-rate inference",
+  "clearance_definition": "Exact rectangle-obstacle polygon distance, min with signed map-boundary margin; obstacle overlap/contact = 0",
+  "clearance_encoding": "Observed pose values in mm; each pose colors its adjacent half-segments; no smoothing or clipping",
+  "velocity_definition": "Signed applied DD linear input v in m/s; history row i colors pose i to pose i+1",
+  "validation": "All values finite; complete contiguous indices; all pose/time joins checked; identical starts/settings; all motion steps verified by RK4",
+  "figure_size_mm": [
+    178,
+    101
+  ],
+  "png_dpi": 600,
+  "metrics": {
+    "clearance": {
+      "range": [
+        0.0,
+        40.0
+      ],
+      "colormap": "magma",
+      "individual_exports": {
+        "directory": "individual",
+        "panels": [
+          "clearance_mpcc",
+          "clearance_cc_ecs",
+          "clearance_cc_sf",
+          "clearance_cc_mf"
+        ],
+        "colorbar": "clearance_colorbar",
+        "formats": [
+          "pdf",
+          "svg",
+          "png"
+        ],
+        "panel_size_mm": [
+          37.379999999999995,
+          80.05666666666666
+        ],
+        "colorbar_size_mm": [
+          106.8,
+          14
+        ],
+        "panel_labels": "Provided by LaTeX subcaptions",
+        "normalization": "Shared with combined figure and all individual panels"
+      },
+      "normalization": "power",
+      "gamma": 0.35,
+      "normalized_mapping": "((value - vmin) / (vmax - vmin)) ** gamma",
+      "colorbar_ticks": [
+        0.0,
+        0.5,
+        1.0,
+        2.0,
+        5.0,
+        10.0,
+        20.0,
+        40.0
+      ],
+      "unit": "mm",
+      "sample_min": 0.16278121733573808,
+      "sample_max": 38.62788400894668,
+      "clipped_samples": 0
+    },
+    "velocity": {
+      "range": [
+        0.0,
+        0.18
+      ],
+      "colormap": "inferno",
+      "individual_exports": {
+        "directory": "individual",
+        "panels": [
+          "velocity_mpcc",
+          "velocity_cc_ecs",
+          "velocity_cc_sf",
+          "velocity_cc_mf"
+        ],
+        "colorbar": "velocity_colorbar",
+        "formats": [
+          "pdf",
+          "svg",
+          "png"
+        ],
+        "panel_size_mm": [
+          37.379999999999995,
+          80.05666666666666
+        ],
+        "colorbar_size_mm": [
+          106.8,
+          14
+        ],
+        "panel_labels": "Provided by LaTeX subcaptions",
+        "normalization": "Shared with combined figure and all individual panels"
+      },
+      "normalization": "linear",
+      "gamma": 1.0,
+      "normalized_mapping": "((value - vmin) / (vmax - vmin)) ** gamma",
+      "colorbar_ticks": [
+        0.0,
+        0.03,
+        0.06,
+        0.09,
+        0.12,
+        0.15,
+        0.18
+      ],
+      "unit": "m/s",
+      "sample_min": 0.0076438126005672555,
+      "sample_max": 0.17552384549346567,
+      "clipped_samples": 0
+    }
+  },
+  "trials": [
+    {
+      "method": "MPCC",
+      "status": "success",
+      "steps": 231,
+      "duration_s": 23.1,
+      "rk4_max_abs_residual": 1.4432899320127035e-15,
+      "clearance_mm_min": 0.16278121733573808,
+      "clearance_mm_mean": 8.242790328574655,
+      "clearance_mm_max": 38.62788400894668,
+      "velocity_min": 0.007647554800696272,
+      "velocity_mean": 0.12015805523718358,
+      "velocity_max": 0.1754025601126044
+    },
+    {
+      "method": "CC-ECS",
+      "status": "success",
+      "steps": 250,
+      "duration_s": 25.0,
+      "rk4_max_abs_residual": 1.5543122344752192e-15,
+      "clearance_mm_min": 1.0566491992255547,
+      "clearance_mm_mean": 9.14658175868503,
+      "clearance_mm_max": 38.34430423786817,
+      "velocity_min": 0.0076438126005672555,
+      "velocity_mean": 0.11133424771669004,
+      "velocity_max": 0.17048043157103135
+    },
+    {
+      "method": "CC-SF",
+      "status": "success",
+      "steps": 221,
+      "duration_s": 22.1,
+      "rk4_max_abs_residual": 1.4432899320127035e-15,
+      "clearance_mm_min": 3.6283100516779894,
+      "clearance_mm_mean": 12.792090020352413,
+      "clearance_mm_max": 36.68252162013774,
+      "velocity_min": 0.029999999999944484,
+      "velocity_mean": 0.12728444416706985,
+      "velocity_max": 0.17552384549346567
+    },
+    {
+      "method": "CC-MF",
+      "status": "success",
+      "steps": 247,
+      "duration_s": 24.700000000000003,
+      "rk4_max_abs_residual": 2.220446049250313e-15,
+      "clearance_mm_min": 3.554593155038333,
+      "clearance_mm_mean": 12.367299854813293,
+      "clearance_mm_max": 35.848610812760924,
+      "velocity_min": 0.029999999999938177,
+      "velocity_mean": 0.11378634166305221,
+      "velocity_max": 0.15911025269780982
+    }
+  ],
+  "raw_sources": {
+    "mpcc": {
+      "clearance": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/mpcc/seed_0/clearance.csv",
+        "sha256": "3fefc3cd1b48656d2105eb7f3f619675f8459066237fcba7eae005a73625516e"
+      },
+      "history": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/mpcc/seed_0/data/trial_history.csv",
+        "sha256": "fa74e1d98322ffc87c296b01ab8f0b1d95ddf7edeb95c59981319875bcb0ced4"
+      },
+      "outcome": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/mpcc/seed_0/outcome.json",
+        "sha256": "a7d423a0db548644e88fb0f4538132919e28f0f29fbcc16120393a205103231e"
+      },
+      "config": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/mpcc/seed_0/config.yaml",
+        "sha256": "0eca6548e91e67dd777b4c2538dd4b457600a636b368115471e4552ca043bed5"
+      }
+    },
+    "cc_ecs": {
+      "clearance": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/cc_ecs/seed_0/clearance.csv",
+        "sha256": "7a40ad3f9e78909f70f994390e23a322963b4479fbe112ec22635389cfbae801"
+      },
+      "history": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/cc_ecs/seed_0/data/trial_history.csv",
+        "sha256": "66357445e654d16a84480c93084b20578e3ebde86791952c5eb9778c18ee2df2"
+      },
+      "outcome": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/cc_ecs/seed_0/outcome.json",
+        "sha256": "02853966d7881ed3378d8d71d2f9edb0d2980decf54f0f6b5949af3149865974"
+      },
+      "config": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/cc_ecs/seed_0/config.yaml",
+        "sha256": "49d0132499c2c25a974e6f206ae5975b091a53a72bec565438d08a46f6303f85"
+      }
+    },
+    "cc_sf": {
+      "clearance": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/cc_sf/seed_0/clearance.csv",
+        "sha256": "9f3448b52679cb5213c69842cd0bbd5ba3fa8ea7d63067ea1ef346938189083c"
+      },
+      "history": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/cc_sf/seed_0/data/trial_history.csv",
+        "sha256": "69cb9c8195a9ffac13fa3bff100b822ceefd37a73c8be01330021e396cd4fecd"
+      },
+      "outcome": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/cc_sf/seed_0/outcome.json",
+        "sha256": "321af02b0f7a5e7b36a2cef65f2d174595ea32d37452d34ebb1618d94cd33f2f"
+      },
+      "config": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/cc_sf/seed_0/config.yaml",
+        "sha256": "24b2336d587604c8c673d096b0cc0ca47a5951cbf0f3633d844711647e690555"
+      }
+    },
+    "cc_mf": {
+      "clearance": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/cc_mf/seed_0/clearance.csv",
+        "sha256": "1c9e697d3967e9cb6fce76055f40c4bd9575a49ffe76af496b2d65b9ab49f99a"
+      },
+      "history": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/cc_mf/seed_0/data/trial_history.csv",
+        "sha256": "8d4fa9ce702ba599da39fe40fcf907c032c81ed8a7eb2cbb4620d571d295ace1"
+      },
+      "outcome": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/cc_mf/seed_0/outcome.json",
+        "sha256": "b0db8260a0d55b955ba2115f5ba61bc7939aafabf20a9db8bf5685b70062e8f8"
+      },
+      "config": {
+        "path": "experiments/maze/rectangle_width070_130mm_step005_10trials_20261103/width_070mm/cc_mf/seed_0/config.yaml",
+        "sha256": "5d526fac7357442cb98b06b354ec3d0c2e1090f8ab37be6a00eab54c8e1612f4"
+      }
+    }
+  }
+}

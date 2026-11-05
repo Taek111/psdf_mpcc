@@ -1,0 +1,25 @@
+{
+  "schema_version": 2,
+  "stage_dt_s": 0.1,
+  "risk_domain": "Fresh p_selected/R/p_max/p_other_max are NaN outside phi>d_min, separated, finite represented features; use prefix_probability_valid.",
+  "frozen_domain": "frozenpost_valid uses the nominal separated MF domain; affine feature distances may become negative at the saved postsolve state.",
+  "units": {
+    "sf_native_margin_mm": "millimetres; paired SF gamma/floor/cap on BOTH controllers' trajectories",
+    "sf_quantile": "(phi-d_min)/sigma_selected - gamma; dimensionless, UNCLIPPED, not equivalent to native capped SF feasibility when cap/floor active",
+    "mf_quantile": "implemented inverse-CDF with linear extension for R>.5 and lower-tail clipping",
+    "native_affine": "m for SF; standard-normal quantile for MF"
+  },
+  "masks": {
+    "post_valid": "successful normal solve only",
+    "nominal_valid": "successful normal solve with finite reconstructed pre-solve nominal",
+    "replay_valid": "native replay validation, including MF activation-mask consistency",
+    "frozenpost_valid": "nominal model probability comparison is valid"
+  },
+  "selector_id": "canonical branch identity with endpoint aliases merged; a change alone does not establish discontinuity",
+  "other_feature": "Exclude nominal selected-equivalent d/full-q events (tolerances1e-7m/1e-6); other slots are not mutually deduplicated.",
+  "probability": "Affine Gaussian marginal probabilities and raw Boole sum with duplicates/correlation; R can exceed1 and is not empirical or exact collision probability.",
+  "native_affine": "Before MF lower slack. Source helper native residual arrays preserve its original semantics; use explicit masks.",
+  "SF_affine_pass_fresh_guard_fail": "SF affine >= -1um while fresh phi-d_col < -1um; can also be evaluated as a shadow SF row on MF states.",
+  "source_hashes_sha256": "a30f5a7b05492996a8fb1d79e4822afb7c900ec5c185ff07eed439e81286d694",
+  "experiment_sha256": "3fc20ce64de47a9ef536e907123feba022a430fa58458e31a8c1b0dd783caeeb"
+}

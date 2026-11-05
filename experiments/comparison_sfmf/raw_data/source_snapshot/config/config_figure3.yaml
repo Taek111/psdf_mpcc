@@ -1,0 +1,52 @@
+# Straight-corridor comparison for Figure 3.
+# Set environment.straight_corridor.width to vary the bottleneck gap in metres.
+# All methods inherit the same MPCC tracking, speed, and rate-limit defaults.
+# CC-SF and CC-MF inherit the same control-dependent covariance defaults.
+# No injected localization noise: this isolates the controllers' nominal response.
+# Use generage_figure3.py to run the comparison and regenerate its figures.
+trials: 1
+
+environment:
+  straight_corridor:
+    # Selected after the 0.150 / 0.130 / 0.120 / 0.110 m comparison.
+    # 0.120 m shows anticipatory CC braking with all methods completing.
+    width: 0.120
+
+rectangle_geometry:
+  length: 0.150
+  width: 0.100
+
+start_perturbation:
+  enabled: false
+  seed: 0
+
+localization_error:
+  enabled: false
+
+defaults:
+  simulation_time: 60.0
+  generate_animation: false
+  generate_plots: false
+
+trial_failure_criteria:
+  enabled: true
+  movement_window_sec: 4.0
+  movement_threshold: 0.03
+  max_consecutive_solver_failures: 20
+
+test_configs:
+  - maze_type: straight_corridor
+    robot_shape: rectangle
+    optimizer_type: mpcc
+    dynamics_type: differential_drive
+    path_planner: astar
+  - maze_type: straight_corridor
+    robot_shape: rectangle
+    optimizer_type: cc_sf
+    dynamics_type: differential_drive
+    path_planner: astar
+  - maze_type: straight_corridor
+    robot_shape: rectangle
+    optimizer_type: cc_mf
+    dynamics_type: differential_drive
+    path_planner: astar

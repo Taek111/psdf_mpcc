@@ -32,6 +32,9 @@ class CCSFOptimizerParam(CCMPCCOptimizerParam):
         self.chance_gamma = None
         self.risk_margin_floor = 0.0
         self.risk_margin_cap = 2.0
+        # Match CC-MF's geometric guard and measured-pose stop threshold.
+        # Both hard rows apply only at future stages 1,...,N.
+        self.d_col = 0.00005
         self.debug_mode = False
         # Optional risk-diagnostic subflag; debug_mode is the master switch.
         self.debug_risk = True
@@ -81,6 +84,7 @@ class CCSFOptimizer(MPCCOptimizer):
         self._last_local_covariances = None
         self._last_risk_tensors = None
         self._last_risk_clearances = None
+        self._current_psdf = None
 
         self.backup_solver = None
         self._last_solve_mode = "uninitialized"
@@ -92,6 +96,8 @@ class CCSFOptimizer(MPCCOptimizer):
     def _reset_runtime_counters(self):
         self._backup_feasible_qp_success_count = 0
         self._safe_stop_count = 0
+        self._stage0_guard_stop_count = 0
+        self._main_solver_failure_count = 0
         self._plant_input_apply_count = 0
 
     def _has_runtime_activity(self):
@@ -145,12 +151,15 @@ class CCSFOptimizer(MPCCOptimizer):
         self._last_local_covariances = None
         self._last_risk_tensors = None
         self._last_risk_clearances = None
+        self._current_psdf = None
         self._last_solve_mode = "uninitialized"
 
     def get_runtime_stats(self):
         return {
             "backup_feasible_qp_success_count": int(self._backup_feasible_qp_success_count),
             "safe_stop_count": int(self._safe_stop_count),
+            "stage0_guard_stop_count": int(self._stage0_guard_stop_count),
+            "main_solver_failure_count": int(self._main_solver_failure_count),
             "plant_input_apply_count": int(self._plant_input_apply_count),
             "last_solve_mode": str(self._last_solve_mode),
         }
@@ -188,9 +197,11 @@ class CCSFOptimizer(MPCCOptimizer):
         if num_stages == 0:
             return np.zeros((0,), dtype=bool)
 
-        return np.full(
+        active = np.full(
             num_stages, self._risk_margin_enabled(self.param), dtype=bool
         )
+        active[0] = False
+        return active
 
     def record_plant_input_applied(self):
         self._plant_input_apply_count += 1
@@ -418,7 +429,8 @@ class CCSFOptimizer(MPCCOptimizer):
         return np.clip(gamma * np.sqrt(np.maximum(risk_var, 0.0)), floor, cap)
 
     def _build_risk_margin_scale_batch(self, num_stages, param):
-        # SF has no stage window. Keep the parameter slot for ECS beta values.
+        # Future SF rows have no configurable stage window. Stage 0 has
+        # constant inactive rows. Keep this parameter slot for ECS beta values.
         return np.ones((num_stages,), dtype=float)
 
     def _risk_margin_enabled(self, param):
@@ -434,7 +446,7 @@ class CCSFOptimizer(MPCCOptimizer):
             return
 
         stage_indices = (
-            np.arange(margin_batch.size)
+            np.arange(1, margin_batch.size)
             if self._risk_margin_enabled(param)
             else np.zeros((0,), dtype=int)
         )
@@ -463,7 +475,7 @@ class CCSFOptimizer(MPCCOptimizer):
         only_active = bool(getattr(param, "debug_print_nominal_risk_head_only_active", True))
         if only_active:
             stage_indices = (
-                np.arange(risk_tensor_batch.shape[0])
+                np.arange(1, risk_tensor_batch.shape[0])
                 if self._risk_margin_enabled(param)
                 else np.zeros((0,), dtype=int)
             )
@@ -696,27 +708,33 @@ class CCSFOptimizer(MPCCOptimizer):
 
         # The active PSDF bridge injects first-order Taylor parameters through model.p.
         sdf_value = self.ped_model(x[:3])
-        constraint_expr = sdf_value - risk_margin - d_min
+        d_col = float(param.d_col)
+        if not np.isfinite(d_col) or d_col < 0.0:
+            raise ValueError("d_col must be nonnegative and finite")
+        constraint_expr = ca.vertcat(
+            sdf_value - d_col,
+            sdf_value - risk_margin - d_min,
+        )
 
         self.ocp.constraints.constr_type = "BGH"
-        self.ocp.dims.nh = 1
+        self.ocp.dims.nh = 2
         self.ocp.model.con_h_expr = constraint_expr
-        self.ocp.constraints.lh = np.array([0.0], dtype=float)
-        self.ocp.constraints.uh = np.array([1e8], dtype=float)
-        # Keep N control intervals, with N safety rows at stages 0,...,N-1.
-        # Stage 0 checks the fixed measured state; x_N has no safety row.
+        self.ocp.constraints.lh = np.zeros(2, dtype=float)
+        self.ocp.constraints.uh = np.full(2, 1e8, dtype=float)
+        # The fixed initial state is checked by the exact geometric PSDF
+        # before solving, as in CC-MF. Neither OCP row constrains stage 0.
         self.ocp.constraints.constr_type_0 = "BGH"
-        self.ocp.dims.nh_0 = 1
-        self.ocp.model.con_h_expr_0 = constraint_expr
-        self.ocp.constraints.lh_0 = np.array([0.0], dtype=float)
-        self.ocp.constraints.uh_0 = np.array([1e8], dtype=float)
+        self.ocp.dims.nh_0 = 2
+        self.ocp.model.con_h_expr_0 = ca.MX.ones(2, 1)
+        self.ocp.constraints.lh_0 = np.zeros(2, dtype=float)
+        self.ocp.constraints.uh_0 = np.full(2, 1e8, dtype=float)
         self.ocp.constraints.constr_type_e = "BGH"
-        self.ocp.dims.nh_e = 0
-        self.ocp.model.con_h_expr_e = ca.MX.zeros(0, 1)
-        self.ocp.constraints.lh_e = np.empty(0, dtype=float)
-        self.ocp.constraints.uh_e = np.empty(0, dtype=float)
-        print(f"Added HARD projected-variance obstacle constraint at stages 0..{self.N - 1} "
-              f"with d_min = {d_min}")
+        self.ocp.dims.nh_e = 2
+        self.ocp.model.con_h_expr_e = constraint_expr
+        self.ocp.constraints.lh_e = np.zeros(2, dtype=float)
+        self.ocp.constraints.uh_e = np.full(2, 1e8, dtype=float)
+        print(f"Added HARD PSDF guard and projected-variance rows at stages 1..{self.N} "
+              f"with d_col = {d_col}, d_min = {d_min}; stage 0 uses exact PSDF check")
 
     def add_warm_start(self, param, system, solver=None):
         solver = self.solver if solver is None else solver
@@ -890,6 +908,14 @@ class CCSFOptimizer(MPCCOptimizer):
         )
         solver.set(self.N, "p", terminal_stage_param)
 
+        # x_guess[0] is the measured pose. The bridge parameter is its exact
+        # signed PSDF, not the affine prediction at a displaced pose.
+        self._current_psdf = None
+        if getattr(self.param, "use_obstacle_constraint", True) and psdf_params_batch is not None:
+            self._current_psdf = float(psdf_params_batch[0, 3])
+            if not np.isfinite(self._current_psdf) or self._current_psdf < float(self.param.d_col):
+                return None  # No solver call; do not invent an acados status.
+
         # Include every main/backup solve in this cycle, but exclude geometry,
         # parameter updates, recovery construction and optional diagnostics.
         started = time.perf_counter()
@@ -933,12 +959,18 @@ class CCSFOptimizer(MPCCOptimizer):
                     f"Backup SQP_WITH_FEASIBLE_QP solver returned status {backup_status}; "
                     "falling back to safe stop."
                 )
-                fast_status = backup_status
+                if backup_status is not None:
+                    fast_status = backup_status
             except Exception as e:
                 print(f"Warning: backup solver recovery failed: {e}")
         else:
             print("Backup solver is unavailable; falling back to safe stop.")
 
+        return self._apply_safe_stop(fast_status)
+
+    def _apply_safe_stop(self, solver_status, *, mode="safe_stop"):
+        if self.solver is None or self.state is None:
+            raise RuntimeError("CC-SF safe stop requires a solver and current state")
         try:
             # Physical and virtual inputs stop immediately. Keep this separate
             # from nominal_safe_controller, which also constructs warm starts.
@@ -960,11 +992,11 @@ class CCSFOptimizer(MPCCOptimizer):
                     self.solver.set(stage, "u", inputs[stage])
             # A constructed stop is not a successful solver result, even if
             # reset() changes the solver's status in a future acados version.
-            self.solver.status = int(fast_status)
+            self.solver.status = int(solver_status) if solver_status is not None else None
         except Exception as e:
             raise RuntimeError("Could not install CC-SF zero-input safe-stop plan") from e
-        self._last_solve_mode = "safe_stop"
-        return self.solver, fast_status, "safe_stop"
+        self._last_solve_mode = mode
+        return self.solver, solver_status, mode
 
     def setup(self, param, system, reference_trajectory, obstacles):
         self.param = param
@@ -1031,7 +1063,14 @@ class CCSFOptimizer(MPCCOptimizer):
         active_solver = self.solver
         mode = "fast"
 
-        if status != 0:
+        if status is None:
+            active_solver, status, mode = self._apply_safe_stop(
+                None, mode="safe_stop_stage0",
+            )
+            self._safe_stop_count += 1
+            self._stage0_guard_stop_count += 1
+        elif status != 0:
+            self._main_solver_failure_count += 1
             if getattr(self.param, "debug_mode", False):
                 report_solver_failure(
                     self.solver,
@@ -1097,7 +1136,18 @@ class CCSFOptimizer(MPCCOptimizer):
                 f"risk_margin_max: {risk_margin_max}, solve_mode: {mode}"
             )
             self._log_stage_risk_margins(self._last_risk_margins, self.param)
-        return AcadosSolution(active_solver, self.N, self.variables)
+        return AcadosSolution(
+            active_solver, self.N, self.variables,
+            status_info={
+                "return_status": (
+                    "safe_stop_stage0" if status is None
+                    else "success" if status == 0 else "failure"
+                ),
+                "status_code": int(status) if status is not None else None,
+                "success": status == 0,
+                "solver_called": status is not None,
+            },
+        )
 
     def initialize_ped_model(self, system, obstacles, E_max=100, K_max=20, device="cuda"):
         device = self._require_cuda_device(device)
@@ -1123,10 +1173,11 @@ class CCSFOptimizer(MPCCOptimizer):
 
 
 class AcadosSolution:
-    def __init__(self, solver, N, variables):
+    def __init__(self, solver, N, variables, *, status_info=None):
         self.solver = solver
         self.N = N
         self.variables = variables
+        self._status_info = dict(status_info) if status_info is not None else None
 
     def value(self, var_expr):
         if var_expr == "x" or (isinstance(var_expr, str) and var_expr == "x"):
@@ -1147,4 +1198,6 @@ class AcadosSolution:
         return u[:2, :]
 
     def stats(self):
+        if self._status_info is not None:
+            return dict(self._status_info)
         return {"return_status": "success" if self.solver.status == 0 else "failure"}

@@ -139,6 +139,7 @@ class simulation_mpc:
         self.pose_sdf_data = []  # Store pose and SDF data for CSV logging
         self.detected_obstacles_logger = []  # Store detected obstacle caps for animation
         self.profile_heatmap_scales = {}
+        self._environment_config = {}
 
     def _get_output_dir(self, category, *subdirs):
         output_dir = os.path.join(self.output_root_dir, category, *subdirs) if self.output_root_dir else os.path.join(category, *subdirs)
@@ -1434,7 +1435,7 @@ class simulation_mpc:
         self.pose_sdf_data = []
         self.detected_obstacles_logger = []
         
-        start_pos, goal_pos, grid, obstacles = self.create_env(maze_type)
+        start_pos, goal_pos, grid, obstacles = self.create_env(maze_type, config or {})
         geometry_regions = DifferentialDriveMultipleGeometry()
         localization_error_model = self._build_localization_error_model(config)
         self.output_root_dir = self._resolve_output_root_dir(config, localization_error_model is not None)
@@ -2001,7 +2002,20 @@ class simulation_mpc:
         
         return robot_indexes, traj_indexes
 
-    def create_env(self, env_type):
+    def create_env(self, env_type, config=None):
+        """Build a map, retaining configured geometry for later plot calls.
+
+        Pass an empty config to reset environment overrides. Omitting config
+        reuses the last map settings, so a snapshot matches its simulation.
+        """
+        if config is not None:
+            if not isinstance(config, dict):
+                raise ValueError("Environment config must be a mapping")
+            environment_config = config.get("environment", {})
+            if not isinstance(environment_config, dict):
+                raise ValueError("environment must be a mapping")
+            self._environment_config = copy.deepcopy(environment_config)
+
         if env_type == "s_path":
             s = 1.0  # scale of environment
             start = np.array([0.3 * s, 0.2 * s, 0.0])
@@ -2027,7 +2041,10 @@ class simulation_mpc:
         elif env_type == "straight_corridor":
             s = 1.0
             corridor_center_y = 0.50 * s
-            corridor_width = 0.108 * s
+            corridor_config = self._environment_config.get("straight_corridor", {})
+            if not isinstance(corridor_config, dict):
+                raise ValueError("environment.straight_corridor must be a mapping")
+            corridor_width = float(corridor_config.get("width", 0.150)) * s
             start = np.array([0.15 * s, corridor_center_y, 0.0])
             goal = np.array([1.45 * s, corridor_center_y, 0.0])
 
@@ -2038,6 +2055,15 @@ class simulation_mpc:
             x_min, y_min = bounds[0]
             x_max, y_max = bounds[1]
             wall_thickness = 0.03 * s
+            maximum_width = 2.0 * min(
+                corridor_center_y - (y_min + wall_thickness),
+                y_max - wall_thickness - corridor_center_y,
+            )
+            if not np.isfinite(corridor_width) or not 0.0 < corridor_width < maximum_width:
+                raise ValueError(
+                    "environment.straight_corridor.width must be finite and "
+                    f"strictly between 0 and {maximum_width:g} m"
+                )
             half_gap = 0.5 * corridor_width
             obstacles = []
 

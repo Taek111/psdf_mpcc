@@ -309,7 +309,7 @@ $$
 
 SF uses the PSDF value and PSDF gradient on the branch selected by the PSDF-minimizing pair. In a separated configuration on a locally differentiable branch, retaining only that feature in MF and using the same affine Gaussian distance model and planning covariance makes the single-feature probability condition equivalent to this SF Gaussian margin. A multi-feature union event is generally different from the SF single event. This probability-level equivalence does not imply that separate RTI linearizations of different residual functions yield identical QP rows. 
 
-The CC-SF implementation applies its hard safety row at stages $i=0,\ldots,N-1$, including the fixed initial state, and omits it at terminal state $x_N$. The $N$ control intervals and terminal state remain; $N=20$ with $\Delta t=0.1$ s still spans 2 s. Historical runs before the 2026-10-28 stage-window experiment used stages $1,\ldots,N$ instead.
+As of the 2026-11-04 guard/stage-window ablation, CC-SF applies both its original hard chance row and an independent hard affine PSDF guard at future stages $i=1,\ldots,N$, including the terminal state. Both stage-0 OCP rows are inactive; the exact signed PSDF at the measured pose instead triggers `safe_stop_stage0` before solving when $\phi(x_0)<d_{\mathrm{col}}$. The default guard clearance is $d_{\mathrm{col}}=0.00005$ m, matching CC-MF. The SF chance row remains hard and has no MF-style domain gate or slack. The $N$ control intervals and terminal state remain; $N=20$ with $\Delta t=0.1$ s still spans 2 s. Archived 2026-11-03 benchmarks used the previous hard SF row at stages $0,\ldots,N-1$, including the fixed initial state and omitting the terminal row. Historical runs before the 2026-10-28 stage-window experiment used stages $1,\ldots,N$ instead.
 
 ### 4.2 Multi-Feature Gaussian Distance Model
 
@@ -659,7 +659,7 @@ The four baseline controllers in the evaluation plan follow Section 6-1 of [cc_p
 | Short label | Controller    | Safety formulation                                                                               |
 | ----------- | ------------- | ------------------------------------------------------------------------------------------------ |
 | **Det**     | PSDF-MPCC-Det | Affine deterministic constraint on the PSDF value                                                |
-| **CC-SF**   | PSDF-MPCC-SF  | RTI-linearized Gaussian margin using the PSDF value and PSDF gradient for the minimizing feature |
+| **CC-SF**   | PSDF-MPCC-SF  | Hard PSDF guard plus an RTI-linearized hard Gaussian margin for the minimizing feature at future stages; stage-0 exact geometric precheck (current implementation) |
 | **CC-MF**   | PSDF-MPCC-MF  | Hard PSDF-based safety guard plus one slack-relaxed affine inverse-CDF MF row per stage                      |
 | **CC-ECS**  | PSDF-MPCC-ECS | Per-polygon PSDF adaptation of an ellipsoidal-confidence-set constraint                          |
 

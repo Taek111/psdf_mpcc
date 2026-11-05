@@ -1,0 +1,182 @@
+{
+  "method": "cc_mf",
+  "stage": 10,
+  "outcome": {
+    "status": "success",
+    "failure_reason": null,
+    "goal_reached": true,
+    "final_time": 49.20000000000043,
+    "distance_to_goal": 0.019504268415043144,
+    "start_perturbation": {
+      "enabled": true,
+      "seed": 0,
+      "position_std": 0.02,
+      "heading_std_deg": 2.8647889756541165,
+      "max_sigma": 3.0,
+      "min_clearance": 0.001,
+      "max_attempts": 1000,
+      "nominal_pose": [
+        0.075,
+        0.7949999999999999,
+        -1.5707963267948966
+      ],
+      "initial_pose": [
+        0.07751460442186786,
+        0.7923579027341738,
+        -1.5387751942727323
+      ],
+      "delta_pose": [
+        0.002514604421867866,
+        -0.0026420972658260378,
+        0.03202113252216411
+      ],
+      "nominal_clearance": 0.012499999999999983,
+      "initial_clearance": 0.00761626057116091,
+      "attempts": 1
+    },
+    "optimizer_runtime_stats": {
+      "backup_feasible_qp_success_count": 0,
+      "main_solver_failure_count": 0,
+      "backup_solver_failure_count": 0,
+      "safe_stop_count": 0,
+      "stage0_guard_stop_count": 0,
+      "plant_input_apply_count": 492,
+      "last_solve_mode": "sqp_rti"
+    },
+    "safe_stop_count": 0,
+    "backup_feasible_qp_success_count": 0,
+    "plant_input_apply_count": 492,
+    "last_solve_mode": "sqp_rti",
+    "initial_pose": [
+      0.07751460442186786,
+      0.7923579027341738,
+      -1.5387751942727323
+    ],
+    "runtime_stats": {
+      "backup_feasible_qp_success_count": 0,
+      "main_solver_failure_count": 0,
+      "backup_solver_failure_count": 0,
+      "safe_stop_count": 0,
+      "stage0_guard_stop_count": 0,
+      "plant_input_apply_count": 492,
+      "last_solve_mode": "sqp_rti"
+    },
+    "error": ""
+  },
+  "metadata": {
+    "method": "cc_mf",
+    "width_mm": 125,
+    "seed": 0,
+    "stage": 10,
+    "units": "standard_normal_quantile",
+    "current_s_definition": "pose_sdf.path_s = cycle current x0.s",
+    "affine_definition": "reconstructed final SQP_RTI QP row before slack",
+    "fresh_definition": "archived nonlinear chance model reevaluated at postsolve stage state",
+    "feature_switching_available": false,
+    "replay_exclusions": "first cycle, failed/recovery cycles and their immediate successors",
+    "geometry_device": "cpu float32 (original benchmark CUDA float32)",
+    "input_memory_applied_control_max_abs_error": 1.1435297153639112e-14,
+    "nominal_replay_validation_tolerance": 0.0002,
+    "trial_status": "success",
+    "goal_reached": true,
+    "safe_stop_cycles": 0,
+    "recovery_events": [],
+    "nominal_definition": "directly logged pre-solve inverse-CDF residual",
+    "current_psdf_max_abs_error_m": 7.35744833946228e-08,
+    "mf_nominal_max_abs_error": 2.5698269193075163e-05,
+    "mf_nominal_compared_cycles": 367,
+    "mf_nominal_replay_rejected_cycles": 0,
+    "mf_replay_mask_disagreement_cycles": 0,
+    "mf_nominal_inactive_replay_candidates": 124,
+    "cycles": 492,
+    "replayed_cycles": 367,
+    "solver_success_cycles": 492,
+    "tail_clipped_nominal_cycles": 0,
+    "nominal_inactive_cycles": 124,
+    "fresh_domain_inactive_cycles": 124,
+    "row_m_activation_definition": "Row M is installed only when nominal signed PSDF phi > d_min; a missing inactive margin is not evidence of chance feasibility",
+    "sources": {
+      "checkpoint": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_125mm/cc_mf/seed_0/animation_checkpoint.jsonl",
+        "sha256": "e9d3e25b7d1789ad80e0a83348424aeaaa7618352173c5758c0485ffeddf0365"
+      },
+      "parameters": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_125mm/cc_mf/seed_0/optimizer_parameters.json",
+        "sha256": "c248556fb2357b4c4e531b026cf8ecc4eeb6c200eba1b477df2fc8ef19b5ba01"
+      },
+      "config": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_125mm/cc_mf/seed_0/config.yaml",
+        "sha256": "b6d3324681b62b9c0b743fe36b4cfa14ee75058be18467333fa98c8e889a7ba6"
+      },
+      "pose": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_125mm/cc_mf/seed_0/data/pose_sdf_MPC_cc_mf_rectangle_maze_width125mm_seed0_widthbench_20261103_100138_startseed0.csv",
+        "sha256": "e676d3d856b4388b4bba96f00dcbfda65a820395845daddaf92e259ad99a7624"
+      },
+      "history": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_125mm/cc_mf/seed_0/data/trial_history.csv",
+        "sha256": "314fa065122005c356f2f9e5559c6568a592732fd79597dbb362531654387cdb"
+      },
+      "cycles": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_125mm/cc_mf/seed_0/cycles.csv",
+        "sha256": "0493a729771eaf7e2f5e03a78896d776f943fcb16ba56362c4a2aa69bdbf434c"
+      },
+      "outcome": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_125mm/cc_mf/seed_0/outcome.json",
+        "sha256": "293fcaee500e2605cfb0d1217d90f51f47d1144a4a5ef00268780563ebe0de9b"
+      },
+      "maze": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/source_snapshot/sim/simulation_mpc.py",
+        "sha256": "fe0bd08df6a92827facd6f74dec26dfe0cd21e7e0805db0529223252ef47f582"
+      },
+      "cycle": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_125mm/cc_mf/seed_0/data/cc_mf_cycle_MPC_cc_mf_rectangle_maze_width125mm_seed0_widthbench_20261103_100138_startseed0.csv",
+        "sha256": "c30285fdd93c38423e3d2009c9d2dc7241e59b57f0aeabfcde78edcc48bbe075"
+      },
+      "models/augmented_psdf.py": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/source_snapshot/models/augmented_psdf.py",
+        "sha256": "da7d82eee18090721c105c823fc7f24ff5c74f066e31d097842732f9847f9a37"
+      },
+      "models/augmented_psdf_wrapper.py": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/source_snapshot/models/augmented_psdf_wrapper.py",
+        "sha256": "7530d7e5108436fb6106d9f012803fd90e47e62be4fcd47a0979f3a9eb27f896"
+      },
+      "models/mf_inverse_cdf.py": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/source_snapshot/models/mf_inverse_cdf.py",
+        "sha256": "2fa72680d99a4e432ee0d9a0b46d0c2d0bdf7d205b374e0dda94e31154341183"
+      },
+      "models/mf_implicit.py": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/source_snapshot/models/mf_implicit.py",
+        "sha256": "635bc41b2d5b5105372b225a2b296e37c498fa96ca51f42abc879be63527ebb9"
+      },
+      "control/cc_covariance.py": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/source_snapshot/control/cc_covariance.py",
+        "sha256": "db15abde3b2e4b05a0862c83d1ca7037148bb43252f9eab1c9b88161312194de"
+      },
+      "control/cc_sf_optimizer.py": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/source_snapshot/control/cc_sf_optimizer.py",
+        "sha256": "3c60e708c018127a37e0ce3f3e154dec7137a1b37cfd87c699eff062ae80bcad"
+      },
+      "control/cc_mf_optimizer.py": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/source_snapshot/control/cc_mf_optimizer.py",
+        "sha256": "192fafd57d1899164009bf6457cb5ee36d7b30c33a37f27e1413712117444a53"
+      },
+      "control/mpcc_optimizer.py": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/source_snapshot/control/mpcc_optimizer.py",
+        "sha256": "f5af91bea9dc8645c27346dff5cccc242a2ece670235fe2ec5394fdd63cb40f8"
+      },
+      "control/analytic_psdf_casadi.py": {
+        "path": "/home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/source_snapshot/control/analytic_psdf_casadi.py",
+        "sha256": "3251647e270c7296062ab93c6528f8dc31886b3809cab7af943362d128ff5dc6"
+      }
+    }
+  },
+  "cache_source_helper": {
+    "path": "/home/taek111/projects/psdf_mpcc/utils/offline_cc_margin.py",
+    "sha256": "51b349d34d9ca2b3ad0365e94b9e8cf0751f4fa2fbd060e3a731a53a072a07bb"
+  },
+  "cache_compatible_helper": {
+    "path": "/home/taek111/projects/psdf_mpcc/utils/offline_cc_margin.py",
+    "sha256": "844ef05098df8f51da71a3ccde721bbdc09a1f49c684fcd0b7a359026836f542"
+  },
+  "cache_compatibility_note": "Safe-stop-successor reconstruction update changes only cc_sf seeds3,6 and cc_mf seed3; these three were regenerated. Other cached trials have no safe-stop events and identical mathematical outputs."
+}

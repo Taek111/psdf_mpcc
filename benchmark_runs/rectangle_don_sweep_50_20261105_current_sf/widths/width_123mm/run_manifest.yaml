@@ -1,0 +1,144 @@
+trials_per_configuration: 50
+config:
+  trials: 50
+  rectangle_geometry:
+    length: 0.15
+    width: 0.123
+  mpcc:
+    use_debug: false
+  benchmark_logging:
+    enabled: true
+  start_perturbation:
+    enabled: true
+    seed: 0
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.001
+    max_attempts: 1000
+  localization_error:
+    enabled: false
+  defaults:
+    simulation_time: 80.0
+    generate_animation: false
+    generate_plots: false
+  success_criteria:
+    position_tolerance: 0.02
+  trial_failure_criteria:
+    enabled: true
+    movement_window_sec: 10.0
+    movement_threshold: 0.03
+    max_consecutive_solver_failures: 20
+  test_configs:
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: mpcc
+    dynamics_type: differential_drive
+    path_planner: astar
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_ecs
+    dynamics_type: differential_drive
+    path_planner: astar
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_sf
+    dynamics_type: differential_drive
+    path_planner: astar
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_mf
+    dynamics_type: differential_drive
+    path_planner: astar
+cli:
+  config: /home/taekwon/projects/psdf_mpcc/benchmark_runs/rectangle_don_sweep_50_20261105_current_sf/configs/width_123mm.yaml
+  single: false
+  trials: 50
+  results_dir: /home/taekwon/projects/psdf_mpcc/benchmark_runs/rectangle_don_sweep_50_20261105_current_sf/widths/width_123mm
+  maze_type: s_path
+  robot_shape: rectangle
+  optimizer_type: psdf
+  dynamics_type: differential_drive
+  path_planner: astar
+  simulation_time: 60.0
+  frame_skip: 5
+  use_debug: false
+  perturb_start: null
+  start_seed: null
+  start_position_std: null
+  start_heading_std_deg: null
+  start_min_clearance: null
+  generate_animation: false
+  generate_plots: false
+  safe_stop_batch: false
+  safe_stop_robot_shapes: null
+  safe_stop_maze_types: null
+  safe_stop_optimizer_types: null
+  safe_stop_summary: null
+computation_time:
+  clock: time.perf_counter
+  unit: s
+  scope_by_optimizer:
+    mpcc: solve_nlp
+    cc_ecs: solve_nlp
+    cc_sf: solve_nlp
+    cc_mf: solve_nlp
+  successful_steps_only: true
+  debug_work_in_solve_nlp: included_when_enabled
+configurations:
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: mpcc
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config01
+  start_perturbation:
+    enabled: true
+    seed: 0
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.001
+    max_attempts: 1000
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: cc_ecs
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config02
+  start_perturbation:
+    enabled: true
+    seed: 0
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.001
+    max_attempts: 1000
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: cc_sf
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config03
+  start_perturbation:
+    enabled: true
+    seed: 0
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.001
+    max_attempts: 1000
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: cc_mf
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config04
+  start_perturbation:
+    enabled: true
+    seed: 0
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.001
+    max_attempts: 1000

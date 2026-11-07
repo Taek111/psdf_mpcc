@@ -1,0 +1,894 @@
+"""Shared MPCC tracking helpers and deterministic PSDF optimizer.
+
+CC optimizers inherit tracking/cost helpers while owning their Log-Cholesky
+models, safety constraints, solve/recovery lifecycle, and generated resources.
+"""
+
+import casadi as ca
+import numpy as np
+import torch
+from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
+
+from control.analytic_psdf_casadi import AnalyticPSDFCasADi
+from models.dd_dynamics import symbolic_dd_step
+from models.geometry_utils import polygon_to_edges
+from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
+from utils.acados_diagnostics import report_solver_failure
+from utils.acados_codegen import AcadosCodegenMixin
+from utils.solver_timing import record_solve_nlp_time
+from utils.spline_path import (
+    clamp_progress,
+    normalize_path_data,
+    progress_bounds,
+    project_progress,
+    stage_parameter,
+)
+
+
+class MPCCOptimizerParam:
+    """Common experiment defaults, using the selected CC-MF tuning."""
+
+    def __init__(self):
+        # Master switch for diagnostic output and diagnostic-only work.
+        # Keep disabled when comparing solve_nlp() computation times.
+        self.use_debug: bool = False
+        # Deterministic MPCC has no pose-covariance or process-noise model.
+        # The CC-only shared defaults live in CCMPCCOptimizerParam below.
+        self.horizon = 20
+        self.tf = 0.1 * self.horizon
+        self.mat_Qe = np.diag([1.0, 10.0])  # [contour, lag]
+        self.mat_Re = np.diag([1.0, 0.01])  # [v, omega]
+        # Per-step command changes: r_delta_v * (v - v_prev)^2 and
+        # r_delta_omega * (omega - omega_prev)^2, independent of hard rate limits.
+        # Set either weight to zero to disable its command-change penalty.
+        self.r_delta_v = 0.05
+        self.r_delta_omega = 0.1
+        self.q_s = 1.0
+        self.terminal_weight = 5.0
+        self.v_s_target = 1.0
+        self.q_s_ref = 2.0
+
+        self.v_s_max = 2.0
+        self.enforce_v_s_not_faster_than_vmax = True
+        self.path_gate_epsilon = 0.05
+        self.tangent_reg_delta = 1e-6
+        self.reference_weight_reg = 1e-8
+        self.fd_eps = 1e-3
+        self.max_segments = 20
+        self.line_search_window = 0.5
+        self.line_search_samples = 41
+        self.s_upper_guard = 100.0
+        self.use_s_state_bounds = True
+        self.s_backtrack_tolerance = 0.3
+        # Shared deadlock tuning for MPCC and all CC parameter subclasses.
+        self.vmin, self.vmax = -1.0, 1.0
+        self.omegamin, self.omegamax = -1.0, 1.0
+        # Optional symmetric command-rate limits (m/s^2 and rad/s^2).
+        self.a_max = 0.3
+        self.alpha_max = 5.0
+
+        self.qp_solver = "PARTIAL_CONDENSING_HPIPM"
+        self.hessian_approx = "GAUSS_NEWTON"
+        self.integrator_type = "DISCRETE"
+        self.nlp_solver_type = "SQP_RTI"
+        self.qp_solver_iter_max = 50
+        self.nlp_solver_max_iter = 50
+        self.tol = 1e-4
+
+        # Safety constraints (PSDF style)
+        self.d_min = 0.0001
+        self.use_obstacle_constraint = True
+        self.use_soft_constraint = False
+        self.slack_weight = 1e16
+
+        # Obstacle detection parameters (kept for config compatibility)
+        self.detection_window_width = 4.0
+        self.detection_window_height = 4.0
+        self.detection_safety_margin = 0.05
+        self.detection_frequency = 10.0
+
+
+class CCMPCCOptimizerParam(MPCCOptimizerParam):
+    """Shared CC covariance/risk settings; subclasses add method-specific rows.
+
+    Defaults match the selected CC-MF experiment. ECS alone overrides the
+    process-noise coefficients with zero to retain its noise-free formulation.
+    Deterministic MPCC does not inherit these unused uncertainty parameters.
+    """
+
+    def __init__(self):
+        super().__init__()
+        # SF/MF use a node risk budget; ECS allocates this over the horizon.
+        self.chance_epsilon = 0.10
+        # None selects min(10, horizon); set to horizon for full propagation.
+        self.robust_horizon = 10
+        self.initial_pose_covariance = None  # Optional world-frame covariance.
+        # Body-frame initial standard deviations [m, m, rad].
+        self.sigma_f0 = 0.0002
+        self.sigma_l0 = 0.00025
+        self.sigma_psi0 = 0.00025
+
+        # Q_k = dt * diag([q_f, q_l, q_psi]), with dt = tf / horizon.
+        # q_f   = q_f0   + alpha_f * v**2
+        # q_l   = q_l0   + alpha_v * v**2 + alpha_kappa * abs(v * omega)
+        # q_psi = q_psi0 + beta_v * v**2 + beta_kappa * abs(v * omega)
+        #               + beta_omega * omega**2
+        # Baseline rates have units [m**2/s, m**2/s, rad**2/s]. Turning uses
+        # physical v * omega, not spline curvature. Propagation retains the
+        # forward and lateral/heading blocks of A_k Sigma_k A_k.T + Q_k.
+        self.q_f0 = 0.0
+        self.q_l0 = 0.0
+        self.q_psi0 = 0.0
+        # Initialization scale only: propagation reads the resolved coefficients.
+        self.covariance_growth_scale = 0.8
+        self.alpha_f = 0.002 * self.covariance_growth_scale
+        self.alpha_v = 0.0004 * self.covariance_growth_scale
+        self.alpha_kappa = 0.0001
+        self.beta_v = 0.02 * self.covariance_growth_scale
+        self.beta_kappa = 0.008 * self.covariance_growth_scale
+        self.beta_omega = 0.0032
+        self.risk_cov_jitter = 1e-9
+
+        # RTI regularization around regenerated nominal covariance factors.
+        # Zero disables both the cost and the six extra stage parameters.
+        self.covariance_proximal_weight = 0.01
+        self.enable_backup_solver = False
+        self.augmented_psdf_device = "cuda"
+
+
+class MPCCOptimizer(AcadosCodegenMixin):
+    _codegen_name = "mpcc"
+    _path_includes_curvature = False
+    # setup() owns the per-control-step obstacle snapshot. Simulation hooks
+    # must not upload the same data before calling this optimizer's setup.
+    updates_obstacles_in_setup = True
+
+    def __init__(self, variables=None, costs=None, dynamics_opt=None):
+        self.ocp = None
+        self.solver = None
+        self.solver_times = []
+        self.state = None
+        self.reference_path_data = None
+        self.N = None
+        self.nx = None
+        self.nu = None
+        self.variables = {}
+        self.costs = {} if costs is None else costs
+        self.dynamics_opt = dynamics_opt
+
+        self.psdf_wrapper = None
+        self.ped_model = None
+        self._is_initialized = False
+        self.device = "cuda"
+
+        self.path_param_dim = None
+        self.psdf_param_dim = 0
+        self.path_param_slice = slice(0, 0)
+        self.psdf_param_slice = slice(0, 0)
+        self._prev_predicted_s = 0.0
+        self._current_s0 = 0.0
+        self._has_prev_predicted_s = False
+
+        # Local window obstacle detector placeholder (kept for compatibility)
+        self.obstacle_detector = None
+
+    def cleanup(self):
+        self.ocp = None
+        self.solver = None
+        self._cleanup_codegen_workspace()
+        self.solver_times = []
+        self.psdf_wrapper = None
+        self.ped_model = None
+        self._is_initialized = False
+
+        self.reference_path_data = None
+        self.path_param_dim = None
+        self.psdf_param_dim = 0
+        self.path_param_slice = slice(0, 0)
+        self.psdf_param_slice = slice(0, 0)
+        self._prev_predicted_s = 0.0
+        self._current_s0 = 0.0
+        self._has_prev_predicted_s = False
+        self.obstacle_detector = None
+
+    def __del__(self):
+        self.cleanup()
+
+    def reset(self):
+        self.cleanup()
+
+    def set_state(self, state):
+        self.state = state
+
+    def _debug_enabled(self, param=None):
+        """Whether optional diagnostics are enabled for this optimizer."""
+        if param is None:
+            param = getattr(self, "param", None)
+        return bool(getattr(param, "use_debug", False))
+
+    def get_progress_info(self):
+        """Return MPCC progress-state values useful for runtime logging."""
+        return {
+            "path_s": float(self._current_s0),
+            "predicted_s": float(self._prev_predicted_s),
+            "has_predicted_s": bool(self._has_prev_predicted_s),
+        }
+
+    def _get_effective_v_s_max(self, param):
+        v_s_max = float(getattr(param, "v_s_max", 0.0))
+        if getattr(param, "enforce_v_s_not_faster_than_vmax", True):
+            return min(v_s_max, max(0.0, float(getattr(param, "vmax", 0.0))))
+        return v_s_max
+
+    def _get_progress_speed_penalty(self, param):
+        v_s_target = max(float(getattr(param, "v_s_target", 0.6)), 1e-6)
+        q_s = max(float(getattr(param, "q_s", 0.0)), 0.0)
+        # For r_v_s * v_s^2 - q_s * v_s, the unconstrained minimizer is
+        # q_s / (2 * r_v_s), so choose the quadratic penalty from v_s_target.
+        return 0.5 * q_s / v_s_target
+
+    def _get_progress_reference_weight(self, param):
+        return float(getattr(param, "q_s_ref", 0.0))
+
+    @staticmethod
+    def _require_cuda_device(device="cuda"):
+        """Validate PSDF tensor placement without moving the acados solver."""
+        selected_device = torch.device(device)
+        if selected_device.type != "cuda":
+            raise ValueError("MPCC PSDF evaluation requires a CUDA device.")
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                "MPCC PSDF evaluation requires CUDA, but CUDA is unavailable; "
+                "CPU fallback is disabled."
+            )
+        return str(selected_device)
+
+    def _build_mpcc_cost(self, param, x, u, path_p):
+        """Build tracking costs independently of safety/state augmentation."""
+        p_ref = path_p[0:2]
+        t_raw = path_p[2:4]
+        s_ref = path_p[4]
+        t_vec = t_raw / (ca.norm_2(t_raw) + float(param.tangent_reg_delta))
+        p_ref_lin = p_ref + (x[3] - s_ref) * t_vec
+
+        dx = x[0] - p_ref_lin[0]
+        dy = x[1] - p_ref_lin[1]
+        e_l = -(dx * t_vec[0] + dy * t_vec[1])
+        e_c = dx * t_vec[1] - dy * t_vec[0]
+        e_s = x[3] - s_ref
+
+        q_c = float(param.mat_Qe[0, 0])
+        q_l = float(param.mat_Qe[1, 1])
+        r_v = float(param.mat_Re[0, 0])
+        r_w = float(param.mat_Re[1, 1])
+        q_s = float(param.q_s)
+        r_vs = self._get_progress_speed_penalty(param)
+        q_s_ref = self._get_progress_reference_weight(param)
+        qf = float(param.terminal_weight)
+
+        cost_stage = (
+            q_c * e_c * e_c
+            + q_l * e_l * e_l
+            + q_s_ref * e_s * e_s
+            + r_v * u[0] * u[0]
+            + r_w * u[1] * u[1]
+            + r_vs * u[2] * u[2]
+            - q_s * u[2]
+        )
+        cost_terminal = qf * (q_c * e_c * e_c + q_l * e_l * e_l + q_s_ref * e_s * e_s)
+        return cost_stage, cost_terminal
+
+    def create_model(self, param, p_psdf_sym=None):
+        nx = 4  # [x, y, theta, s]
+        nu = 3  # [v, omega, v_s]
+        # Stage-varying path parameter: [p_ref_x, p_ref_y, t_ref_x, t_ref_y, s_ref]
+        self.path_param_dim = 5
+
+        x = ca.MX.sym("x", nx)
+        xdot = ca.MX.sym("xdot", nx)
+        u = ca.MX.sym("u", nu)
+        p_ref_t_ref = ca.MX.sym("p_ref_t_ref", self.path_param_dim)
+
+        self.psdf_param_dim = 0 if p_psdf_sym is None else int(p_psdf_sym.shape[0])
+        self.path_param_slice = slice(0, self.path_param_dim)
+        self.psdf_param_slice = slice(self.path_param_dim, self.path_param_dim + self.psdf_param_dim)
+
+        if p_psdf_sym is None:
+            p_all = p_ref_t_ref
+        else:
+            p_all = ca.vertcat(p_ref_t_ref, p_psdf_sym)
+
+        f_expl = ca.vertcat(
+            u[0] * ca.cos(x[2]),
+            u[0] * ca.sin(x[2]),
+            u[1],
+            u[2],
+        )
+
+        cost_stage, cost_terminal = self._build_mpcc_cost(param, x, u, p_ref_t_ref)
+
+        model = AcadosModel()
+        model.name = "differential_drive_mpcc"
+        model.x = x
+        model.xdot = xdot
+        model.u = u
+        model.p = p_all
+        model.f_expl_expr = f_expl
+        model.f_impl_expr = xdot - f_expl
+        # Also provide the shared RK4 map when input memory is disabled.
+        # This keeps DISCRETE valid for every combination of rate/cost settings.
+        dt = float(param.tf) / float(param.horizon)
+        model.disc_dyn_expr = ca.vertcat(
+            symbolic_dd_step(x[:3], u[0], u[1], dt), x[3] + dt * u[2],
+        )
+        model.cost_expr_ext_cost = cost_stage
+        model.cost_expr_ext_cost_e = cost_terminal
+        return self._augment_input_memory(model, param)
+
+    def _augment_input_memory(self, model, param):
+        """Add command-change cost and retain inputs with an exact discrete shift."""
+        limits = [getattr(param, name, None) for name in ("a_max", "alpha_max")]
+        for name, limit in zip(("a_max", "alpha_max"), limits):
+            if limit is not None and (
+                isinstance(limit, (bool, np.bool_))
+                or not np.isscalar(limit)
+                or not isinstance(limit, (int, float, np.integer, np.floating))
+                or not np.isfinite(limit)
+                or limit < 0
+            ):
+                raise ValueError(f"{name} must be finite and nonnegative, or None")
+        change_weights = {
+            name: getattr(param, name, 0.0)
+            for name in ("r_delta_v", "r_delta_omega")
+        }
+        for name, weight in change_weights.items():
+            if (
+                isinstance(weight, (bool, np.bool_))
+                or not np.isscalar(weight)
+                or not isinstance(weight, (int, float, np.integer, np.floating))
+                or not np.isfinite(weight)
+                or weight < 0
+            ):
+                raise ValueError(f"{name} must be finite and nonnegative")
+        self._input_memory_slice = None
+        if (
+            all(limit is None for limit in limits)
+            and all(weight == 0 for weight in change_weights.values())
+        ):
+            return model
+
+        base_nx = int(model.x.numel())
+        self._input_memory_slice = slice(base_nx, base_nx + 2)
+        if ca.MX(model.disc_dyn_expr).is_empty():
+            # Match the four-stage ERK map before adding the discrete memory.
+            dt = float(param.tf) / float(param.horizon)
+            rhs = ca.Function("mpcc_rhs", [model.x, model.u], [model.f_expl_expr])
+            x, u = model.x, model.u
+            k1 = rhs(x, u)
+            k2 = rhs(x + 0.5 * dt * k1, u)
+            k3 = rhs(x + 0.5 * dt * k2, u)
+            k4 = rhs(x + dt * k3, u)
+            model.disc_dyn_expr = x + dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6
+        memory = ca.MX.sym("previous_input", 2)
+        model.x = ca.vertcat(model.x, memory)
+        model.disc_dyn_expr = ca.vertcat(model.disc_dyn_expr, model.u[:2])
+        # Stage 0 uses the last plant-applied command; the discrete shift
+        # supplies each later stage with the preceding predicted command.
+        delta_v = model.u[0] - memory[0]
+        delta_omega = model.u[1] - memory[1]
+        model.cost_expr_ext_cost += (
+            float(change_weights["r_delta_v"]) * delta_v**2
+            + float(change_weights["r_delta_omega"]) * delta_omega**2
+        )
+        # Discrete dynamics replace the continuous model, including xdot.
+        model.xdot = ca.MX.sym("xdot", base_nx + 2)
+        model.f_expl_expr = []
+        model.f_impl_expr = []
+        return model
+
+    def _with_input_memory(self, base_state):
+        """Anchor memory to the last input actually applied to the plant."""
+        if getattr(self, "_input_memory_slice", None) is None:
+            return np.asarray(base_state, dtype=float)
+        previous = np.zeros(2) if self.state is None else np.asarray(self.state._u, dtype=float)[:2]
+        if previous.shape != (2,) or not np.isfinite(previous).all():
+            raise ValueError("Previous applied physical input must contain two finite values")
+        return np.r_[base_state, previous]
+
+    def _set_input_memory_trajectory(self, states, inputs):
+        memory = getattr(self, "_input_memory_slice", None)
+        if memory is not None:
+            states[0, memory] = self._with_input_memory([])
+            states[1:, memory] = inputs[:, :2]
+
+    def _refresh_input_memory_guess(self, solver):
+        if getattr(self, "_input_memory_slice", None) is None:
+            return
+        states = np.stack([solver.get(i, "x") for i in range(self.N + 1)])
+        inputs = np.stack([solver.get(i, "u") for i in range(self.N)])
+        self._set_input_memory_trajectory(states, inputs)
+        for stage, state in enumerate(states):
+            solver.set(stage, "x", state)
+
+    def _set_input_rate_constraints(self, param):
+        """Hard linear rows u[i] - memory[i] bound every control interval."""
+        memory = getattr(self, "_input_memory_slice", None)
+        if memory is None:
+            return
+        limits = [(axis, float(limit)) for axis, limit in enumerate(
+            (param.a_max, param.alpha_max)
+        ) if limit is not None]
+        C = np.zeros((len(limits), self.nx))
+        D = np.zeros((len(limits), self.nu))
+        bound = np.empty(len(limits))
+        dt = float(param.tf) / float(param.horizon)
+        for row, (axis, limit) in enumerate(limits):
+            C[row, memory.start + axis] = -1.0
+            D[row, axis] = 1.0
+            bound[row] = limit * dt
+        self.ocp.constraints.C = C
+        self.ocp.constraints.D = D
+        self.ocp.constraints.lg = -bound
+        self.ocp.constraints.ug = bound
+
+    def _build_stage_path_parameter(self, s_value):
+        path_parameter = stage_parameter(
+            self.reference_path_data,
+            s_value,
+            getattr(self.param, "tangent_reg_delta", 1e-6),
+            getattr(self.param, "fd_eps", 1e-3),
+            include_curvature=False,
+        )
+        if self._path_includes_curvature:
+            # CC models retain their six-value parameter layout, but the
+            # final compatibility slot is unused by the physical covariance
+            # transition. Do not evaluate spline curvature to populate it.
+            return np.append(path_parameter, 0.0)
+        return path_parameter
+
+    def _predict_stage_s_values(self, s0, s_lower, s_upper, solver=None):
+        solver = self.solver if solver is None else solver
+        s_values = np.zeros((self.N + 1,), dtype=float)
+        s_values[0] = float(np.clip(s0, s_lower, s_upper))
+        if self.N <= 0:
+            return s_values
+
+        dt = float(self.param.tf) / float(max(self.N, 1))
+        effective_v_s_max = self._get_effective_v_s_max(self.param)
+        for i in range(1, self.N + 1):
+            s_from_state = np.nan
+            try:
+                s_from_state = float(solver.get(i, "x")[3])
+            except Exception:
+                pass
+
+            try:
+                v_s_prev = float(solver.get(i - 1, "u")[2])
+            except Exception:
+                v_s_prev = 0.0
+            v_s_prev = float(np.clip(v_s_prev, 0.0, effective_v_s_max))
+            s_from_input = s_values[i - 1] + dt * v_s_prev
+
+            if np.isfinite(s_from_state):
+                s_next = 0.5 * s_from_state + 0.5 * s_from_input
+            else:
+                s_next = s_from_input
+
+            s_next = float(np.clip(s_next, s_lower, s_upper))
+            s_values[i] = max(s_values[i - 1], s_next)
+
+        return s_values
+
+    def _clamp_s(self, s_value):
+        return clamp_progress(self.reference_path_data, s_value)
+
+    def _project_s_with_line_search(self, position_xy, param):
+        previous_s = self._prev_predicted_s if self._has_prev_predicted_s else None
+        return project_progress(
+            self.reference_path_data,
+            position_xy,
+            previous_s,
+            param.line_search_window,
+            param.line_search_samples,
+        )
+
+    def _get_current_s_bounds(self, param):
+        return progress_bounds(self.reference_path_data, param.s_upper_guard)
+
+    def update_reference_path_params(self, reference_path_data, state):
+        if reference_path_data is not None:
+            self.reference_path_data = normalize_path_data(reference_path_data)
+        if self.reference_path_data is None:
+            return None
+
+        position_xy = np.asarray(state._x[:2], dtype=float)
+        self._current_s0 = self._project_s_with_line_search(position_xy, self.param)
+        self._current_s0 = self._clamp_s(self._current_s0)
+        if self._has_prev_predicted_s:
+            backtrack_tol = max(float(getattr(self.param, "s_backtrack_tolerance", 0.03)), 0.0)
+            s_floor = self._clamp_s(self._prev_predicted_s - backtrack_tol)
+            self._current_s0 = max(self._current_s0, s_floor)
+        return self._current_s0
+
+    def set_reference_trajectory(self, reference_path_data):
+        if reference_path_data is None:
+            return
+        self.reference_path_data = normalize_path_data(reference_path_data)
+
+    def _configure_ocp_dimensions_and_cost(self, param, model):
+        """Configure model-sized plumbing; subclasses own the parameter layout."""
+        self.ocp.model = model
+        self.nx = int(model.x.numel())
+        self.nu = int(model.u.numel())
+        self.N = param.horizon
+        self.ocp.dims.N = self.N
+        self.ocp.dims.np = int(model.p.numel())
+        self.ocp.parameter_values = np.zeros((self.ocp.dims.np,), dtype=float)
+        self.ocp.cost.cost_type = "EXTERNAL"
+        self.ocp.cost.cost_type_e = "EXTERNAL"
+
+    def _set_input_bounds(self, param):
+        effective_v_s_max = self._get_effective_v_s_max(param)
+        self.ocp.constraints.lbu = np.array([param.vmin, param.omegamin, 0.0], dtype=float)
+        self.ocp.constraints.ubu = np.array([param.vmax, param.omegamax, effective_v_s_max], dtype=float)
+        self.ocp.constraints.idxbu = np.array([0, 1, 2], dtype=np.int64)
+        self._set_input_rate_constraints(param)
+
+    def _configure_solver_options(self, param, integrator_type=None):
+        """Share solver options while allowing discrete CC maps to stay discrete."""
+        integrator_type = param.integrator_type if integrator_type is None else integrator_type
+        if getattr(self, "_input_memory_slice", None) is not None:
+            integrator_type = "DISCRETE"
+        self.ocp.solver_options.qp_solver = param.qp_solver
+        self.ocp.solver_options.hessian_approx = param.hessian_approx
+        self.ocp.solver_options.integrator_type = integrator_type
+        if integrator_type == "ERK":
+            self.ocp.solver_options.sim_method_num_stages = 4
+            self.ocp.solver_options.sim_method_num_steps = 1
+        self.ocp.solver_options.nlp_solver_type = param.nlp_solver_type
+        self.ocp.solver_options.qp_solver_iter_max = param.qp_solver_iter_max
+        self.ocp.solver_options.nlp_solver_max_iter = param.nlp_solver_max_iter
+        self.ocp.solver_options.tol = param.tol
+        self.ocp.solver_options.qp_solver_warm_start = True
+        self.ocp.solver_options.nlp_solver_warm_start_first_qp = True
+        self.ocp.solver_options.tf = param.tf
+
+    def setup_ocp(self, param, reference_path_data):
+        self.ocp = AcadosOcp()
+        p_psdf_sym = None
+        if self.ped_model is not None:
+            # The analytic bridge exposes the same seven Taylor parameters.
+            _pose_seed = ca.MX.sym("pose_seed", 3)
+            _ = self.ped_model(_pose_seed)
+            p_psdf_sym = self.ped_model.get_sym_params()
+        model = self.create_model(param, p_psdf_sym=p_psdf_sym)
+        self._configure_ocp_dimensions_and_cost(param, model)
+        self._set_input_bounds(param)
+
+        x0_phys = np.zeros((3,), dtype=float) if self.state is None else np.asarray(self.state._x, dtype=float)
+        self._current_s0 = self._project_s_with_line_search(x0_phys[:2], param)
+        s_lower, s_upper = self._get_current_s_bounds(param)
+        self._current_s0 = float(np.clip(self._current_s0, s_lower, s_upper))
+        x0_full = np.array([x0_phys[0], x0_phys[1], x0_phys[2], self._current_s0], dtype=float)
+        x0_full = self._with_input_memory(x0_full)
+
+        # Stage-0 equality on full augmented state.
+        self.ocp.constraints.idxbx_0 = np.arange(self.nx, dtype=np.int64)
+        self.ocp.constraints.lbx_0 = x0_full.copy()
+        self.ocp.constraints.ubx_0 = x0_full.copy()
+
+        # Optional s-bounds for intermediate and terminal stages.
+        if getattr(param, "use_s_state_bounds", True):
+            self.ocp.constraints.idxbx = np.array([3], dtype=np.int64)
+            self.ocp.constraints.lbx = np.array([s_lower], dtype=float)
+            self.ocp.constraints.ubx = np.array([s_upper], dtype=float)
+            self.ocp.constraints.idxbx_e = np.array([3], dtype=np.int64)
+            self.ocp.constraints.lbx_e = np.array([s_lower], dtype=float)
+            self.ocp.constraints.ubx_e = np.array([s_upper], dtype=float)
+        else:
+            self.ocp.constraints.x0 = x0_full
+
+        self._configure_solver_options(param)
+
+        if reference_path_data is not None:
+            self.set_reference_trajectory(reference_path_data)
+
+    def create_solver(self):
+        if (
+            getattr(getattr(self, "ped_model", None), "requires_external_shared_lib", False)
+            and hasattr(self.ped_model, "shared_lib_dir")
+            and hasattr(self.ped_model, "name")
+        ):
+            self.ocp.solver_options.model_external_shared_lib_dir = self.ped_model.shared_lib_dir
+            self.ocp.solver_options.model_external_shared_lib_name = self.ped_model.name
+
+        self.variables["x"] = "x"
+        self.variables["u"] = "u"
+        self.ocp.code_export_directory = self.code_export_directory
+        self.solver = AcadosOcpSolver(self.ocp, json_file=self.json_filename)
+
+    def add_obstacle_avoidance_constraint(
+        self, param, system, obstacles_geo, *, update_obstacle_data=True,
+    ):
+        if not getattr(param, "use_obstacle_constraint", True):
+            if getattr(param, "use_debug", False):
+                print("Obstacle avoidance constraint is disabled by use_obstacle_constraint=False")
+            return
+
+        if update_obstacle_data:
+            self.update_obstacles(obstacles_geo)
+
+        if self.ped_model is None or self.ocp is None:
+            if getattr(param, "use_debug", False):
+                print("Warning: PED model not initialized, skipping obstacle avoidance constraint")
+            return
+
+        x = self.ocp.model.x
+        d_min = float(param.d_min)
+
+        # The analytic bridge injects first-order Taylor parameters through model.p.
+        sdf_value = self.ped_model(x[:3])
+        constraint_expr = sdf_value - d_min
+
+        self.ocp.constraints.constr_type = "BGH"
+        self.ocp.dims.nh = 1
+        self.ocp.model.con_h_expr = constraint_expr
+        self.ocp.constraints.lh = np.array([0.0], dtype=float)
+        self.ocp.constraints.uh = np.array([1e8], dtype=float)
+
+        if getattr(param, "use_soft_constraint", False):
+            ns = 1
+            self.ocp.dims.ns = ns
+            self.ocp.dims.nsh = 1
+            self.ocp.constraints.idxsh = np.arange(1, dtype=np.int64)
+            self.ocp.constraints.lsh = np.zeros(ns)
+            self.ocp.constraints.ush = np.ones(ns) * 1e8
+            slack_w = float(getattr(param, "slack_weight", 1e4))
+            self.ocp.cost.Zl = np.diag([slack_w] * ns)
+            self.ocp.cost.Zu = np.diag([slack_w] * ns)
+            self.ocp.cost.zl = np.zeros(ns)
+            self.ocp.cost.zu = np.zeros(ns)
+            if getattr(param, "use_debug", False):
+                print(f"Obstacle avoidance softened with slack weight = {slack_w}")
+        else:
+            if getattr(param, "use_debug", False):
+                print(f"Added HARD obstacle avoidance constraint with d_min = {d_min}")
+
+    def add_warm_start(self, param, system):
+        if self.solver is None:
+            return
+
+        dt = float(param.tf) / float(param.horizon)
+        effective_v_s_max = self._get_effective_v_s_max(param)
+        try:
+            x_ws, u_ws = system._dynamics.nominal_safe_controller(
+                self.state._x, dt, self.state._u[0], -1.0, 1.0
+            )
+            v_s_ws = float(np.clip(0.1, 0.0, effective_v_s_max))
+            for i in range(self.N):
+                s_ws = self._clamp_s(self._current_s0 + i * dt * v_s_ws)
+                self.solver.set(i, "x", self._with_input_memory([x_ws[0], x_ws[1], x_ws[2], s_ws]))
+                self.solver.set(i, "u", np.array([u_ws[0], u_ws[1], v_s_ws], dtype=float))
+            self.solver.set(
+                self.N,
+                "x",
+                self._with_input_memory(
+                    [x_ws[0], x_ws[1], x_ws[2], self._clamp_s(self._current_s0 + self.N * dt * v_s_ws)],
+                ),
+            )
+        except Exception as e:
+            if getattr(param, "use_debug", False):
+                print(f"Error in warm start: {e}")
+            for i in range(self.N):
+                self.solver.set(i, "x", np.zeros((self.nx,), dtype=float))
+                self.solver.set(i, "u", np.zeros((self.nu,), dtype=float))
+            self.solver.set(self.N, "x", np.zeros((self.nx,), dtype=float))
+        self._refresh_input_memory_guess(self.solver)
+
+    def update_obstacles(self, obstacles_geo):
+        if self.psdf_wrapper is None:
+            return
+        if obstacles_geo is None:
+            self.psdf_wrapper.clear_clusters()
+            return
+
+        all_clusters_A = []
+        all_clusters_B = []
+        for obs_geo in obstacles_geo:
+            edgesA, edgesB = polygon_to_edges(obs_geo)
+            all_clusters_A.append(edgesA)
+            all_clusters_B.append(edgesB)
+
+        if len(all_clusters_A) == 0:
+            self.psdf_wrapper.clear_clusters()
+        elif len(all_clusters_A) <= self.psdf_wrapper.K_max:
+            self.psdf_wrapper.update_edge_clusters(all_clusters_A, all_clusters_B)
+        else:
+            self.psdf_wrapper.update_edge_clusters(
+                all_clusters_A[:self.psdf_wrapper.K_max],
+                all_clusters_B[:self.psdf_wrapper.K_max],
+            )
+
+    def setup(self, param, system, reference_trajectory, obstacles):
+        self.param = param
+        self.set_state(system._state)
+        self.set_reference_trajectory(reference_trajectory)
+        use_obstacle_constraint = getattr(param, "use_obstacle_constraint", True)
+
+        if not self._is_initialized:
+            if getattr(param, "use_debug", False):
+                print("Setting up MPCC optimizer...")
+            if use_obstacle_constraint:
+                self.initialize_ped_model(system, obstacles, E_max=100, K_max=20, device="cuda")
+            else:
+                self.psdf_wrapper = None
+                self.ped_model = None
+                if getattr(param, "use_debug", False):
+                    print("MPCC obstacle constraint disabled: skipping PSDF model initialization.")
+            self.setup_ocp(param, reference_trajectory)
+            if use_obstacle_constraint:
+                self.add_obstacle_avoidance_constraint(
+                    param, system, obstacles, update_obstacle_data=False,
+                )
+            self.create_solver()
+            self.add_warm_start(param, system)
+            self._is_initialized = True
+        else:
+            self.set_reference_trajectory(reference_trajectory)
+            if use_obstacle_constraint:
+                self.update_obstacles(obstacles)
+
+    @record_solve_nlp_time
+    def solve_nlp(self):
+        if self.solver is None:
+            raise RuntimeError("MPCC solver is not initialized. Call setup() first.")
+
+        s_lower, s_upper = self._get_current_s_bounds(self.param)
+        if self.state is not None:
+            self.update_reference_path_params(self.reference_path_data, self.state)
+            s_lower, s_upper = self._get_current_s_bounds(self.param)
+            self._current_s0 = float(np.clip(self._current_s0, s_lower, s_upper))
+            x0 = np.array([self.state._x[0], self.state._x[1], self.state._x[2], self._current_s0], dtype=float)
+            x0 = self._with_input_memory(x0)
+            try:
+                # Fix the full state, including input memory when enabled.
+                self.solver.set(0, "lbx", x0)
+                self.solver.set(0, "ubx", x0)
+            except Exception:
+                if getattr(self, "_input_memory_slice", None) is not None:
+                    raise
+                # Fallback for configurations where only s is boxed.
+                if getattr(self.param, "use_debug", False):
+                    print("Warning: stage-0 full-state bounds update failed; falling back to s-only bound.")
+                self.solver.set(0, "lbx", np.array([x0[3]], dtype=float))
+                self.solver.set(0, "ubx", np.array([x0[3]], dtype=float))
+            self.solver.set(0, "x", x0)
+
+        if getattr(self.param, "use_s_state_bounds", True):
+            try:
+                for i in range(1, self.N):
+                    self.solver.set(i, "lbx", np.array([s_lower], dtype=float))
+                    self.solver.set(i, "ubx", np.array([s_upper], dtype=float))
+                self.solver.set(self.N, "lbx", np.array([s_lower], dtype=float))
+                self.solver.set(self.N, "ubx", np.array([s_upper], dtype=float))
+            except Exception:
+                if getattr(self.param, "use_debug", False):
+                    print("Warning: failed to update per-stage s bounds in solver.")
+
+        # Keep warm-start state/control in-domain before using them for stage-wise reference generation.
+        try:
+            effective_v_s_max = self._get_effective_v_s_max(self.param)
+            for i in range(1, self.N + 1):
+                xi = self.solver.get(i, "x")
+                xi[3] = float(np.clip(xi[3], s_lower, s_upper))
+                self.solver.set(i, "x", xi)
+            for i in range(self.N):
+                ui = self.solver.get(i, "u")
+                ui[2] = float(np.clip(ui[2], 0.0, effective_v_s_max))
+                self.solver.set(i, "u", ui)
+        except Exception:
+            pass
+
+        self._refresh_input_memory_guess(self.solver)
+        psdf_params_batch = None
+        if self.ped_model is not None and self.psdf_param_dim > 0:
+            x_guess = np.stack([self.solver.get(i, "x") for i in range(self.N + 1)], axis=0)
+            psdf_params_batch = self.ped_model.get_params(x_guess[:, :3])
+
+        stage_s_values = self._predict_stage_s_values(self._current_s0, s_lower, s_upper)
+        for i in range(self.N):
+            stage_path_param = self._build_stage_path_parameter(stage_s_values[i])
+            psdf_stage = None if psdf_params_batch is None else psdf_params_batch[i]
+            stage_param = np.zeros((self.path_param_dim + self.psdf_param_dim,), dtype=float)
+            stage_param[self.path_param_slice] = stage_path_param
+            if self.psdf_param_dim > 0 and psdf_stage is not None:
+                stage_param[self.psdf_param_slice] = psdf_stage
+            self.solver.set(i, "p", stage_param)
+        terminal_path_param = self._build_stage_path_parameter(stage_s_values[self.N])
+        psdf_terminal = None if psdf_params_batch is None else psdf_params_batch[-1]
+        terminal_stage_param = np.zeros((self.path_param_dim + self.psdf_param_dim,), dtype=float)
+        terminal_stage_param[self.path_param_slice] = terminal_path_param
+        if self.psdf_param_dim > 0 and psdf_terminal is not None:
+            terminal_stage_param[self.psdf_param_slice] = psdf_terminal
+        self.solver.set(self.N, "p", terminal_stage_param)
+
+        # The decorator measures this entire solve_nlp() call, including the
+        # stage parameter updates and warm-start preparation above.
+        status = self.solver.solve()
+
+        if status != 0:
+            if getattr(self.param, "use_debug", False):
+                report_solver_failure(
+                    self.solver,
+                    status,
+                    max_iteration_message=(
+                        "Acados reached the maximum SQP iterations before meeting "
+                        "the configured tolerance."
+                    ),
+                )
+            # Prevent failed iterate from poisoning next-step projection center.
+            self._prev_predicted_s = self._clamp_s(self._current_s0)
+            self._has_prev_predicted_s = False
+        else:
+            try:
+                if self.N >= 1:
+                    self._prev_predicted_s = self._clamp_s(float(self.solver.get(1, "x")[3]))
+                else:
+                    self._prev_predicted_s = self._clamp_s(float(self.solver.get(0, "x")[3]))
+                self._has_prev_predicted_s = True
+            except Exception:
+                self._prev_predicted_s = self._clamp_s(self._current_s0)
+                self._has_prev_predicted_s = False
+
+        return AcadosSolution(self.solver, self.N, self.variables)
+
+    def initialize_ped_model(self, system, obstacles, E_max=100, K_max=20, device="cuda"):
+        self.device = device = self._require_cuda_device(device)
+        if not hasattr(system, "_geometry"):
+            raise ValueError("System must have _geometry attribute")
+
+        geometry = system._geometry._geometries[0]
+        vertices = geometry._region.get_ccw_vertices()
+        self.psdf_wrapper = AugmentedPSDFWrapper(
+            verts=torch.tensor(vertices, dtype=torch.float32, device=device),
+            E_max=E_max,
+            K_max=K_max,
+            device=device,
+        )
+        self.ped_model = AnalyticPSDFCasADi(
+            self.psdf_wrapper,
+            device=self.device,
+            name="analytic_mpcc_psdf",
+        )
+        self.update_obstacles(obstacles)
+
+
+class AcadosSolution:
+    def __init__(self, solver, N, variables):
+        self.solver = solver
+        self.N = N
+        self.variables = variables
+
+    def get_first_input(self):
+        """Read only the command applied to the plant, without a horizon copy."""
+        return self.solver.get(0, "u")
+
+    def value(self, var_expr):
+        if var_expr == "x" or (isinstance(var_expr, str) and var_expr == "x"):
+            return np.stack([self.solver.get(i, "x") for i in range(self.N + 1)], axis=1)
+        if var_expr == "u" or (isinstance(var_expr, str) and var_expr == "u"):
+            return np.stack([self.solver.get(i, "u") for i in range(self.N)], axis=1)
+        raise NotImplementedError("Only 'x' and 'u' supported in AcadosSolution.value")
+
+    def get_state_trajectory(self):
+        return self.value("x")
+
+    def get_input_trajectory(self):
+        return self.value("u")
+
+    def get_physical_input_trajectory(self):
+        u = self.value("u")
+        return u[:2, :]
+
+    def stats(self):
+        return {"return_status": "success" if self.solver.status == 0 else "failure"}

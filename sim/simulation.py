@@ -53,16 +53,21 @@ class Robot:
     def run_local_planner(self):
         # TODO: local path shall be generated with `obstacles`.
         self._local_trajectory = self._local_planner.generate_trajectory(self._system, self._global_path)
-        self._local_planner.logging(self._local_planner_logger)
+        if getattr(getattr(self, "_controller", None), "use_debug", True):
+            self._local_planner.logging(self._local_planner_logger)
 
     def run_controller(self, obstacles):
-        start = time.perf_counter()
+        use_debug = self._controller.use_debug
+        start = time.perf_counter() if use_debug else None
         try:
             self._control_action = self._controller.generate_control_input(
                 self._system, self._global_path, self._local_trajectory, obstacles
             )
         finally:
-            self._controller_logger._computation_times.append(time.perf_counter() - start)
+            if use_debug:
+                # Optional whole-controller wall time; benchmark timings live
+                # in optimizer.solver_times and cover solve_nlp() only.
+                self._controller_logger._computation_times.append(time.perf_counter() - start)
         self._controller.logging(self._controller_logger)
 
     def run_system(self):

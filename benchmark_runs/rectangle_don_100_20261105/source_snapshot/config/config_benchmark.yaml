@@ -1,0 +1,62 @@
+# Maze benchmark: 10 trials per enabled method, at most 80 simulation seconds.
+# Run from the repository root; choose a fresh --results-dir for every batch:
+# python test_nmpc.py -c config/config_benchmark.yaml --results-dir benchmark_runs/<new_run>
+# Common controller defaults are defined in control/mpcc_optimizer.py from CC-MF tuning.
+# Optional common overrides belong in 'mpcc'; method blocks are for method-specific settings.
+# computation_times CSVs measure complete solve_nlp() calls in seconds.
+# Diagnostic collection must be off for all methods when comparing timings.
+trials: 10
+
+mpcc:
+  use_debug: false  # true enables detailed output, traces and diagnostic CSVs
+
+# Trial seeds 0-9 are shared across methods. This perturbs the true initial pose.
+start_perturbation:
+  enabled: true
+  seed: 0
+  position_std: 0.02
+  heading_std_deg: 2.8647889756541165  # 0.05 rad
+  max_sigma: 3.0
+  min_clearance: 0.001
+  max_attempts: 1000
+
+localization_error:
+  enabled: false
+
+defaults:
+  simulation_time: 80.0
+  generate_animation: false
+  generate_plots: false
+
+trial_failure_criteria:
+  enabled: true
+  movement_window_sec: 10.0
+  movement_threshold: 0.03
+  max_consecutive_solver_failures: 20
+
+test_configs:
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_mf
+    dynamics_type: differential_drive
+    path_planner: astar
+  # - maze_type: maze
+  #   robot_shape: rectangle
+  #   optimizer_type: mpcc
+  #   dynamics_type: differential_drive
+  #   path_planner: astar
+  # - maze_type: maze
+  #   robot_shape: rectangle
+  #   optimizer_type: cc_sf
+  #   dynamics_type: differential_drive
+  #   path_planner: astar
+  # - maze_type: maze
+  #   robot_shape: rectangle
+  #   optimizer_type: cc_mf
+  #   dynamics_type: differential_drive
+  #   path_planner: astar
+  # - maze_type: maze
+  #   robot_shape: rectangle
+  #   optimizer_type: cc_ecs
+  #   dynamics_type: differential_drive
+  #   path_planner: astar

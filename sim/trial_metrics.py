@@ -1,10 +1,11 @@
 """Incremental navigation outcomes and successful solver-step timing CSVs.
 
-MPCC, CC-SF, CC-MF and CC-ECS record seconds spent inside ``solve()`` using
-``time.perf_counter()``. A recovered cycle sums its main and backup calls;
-preparation, diagnostics and fallback-plan construction are excluded. A cycle
-that skips the solver records zero but is unsuccessful, so it is excluded from
-the successful-step summaries below. Controller wall time is logged separately.
+MPCC, CC-SF, CC-MF and CC-ECS record the complete ``solve_nlp()`` call using
+``time.perf_counter()``. This includes preparation inside the method, main and
+backup solves, and fallback-plan construction. External setup, planning and
+logging are excluded. Use ``use_debug=False`` for comparable measurements;
+debug work inside the method is included when enabled. Failed/skipped solver
+cycles are timed but excluded from successful-step summaries below.
 """
 
 import csv
@@ -25,6 +26,9 @@ TRIAL_FIELDS = CONFIG_FIELDS + (
     "failure_reason", "goal_reached", "final_time", "distance_to_goal",
     "successful_solver_steps", "solver_time_mean_s", "solver_time_p95_s",
     "current_name", "output_root_dir", "error",
+    "safe_stop_count", "backup_feasible_qp_success_count",
+    "plant_input_apply_count", "last_solve_mode",
+    "raw_trace_path", "raw_trace_metadata_path", "raw_trace_error",
 )
 TIME_FIELDS = CONFIG_FIELDS + (
     "trial_number", "start_seed", "trial_success", "trial_status",
@@ -135,6 +139,13 @@ class TrialMetricsRecorder:
             "current_name": result.get("current_name"),
             "output_root_dir": result.get("output_root_dir", ""),
             "error": result.get("error", ""),
+            **{
+                key: result.get(key, "") for key in (
+                    "safe_stop_count", "backup_feasible_qp_success_count",
+                    "plant_input_apply_count", "last_solve_mode",
+                    "raw_trace_path", "raw_trace_metadata_path", "raw_trace_error",
+                )
+            },
         }
         # The numeric config ID keeps separately configured instances apart.
         tokens = (str(identity[key]) for key in CONFIG_FIELDS)

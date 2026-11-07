@@ -24,6 +24,7 @@ from control.cc_covariance import (
 from control.mpcc_optimizer import CCMPCCOptimizerParam, MPCCOptimizer
 from utils.acados_diagnostics import report_solver_failure
 from utils.cc_mf_diagnostics import CCMFDiagnosticsMixin
+from utils.solver_timing import record_solve_nlp_time
 from utils.spline_path import (
     normalize_path_data,
     project_progress,
@@ -51,7 +52,7 @@ class CCMFOptimizerParam(CCMPCCOptimizerParam):
         self.mf_active_end_step = None
         self.mf_active_terminal = True
 
-        # Optional diagnostics
+        # Optional diagnostics, enabled only inside the shared use_debug switch.
         self.debug_mf = False
         self.debug_infeasibility = False
         self.constraint_debug_tolerance = 1e-6
@@ -204,7 +205,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         )
 
     def _print_runtime_summary(self):
-        if not self._has_runtime_activity():
+        if not self._debug_enabled() or not self._has_runtime_activity():
             return
 
         print(
@@ -279,9 +280,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
     def get_last_constraint_diagnostics(self):
         """Return the latest fixed-row safety diagnostics.
 
-        The cache is populated only when ``debug_mf`` is enabled for the most
-        recent solve. Constraint ordering is invariant: row 0 is the signed-
-        PSDF guard/recovery row and row 1 is the MF row.
+        The cache is populated only when ``use_debug`` and ``debug_mf`` are
+        enabled for the most recent solve. Constraint ordering is invariant:
+        row 0 is the signed-PSDF guard/recovery row and row 1 is the MF row.
         """
         if self._last_constraint_diagnostics is None:
             return None
@@ -614,32 +615,39 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 else:
                     phi = np.full(size, 1000.0)
                     gradient = np.zeros((size, 3))
-                no_obstacles = self.psdf_wrapper is None or (
-                    getattr(self.psdf_wrapper, "active_clusters", None) == 0
-                )
-                missing = np.full(size, np.nan)
                 arrays = {
                     "phi": np.asarray(phi), "gradient": np.asarray(gradient),
                     "A": np.zeros((size, 8)), "c": np.ones(size),
-                    "residual": missing.copy(),
-                    "probability_sum": np.zeros(size) if no_obstacles else missing.copy(),
-                    "feature_count": np.zeros(size, dtype=int),
                     "valid": np.zeros(size, dtype=bool),
                     "required": np.zeros(size, dtype=bool),
                     "status": np.full(size, "not_requested", dtype=object),
-                    "branch": np.full(size, "inactive", dtype=object),
-                    "tail_clipped": np.zeros(size, dtype=bool),
                 }
+                if self._debug_enabled():
+                    no_obstacles = self.psdf_wrapper is None or (
+                        getattr(self.psdf_wrapper, "active_clusters", None) == 0
+                    )
+                    missing = np.full(size, np.nan)
+                    arrays.update(
+                        residual=missing.copy(),
+                        probability_sum=(
+                            np.zeros(size) if no_obstacles else missing.copy()
+                        ),
+                        feature_count=np.zeros(size, dtype=int),
+                        branch=np.full(size, "inactive", dtype=object),
+                        tail_clipped=np.zeros(size, dtype=bool),
+                    )
                 frozen = None
             else:
                 result = self.psdf_wrapper.forward_mf_icdf(
                     z_bar, epsilon, float(self.param.d_min),
                     stage_requested=requested,
+                    collect_diagnostics=self._debug_enabled(),
                     return_frozen_features=bool(
-                        self.param.debug_mf or self.param.debug_infeasibility
+                        self._debug_enabled()
+                        and (self.param.debug_mf or self.param.debug_infeasibility)
                     ),
                 )
-                arrays = self._result_arrays(result)
+                arrays = self._result_arrays(result, include_debug=self._debug_enabled())
                 frozen = result.frozen_features
             self._validate_result(arrays, "CC-MF preprocessing")
         except MFInverseCDFEvaluationError:
@@ -655,7 +663,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         A[required], c[required] = arrays["A"][required], arrays["c"][required]
         guard_A = np.zeros((size, 8))
         guard_A[:, :3] = arrays["gradient"]
-        return {
+        constraint_data = {
             **arrays,
             "row_mf_enabled": bool(self.param.use_row_mf),
             "guard_A": guard_A,
@@ -664,13 +672,18 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 - np.einsum("ij,ij->i", arrays["gradient"], z_bar[:, :3])
                 - float(self.param.d_col)
             ),
-            "mf_A_raw": arrays["A"], "mf_c_raw": arrays["c"],
-            "mf_valid": arrays["valid"].copy(),
-            "mf_stage_mask": stage_mask,
             "mf_A": A, "mf_c": c, "mf_mask": required.copy(),
             "epsilon": epsilon, "frozen_features": frozen,
-            "nominal_state": z_bar.copy(),
         }
+        if self._debug_enabled():
+            constraint_data.update(
+                mf_A_raw=arrays["A"], mf_c_raw=arrays["c"],
+                mf_valid=arrays["valid"].copy(), mf_stage_mask=stage_mask,
+            )
+        proximal = self.covariance_proximal_param_slice
+        if self._debug_enabled() or proximal.stop > proximal.start:
+            constraint_data["nominal_state"] = z_bar.copy()
+        return constraint_data
 
     def _project_s_with_line_search(self, position_xy, param):
         previous_s = self._prev_predicted_s if self._has_prev_predicted_s else None
@@ -786,7 +799,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             self.update_obstacles(obstacles_geo)
 
         if self.ocp is None:
-            print("Warning: OCP is not initialized; skipping fixed safety rows")
+            if self._debug_enabled():
+                print("Warning: OCP is not initialized; skipping fixed safety rows")
             return
 
         x = self.ocp.model.x
@@ -849,10 +863,11 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         self.ocp.cost.Zl_e = slack_quadratic.copy()
         self.ocp.cost.zu_e = slack_linear.copy()
         self.ocp.cost.Zu_e = slack_quadratic.copy()
-        print(
-            "Added two affine safety rows at intermediate/terminal stages: "
-            "0=HARD guard/recovery, 1=SOFT MF"
-        )
+        if self._debug_enabled():
+            print(
+                "Added two affine safety rows at intermediate/terminal stages: "
+                "0=HARD guard/recovery, 1=SOFT MF"
+            )
 
     def add_warm_start(self, param, system, solver=None):
         solver = self.solver if solver is None else solver
@@ -903,7 +918,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 ),
             )
         except Exception as e:
-            print(f"Error in warm start: {e}")
+            if self._debug_enabled():
+                print(f"Error in warm start: {e}")
             initial_guess = np.zeros((self.nx,), dtype=float)
             if self.state is not None:
                 initial_guess[:3] = self.state._x[:3]
@@ -1040,10 +1056,11 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             except Exception:
                 if getattr(self, "_input_memory_slice", None) is not None:
                     raise
-                print(
-                    "Warning: stage-0 full-state bounds update failed; "
-                    "keeping previous equality bounds."
-                )
+                if self._debug_enabled():
+                    print(
+                        "Warning: stage-0 full-state bounds update failed; "
+                        "keeping previous equality bounds."
+                    )
             solver.set(0, "x", x0)
 
         _, lbx, ubx = self._get_augmented_state_bounds(
@@ -1058,10 +1075,11 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             solver.set(self.N, "lbx", lbx)
             solver.set(self.N, "ubx", ubx)
         except Exception:
-            print(
-                "Warning: failed to update per-stage augmented-state bounds "
-                "in solver."
-            )
+            if self._debug_enabled():
+                print(
+                    "Warning: failed to update per-stage augmented-state bounds "
+                    "in solver."
+                )
 
         try:
             effective_v_s_max = self._get_effective_v_s_max(self.param)
@@ -1094,7 +1112,6 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             solver.set(stage, "x", x_guess[stage])
 
         constraint_data = self._compute_constraint_affine_data(x_guess[:, :8])
-        nominal_probability_sum = self._nominal_probability_sum(constraint_data, x_guess[:, :8])
 
         # The batch includes x_guess[0] fixed to the measured current state.
         # Its phi is the exact PSDF, not the affine guard approximation, even
@@ -1104,13 +1121,17 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         constraint_data["exact_current_phi"] = (
             self._current_psdf if self._current_psdf is not None else np.nan
         )
-        self._constraint_data = constraint_data
+        if self._debug_enabled():
+            self._constraint_data = constraint_data
         self._set_constraint_parameters(
             solver,
             stage_s_values,
             constraint_data,
         )
-        self._last_nominal_probability_sum = nominal_probability_sum.copy()
+        if self._debug_enabled():
+            self._last_nominal_probability_sum = self._nominal_probability_sum(
+                constraint_data, x_guess[:, :8],
+            )
         if self.param.use_obstacle_constraint and (
             not np.isfinite(self._current_psdf)
             or self._current_psdf < float(self.param.d_col)
@@ -1119,8 +1140,10 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             # None denotes a skipped solve, never an acados return code.
             return None
 
-        # Keep benchmark timings limited to acados calls. A recovered cycle
-        # includes both the failed main solve and its backup solve.
+        # Backend-only timing is a diagnostic. The shared solve_nlp decorator
+        # records the complete comparable controller optimization time.
+        if not self._debug_enabled():
+            return solver.solve()
         solve_start = time.perf_counter()
         try:
             status = solver.solve()
@@ -1130,10 +1153,13 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
 
     def _try_backup_recovery(self):
         if self.backup_solver is None:
-            print("Backup solver is unavailable; falling back to safe stop.")
+            if self._debug_enabled():
+                print("Backup solver is unavailable; falling back to safe stop.")
             return None
 
-        main_constraint_data = copy.deepcopy(self._constraint_data)
+        # Preparation builds a fresh cache, so retaining the old reference is
+        # enough to restore it without cloning a diagnostic tensor snapshot.
+        main_constraint_data = self._constraint_data
         main_current_psdf = self._current_psdf
         main_probability_sum = (
             None
@@ -1169,7 +1195,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                     self._copy_primal_guess(self.backup_solver, self.solver)
                 except Exception:
                     pass
-                print("Recovered with backup SQP_WITH_FEASIBLE_QP solver.")
+                if self._debug_enabled():
+                    print("Recovered with backup SQP_WITH_FEASIBLE_QP solver.")
                 return self.backup_solver, 0, "backup_feasible_qp"
 
             restore_main_diagnostics()
@@ -1177,14 +1204,16 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 self._copy_primal_guess(self.backup_solver, self.solver)
             except Exception:
                 pass
-            print(
-                f"Backup SQP_WITH_FEASIBLE_QP returned status {status}; "
-                "falling back to safe stop."
-            )
+            if self._debug_enabled():
+                print(
+                    f"Backup SQP_WITH_FEASIBLE_QP returned status {status}; "
+                    "falling back to safe stop."
+                )
         except Exception as error:
             self._raise_if_fatal_evaluation_error(error)
             restore_main_diagnostics()
-            print(f"Warning: backup solver recovery failed: {error}")
+            if self._debug_enabled():
+                print(f"Warning: backup solver recovery failed: {error}")
         return None
 
     def _build_safe_stop_plan(self, dynamics):
@@ -1226,10 +1255,11 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             raise RuntimeError("Cannot install safe stop without a solver and current state")
 
         dynamics = self._system_dynamics
-        print(
-            f"SQP_RTI solver failed with status {solver_status}. "
-            "Starting infeasible recovery."
-        )
+        if self._debug_enabled():
+            print(
+                f"SQP_RTI solver failed with status {solver_status}. "
+                "Starting infeasible recovery."
+            )
         backup_result = self._try_backup_recovery()
         if backup_result is not None:
             return backup_result
@@ -1238,10 +1268,11 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
     def _setup_backup_solver(self, param, obstacles):
         self.backup_solver = None
         if not param.enable_backup_solver:
-            print(
-                f"{self.diagnostics_label} backup SQP_WITH_FEASIBLE_QP solver disabled; "
-                "using nominal safe-stop recovery."
-            )
+            if self._debug_enabled():
+                print(
+                    f"{self.diagnostics_label} backup SQP_WITH_FEASIBLE_QP solver disabled; "
+                    "using nominal safe-stop recovery."
+                )
             return
 
         main_ocp = self.ocp
@@ -1261,7 +1292,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             self.add_warm_start(param, self._system, solver=self.backup_solver)
         except Exception as error:
             self.backup_solver = None
-            print(f"Warning: failed to initialize backup solver: {error}")
+            if self._debug_enabled():
+                print(f"Warning: failed to initialize backup solver: {error}")
         finally:
             self.ocp = main_ocp
 
@@ -1285,16 +1317,17 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 self.update_obstacles(obstacles)
             return
 
-        print(f"Setting up {self.diagnostics_label} optimizer...")
-        active_stages = np.flatnonzero(
-            self._build_mf_stage_mask(int(param.horizon) + 1)
-        ).tolist()
-        print(
-            f"{self.diagnostics_label} Row M configuration: "
-            f"enabled={bool(param.use_row_mf)}, "
-            f"active only when phi > d_min={float(param.d_min):.8g}, "
-            f"configured stages={active_stages}"
-        )
+        if self._debug_enabled():
+            print(f"Setting up {self.diagnostics_label} optimizer...")
+            active_stages = np.flatnonzero(
+                self._build_mf_stage_mask(int(param.horizon) + 1)
+            ).tolist()
+            print(
+                f"{self.diagnostics_label} Row M configuration: "
+                f"enabled={bool(param.use_row_mf)}, "
+                f"active only when phi > d_min={float(param.d_min):.8g}, "
+                f"configured stages={active_stages}"
+            )
         if param.use_obstacle_constraint:
             self.initialize_augmented_psdf(
                 system,
@@ -1304,10 +1337,11 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             )
         else:
             self.psdf_wrapper = None
-            print(
-                f"{self.diagnostics_label} obstacle constraint disabled: "
-                "skipping augmented PSDF initialization."
-            )
+            if self._debug_enabled():
+                print(
+                    f"{self.diagnostics_label} obstacle constraint disabled: "
+                    "skipping augmented PSDF initialization."
+                )
 
         self.setup_ocp(param)
         self.add_obstacle_avoidance_constraint(param, obstacles)
@@ -1319,6 +1353,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         self._is_initialized = True
 
     def _report_solver_failure(self, status):
+        if not self._debug_enabled():
+            return
         report_solver_failure(
             self.solver,
             status,
@@ -1334,7 +1370,9 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             self._safe_stop_count += 1
             if mode == "safe_stop_stage0":
                 self._stage0_guard_stop_count += 1
-            if self.param.debug_mf or self.param.debug_infeasibility:
+            if self._debug_enabled() and (
+                self.param.debug_mf or self.param.debug_infeasibility
+            ):
                 print(f"Applied immediate zero-input safe-stop plan: {mode}.")
 
     def _update_predicted_progress(self, solver, status):
@@ -1357,6 +1395,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         return f"{float(value):+.4g}"
 
     def _record_constraint_log(self, diagnostics):
+        if not self._debug_enabled():
+            return
         tolerance = max(float(self.param.constraint_debug_tolerance), 0.0)
         for stage in diagnostics["constraint_stages"]:
             stage = int(stage)
@@ -1447,6 +1487,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         return float(self._solve_count * dt)
 
     def _record_experiment_logs(self, mode, status, solver, diagnostics):
+        if not self._debug_enabled():
+            return
         log_time = self._get_cycle_log_time()
         try:
             u0 = np.asarray(solver.get(0, "u"), dtype=float).reshape(-1)
@@ -1547,12 +1589,12 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
 
     def _finish_solve(self, mode, status, solver, diagnostics):
         self._last_solve_mode = mode
+        if not self._debug_enabled():
+            return
         self._record_experiment_logs(mode, status, solver, diagnostics)
         solve_time = self._cycle_solver_time
-        self.solver_times.append(solve_time)
 
-        # Detailed console diagnostics are opt-in. CSV uses cached values and
-        # remains available without triggering another PSDF evaluation.
+        # Detailed console diagnostics also honor the method-specific flags.
         if not (self.param.debug_mf or self.param.debug_infeasibility):
             return
 
@@ -1632,6 +1674,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
                 )
         print(summary)
 
+    @record_solve_nlp_time
     def solve_nlp(self):
         if self.solver is None:
             raise RuntimeError(f"{self.diagnostics_label} solver is not initialized. Call setup() first.")
@@ -1659,7 +1702,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
             self._record_recovery(mode)
         elif status != 0:
             self._report_solver_failure(status)
-            use_debug = bool(self.param.debug_infeasibility)
+            use_debug = self._debug_enabled() and bool(self.param.debug_infeasibility)
             if use_debug:
                 failed_diagnostics = self.compute_diagnostics(
                     self.solver,
@@ -1680,7 +1723,7 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         self._update_predicted_progress(active_solver, status)
 
         diagnostics = None
-        use_debug = bool(self.param.debug_mf)
+        use_debug = self._debug_enabled() and bool(self.param.debug_mf)
         if use_debug and status is not None:
             diagnostics = self.compute_diagnostics(
                 active_solver,
@@ -1723,16 +1766,21 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         )
 
     @staticmethod
-    def _result_arrays(result):
+    def _result_arrays(result, *, include_debug=True):
+        diagnostic_fields = {
+            "feature_count", "branch", "tail_clipped", "probability_sum", "residual",
+        }
         arrays = {
             item.name: getattr(result, item.name).detach().cpu().numpy()
             for item in fields(result)
             if isinstance(getattr(result, item.name), torch.Tensor)
+            and (include_debug or item.name not in diagnostic_fields)
         }
-        for key, names in (("status", ICDF_STATUS_NAMES), ("branch", ICDF_BRANCH_NAMES)):
-            arrays[key] = np.asarray(
-                [names[int(code)] for code in arrays[key]], dtype=object,
-            )
+        if include_debug:
+            for key, names in (("status", ICDF_STATUS_NAMES), ("branch", ICDF_BRANCH_NAMES)):
+                arrays[key] = np.asarray(
+                    [names[int(code)] for code in arrays[key]], dtype=object,
+                )
         return arrays
 
     @staticmethod
@@ -1744,17 +1792,27 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         finite = (
             np.isfinite(arrays["A"]).all(axis=1)
             & np.isfinite(arrays["c"])
-            & np.isfinite(arrays["residual"])
-            & np.isfinite(arrays["probability_sum"])
         )
+        # The kernel's validity mask already includes finite risk arithmetic
+        # and residual/coefficient checks. Optional diagnostic vectors add a
+        # redundant validation only when those vectors were requested.
+        for name in ("residual", "probability_sum"):
+            if name in arrays:
+                finite &= np.isfinite(arrays[name])
         failed = arrays["required"] & (~arrays["valid"] | ~finite)
         if failed.any():
-            reasons = ", ".join(
-                f"stage {i}: {arrays['status'][i]}" for i in np.flatnonzero(failed)
-            )
+            reasons = []
+            for stage in np.flatnonzero(failed):
+                status = arrays["status"][stage]
+                if isinstance(status, (int, np.integer)):
+                    status = ICDF_STATUS_NAMES[int(status)]
+                reasons.append(f"stage {stage}: {status}")
+            reasons = ", ".join(reasons)
             raise MFInverseCDFEvaluationError(f"{context}: invalid MF evaluation ({reasons})")
 
     def compute_diagnostics(self, solver, status, mode, *, failed=False, report=False):
+        if not self._debug_enabled():
+            return None
         try:
             states = self._read_diagnostic_states(solver)
             diagnostics = self._build_constraint_diagnostics(solver, states, status, mode)
@@ -1770,6 +1828,8 @@ class CCMFOptimizer(CCMFDiagnosticsMixin, MPCCOptimizer):
         return diagnostics
 
     def _print_constraint_diagnostics(self, diagnostics):
+        if not self._debug_enabled():
+            return
         print("CC-MF: hard PSDF Row G; soft inverse-CDF Row M and slack in quantile units.")
         for key in ("mf_probability_sum_nominal", "mf_icdf_residual_nominal",
                     "mf_affine_residual", "mf_icdf_residual_frozen",
@@ -1782,6 +1842,10 @@ class AcadosSolution:
         self.solver = solver
         self.N = horizon
         self._status_info = dict(status_info) if status_info is not None else None
+
+    def get_first_input(self):
+        """Read only the command applied to the plant, without a horizon copy."""
+        return self.solver.get(0, "u")
 
     def value(self, var_expr):
         if var_expr == "x":

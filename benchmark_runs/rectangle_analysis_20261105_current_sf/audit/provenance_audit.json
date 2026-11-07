@@ -1,0 +1,89 @@
+{
+  "inputs": {
+    "A": "/home/taekwon/projects/psdf_mpcc/benchmark_runs/rectangle_don_100_20261105_current_sf",
+    "B": "/home/taekwon/projects/psdf_mpcc/benchmark_runs/rectangle_don_sweep_50_20261105_current_sf"
+  },
+  "analysis_code": "/home/taekwon/projects/psdf_mpcc/benchmark_runs/rectangle_analysis_20261105_current_sf/code/provenance_audit.py",
+  "analysis_code_sha256": "89bb7ff11f9433fefdad6ed08bdff12659e1cd37e466c79e1c8271b2fafb2d15",
+  "source_aggregate_sha256": "18377821b243cfbac53a14ad151b8195dc659e29d2cfe6655fe8592ed30091d6",
+  "created_at_kst": {
+    "A": "2026-11-05T16:05:53.873879+09:00",
+    "B": "2026-11-05T16:56:52.798695+09:00"
+  },
+  "source_file_count_per_suite": {
+    "A": 59,
+    "B": 59
+  },
+  "checks": 370,
+  "failed_checks": 0,
+  "fixed_condition_metadata_trials": 4400,
+  "fixed_condition_metadata_failures": 0,
+  "reused_trial_count": 200,
+  "reused_trial_failures": 0,
+  "reused_success_step_rows": 75912,
+  "approved_amendments": [
+    {
+      "date_kst": "2026-11-05",
+      "authorization": "User explicitly approved retaining current CC-SF and recording/updating baseline before execution.",
+      "controller": "cc_sf",
+      "parameter_changes": {
+        "d_col": {
+          "historical": "absent",
+          "approved": 5e-05
+        }
+      },
+      "source_changes": "Current CC-SF includes future-stage hard/guard constraints and measured-pose guard absent in 2026-11-03 source. Current source snapshot is authoritative. Historical source parameter hashes remain historical provenance, not hashes of amended values.",
+      "historical_failed_preflight": "benchmark_runs/rectangle_don_100_20261105/baseline_validation.json"
+    }
+  ],
+  "initial_rejected_preflight": {
+    "root": "/home/taekwon/projects/psdf_mpcc/benchmark_runs/rectangle_don_100_20261105",
+    "validation": {
+      "matched": false,
+      "differences": {
+        "cc_sf": {
+          "d_col": {
+            "baseline": null,
+            "current": 5e-05
+          }
+        }
+      }
+    },
+    "changed_snapshot_files_after_rejection": [
+      "scripts/rectangle_benchmark_baseline.json"
+    ]
+  },
+  "historical_source_equivalence": false,
+  "environment": {
+    "python": "3.10.12 (main, Aug 31 2026, 10:18:17) [GCC 11.4.0]",
+    "python_executable": "/home/taekwon/projects/psdf_mpcc/.venv/bin/python",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "processor": "x86_64",
+    "packages": {
+      "numpy": "1.24.4",
+      "torch": "2.4.1+cu121",
+      "casadi": "3.7.1",
+      "scipy": "1.10.1",
+      "PyYAML": "6.0.2",
+      "matplotlib": "3.7.3"
+    },
+    "torch_num_threads": 6,
+    "torch_num_interop_threads": 24,
+    "torch_cuda_version": "12.1",
+    "cuda_available": true,
+    "gpu_devices": [
+      "NVIDIA GeForce RTX 4090"
+    ],
+    "environment": {
+      "OMP_NUM_THREADS": "6",
+      "MKL_NUM_THREADS": "6",
+      "OPENBLAS_NUM_THREADS": "6",
+      "NUMEXPR_NUM_THREADS": "6",
+      "PYTHONHASHSEED": "0",
+      "MPLBACKEND": "Agg",
+      "ACADOS_SOURCE_DIR": "/home/taekwon/projects/acados",
+      "CUDA_VISIBLE_DEVICES": null
+    }
+  },
+  "failures": []
+}

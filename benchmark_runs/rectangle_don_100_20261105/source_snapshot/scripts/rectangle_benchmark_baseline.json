@@ -1,0 +1,361 @@
+{
+  "schema_version": 1,
+  "reference": "benchmark_results_old.md: Rectangle 너비별 주행 benchmark (0.005 m 간격), 2026-11-03 (KST)",
+  "sources": {
+    "mpcc": {
+      "path": "benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_075mm/mpcc/seed_0/optimizer_parameters.json",
+      "sha256": "b3e4b6910e8c4816c5137a17ceac809bf11fca3cf354c7e6f01550af21535e07"
+    },
+    "cc_ecs": {
+      "path": "benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_075mm/cc_ecs/seed_0/optimizer_parameters.json",
+      "sha256": "93fcaae18d76e98db08fc762720d69375dfd9e5f9f381830e4ce07814c10aa83"
+    },
+    "cc_sf": {
+      "path": "benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_075mm/cc_sf/seed_0/optimizer_parameters.json",
+      "sha256": "bd9752ebcc81705556da895b606a27991839e7515b9d13bc3cd6f6ea2ea2d3c6"
+    },
+    "cc_mf": {
+      "path": "benchmark_runs/rectangle_width070_130mm_step005_10trials_20261103/width_075mm/cc_mf/seed_0/optimizer_parameters.json",
+      "sha256": "c248556fb2357b4c4e531b026cf8ecc4eeb6c200eba1b477df2fc8ef19b5ba01"
+    }
+  },
+  "excluded_diagnostic_parameters": [
+    "use_debug",
+    "debug*",
+    "constraint_debug_tolerance",
+    "first_interval_substeps"
+  ],
+  "parameters": {
+    "mpcc": {
+      "horizon": 20,
+      "tf": 2.0,
+      "mat_Qe": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          10.0
+        ]
+      ],
+      "mat_Re": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.01
+        ]
+      ],
+      "r_delta_v": 0.05,
+      "r_delta_omega": 0.1,
+      "q_s": 1.0,
+      "terminal_weight": 5.0,
+      "v_s_target": 1.0,
+      "q_s_ref": 2.0,
+      "v_s_max": 2.0,
+      "enforce_v_s_not_faster_than_vmax": true,
+      "path_gate_epsilon": 0.05,
+      "tangent_reg_delta": 1e-06,
+      "reference_weight_reg": 1e-08,
+      "fd_eps": 0.001,
+      "max_segments": 20,
+      "line_search_window": 0.5,
+      "line_search_samples": 41,
+      "s_upper_guard": 100.0,
+      "use_s_state_bounds": true,
+      "s_backtrack_tolerance": 0.3,
+      "vmin": -1.0,
+      "vmax": 1.0,
+      "omegamin": -1.0,
+      "omegamax": 1.0,
+      "a_max": 0.3,
+      "alpha_max": 5.0,
+      "qp_solver": "PARTIAL_CONDENSING_HPIPM",
+      "hessian_approx": "GAUSS_NEWTON",
+      "integrator_type": "DISCRETE",
+      "nlp_solver_type": "SQP_RTI",
+      "qp_solver_iter_max": 50,
+      "nlp_solver_max_iter": 50,
+      "tol": 0.0001,
+      "d_min": 0.0001,
+      "use_obstacle_constraint": true,
+      "use_soft_constraint": false,
+      "slack_weight": 1e+16,
+      "detection_window_width": 4.0,
+      "detection_window_height": 4.0,
+      "detection_safety_margin": 0.05,
+      "detection_frequency": 10.0
+    },
+    "cc_ecs": {
+      "horizon": 20,
+      "tf": 2.0,
+      "mat_Qe": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          10.0
+        ]
+      ],
+      "mat_Re": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.01
+        ]
+      ],
+      "r_delta_v": 0.05,
+      "r_delta_omega": 0.1,
+      "q_s": 1.0,
+      "terminal_weight": 5.0,
+      "v_s_target": 1.0,
+      "q_s_ref": 2.0,
+      "v_s_max": 2.0,
+      "enforce_v_s_not_faster_than_vmax": true,
+      "path_gate_epsilon": 0.05,
+      "tangent_reg_delta": 1e-06,
+      "reference_weight_reg": 1e-08,
+      "fd_eps": 0.001,
+      "max_segments": 20,
+      "line_search_window": 0.5,
+      "line_search_samples": 41,
+      "s_upper_guard": 100.0,
+      "use_s_state_bounds": true,
+      "s_backtrack_tolerance": 0.3,
+      "vmin": -1.0,
+      "vmax": 1.0,
+      "omegamin": -1.0,
+      "omegamax": 1.0,
+      "a_max": 0.3,
+      "alpha_max": 5.0,
+      "qp_solver": "PARTIAL_CONDENSING_HPIPM",
+      "hessian_approx": "GAUSS_NEWTON",
+      "integrator_type": "DISCRETE",
+      "nlp_solver_type": "SQP_RTI",
+      "qp_solver_iter_max": 50,
+      "nlp_solver_max_iter": 50,
+      "tol": 0.0001,
+      "d_min": 0.0001,
+      "use_obstacle_constraint": true,
+      "use_soft_constraint": false,
+      "slack_weight": 1e+16,
+      "detection_window_width": 4.0,
+      "detection_window_height": 4.0,
+      "detection_safety_margin": 0.05,
+      "detection_frequency": 10.0,
+      "chance_epsilon": 0.1,
+      "robust_horizon": 10,
+      "initial_pose_covariance": null,
+      "sigma_f0": 0.0002,
+      "sigma_l0": 0.00025,
+      "sigma_psi0": 0.00025,
+      "q_f0": 0.0,
+      "q_l0": 0.0,
+      "q_psi0": 0.0,
+      "covariance_growth_scale": 0.8,
+      "alpha_f": 0.0,
+      "alpha_v": 0.0,
+      "alpha_kappa": 0.0,
+      "beta_v": 0.0,
+      "beta_kappa": 0.0,
+      "beta_omega": 0.0,
+      "risk_cov_jitter": 1e-09,
+      "covariance_proximal_weight": 0.01,
+      "enable_backup_solver": false,
+      "augmented_psdf_device": "cuda",
+      "debug_mode": false
+    },
+    "cc_sf": {
+      "horizon": 20,
+      "tf": 2.0,
+      "mat_Qe": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          10.0
+        ]
+      ],
+      "mat_Re": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.01
+        ]
+      ],
+      "r_delta_v": 0.05,
+      "r_delta_omega": 0.1,
+      "q_s": 1.0,
+      "terminal_weight": 5.0,
+      "v_s_target": 1.0,
+      "q_s_ref": 2.0,
+      "v_s_max": 2.0,
+      "enforce_v_s_not_faster_than_vmax": true,
+      "path_gate_epsilon": 0.05,
+      "tangent_reg_delta": 1e-06,
+      "reference_weight_reg": 1e-08,
+      "fd_eps": 0.001,
+      "max_segments": 20,
+      "line_search_window": 0.5,
+      "line_search_samples": 41,
+      "s_upper_guard": 100.0,
+      "use_s_state_bounds": true,
+      "s_backtrack_tolerance": 0.3,
+      "vmin": -1.0,
+      "vmax": 1.0,
+      "omegamin": -1.0,
+      "omegamax": 1.0,
+      "a_max": 0.3,
+      "alpha_max": 5.0,
+      "qp_solver": "PARTIAL_CONDENSING_HPIPM",
+      "hessian_approx": "GAUSS_NEWTON",
+      "integrator_type": "DISCRETE",
+      "nlp_solver_type": "SQP_RTI",
+      "qp_solver_iter_max": 50,
+      "nlp_solver_max_iter": 50,
+      "tol": 0.0001,
+      "d_min": 0.0001,
+      "use_obstacle_constraint": true,
+      "use_soft_constraint": false,
+      "slack_weight": 1e+16,
+      "detection_window_width": 4.0,
+      "detection_window_height": 4.0,
+      "detection_safety_margin": 0.05,
+      "detection_frequency": 10.0,
+      "chance_epsilon": 0.1,
+      "robust_horizon": 10,
+      "initial_pose_covariance": null,
+      "sigma_f0": 0.0002,
+      "sigma_l0": 0.00025,
+      "sigma_psi0": 0.00025,
+      "q_f0": 0.0,
+      "q_l0": 0.0,
+      "q_psi0": 0.0,
+      "covariance_growth_scale": 0.8,
+      "alpha_f": 0.0016,
+      "alpha_v": 0.00032,
+      "alpha_kappa": 0.0001,
+      "beta_v": 0.016,
+      "beta_kappa": 0.0064,
+      "beta_omega": 0.0032,
+      "risk_cov_jitter": 1e-09,
+      "covariance_proximal_weight": 0.01,
+      "enable_backup_solver": false,
+      "augmented_psdf_device": "cuda",
+      "chance_gamma": null,
+      "risk_margin_floor": 0.0,
+      "risk_margin_cap": 2.0,
+      "debug_mode": false,
+      "debug_risk": true,
+      "debug_print_nominal_risk_heads": false,
+      "debug_print_nominal_risk_head_only_active": true
+    },
+    "cc_mf": {
+      "horizon": 20,
+      "tf": 2.0,
+      "mat_Qe": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          10.0
+        ]
+      ],
+      "mat_Re": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.01
+        ]
+      ],
+      "r_delta_v": 0.05,
+      "r_delta_omega": 0.1,
+      "q_s": 1.0,
+      "terminal_weight": 5.0,
+      "v_s_target": 1.0,
+      "q_s_ref": 2.0,
+      "v_s_max": 2.0,
+      "enforce_v_s_not_faster_than_vmax": true,
+      "path_gate_epsilon": 0.05,
+      "tangent_reg_delta": 1e-06,
+      "reference_weight_reg": 1e-08,
+      "fd_eps": 0.001,
+      "max_segments": 20,
+      "line_search_window": 0.5,
+      "line_search_samples": 41,
+      "s_upper_guard": 100.0,
+      "use_s_state_bounds": true,
+      "s_backtrack_tolerance": 0.3,
+      "vmin": -1.0,
+      "vmax": 1.0,
+      "omegamin": -1.0,
+      "omegamax": 1.0,
+      "a_max": 0.3,
+      "alpha_max": 5.0,
+      "qp_solver": "PARTIAL_CONDENSING_HPIPM",
+      "hessian_approx": "GAUSS_NEWTON",
+      "integrator_type": "DISCRETE",
+      "nlp_solver_type": "SQP_RTI",
+      "qp_solver_iter_max": 50,
+      "nlp_solver_max_iter": 50,
+      "tol": 0.0001,
+      "d_min": 0.0001,
+      "use_obstacle_constraint": true,
+      "use_soft_constraint": false,
+      "slack_weight": 1e+16,
+      "detection_window_width": 4.0,
+      "detection_window_height": 4.0,
+      "detection_safety_margin": 0.05,
+      "detection_frequency": 10.0,
+      "chance_epsilon": 0.1,
+      "robust_horizon": 10,
+      "initial_pose_covariance": null,
+      "sigma_f0": 0.0002,
+      "sigma_l0": 0.00025,
+      "sigma_psi0": 0.00025,
+      "q_f0": 0.0,
+      "q_l0": 0.0,
+      "q_psi0": 0.0,
+      "covariance_growth_scale": 0.8,
+      "alpha_f": 0.0016,
+      "alpha_v": 0.00032,
+      "alpha_kappa": 0.0001,
+      "beta_v": 0.016,
+      "beta_kappa": 0.0064,
+      "beta_omega": 0.0032,
+      "risk_cov_jitter": 1e-09,
+      "covariance_proximal_weight": 0.01,
+      "enable_backup_solver": false,
+      "augmented_psdf_device": "cuda",
+      "d_col": 5e-05,
+      "use_row_mf": true,
+      "mf_slack_linear": 100.0,
+      "mf_slack_quadratic": 1.0,
+      "mf_active_start_step": 1,
+      "mf_active_end_step": null,
+      "mf_active_terminal": true,
+      "debug_mf": false,
+      "debug_infeasibility": false,
+      "constraint_debug_tolerance": 1e-06,
+      "first_interval_substeps": 10
+    }
+  }
+}

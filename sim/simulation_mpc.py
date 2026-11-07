@@ -140,6 +140,7 @@ class simulation_mpc:
         self.detected_obstacles_logger = []  # Store detected obstacle caps for animation
         self.profile_heatmap_scales = {}
         self._environment_config = {}
+        self.benchmark_trace_context = None
 
     def _get_output_dir(self, category, *subdirs):
         output_dir = os.path.join(self.output_root_dir, category, *subdirs) if self.output_root_dir else os.path.join(category, *subdirs)
@@ -270,7 +271,7 @@ class simulation_mpc:
             else:
                 unknown_keys.append(key)
 
-        if applied_items:
+        if applied_items and getattr(opt_param, "use_debug", True):
             formatted_items = ", ".join(f"{key}={value}" for key, value in applied_items)
             print(f"{block_name} configured from config: {formatted_items}")
 
@@ -1234,6 +1235,8 @@ class simulation_mpc:
 
     def save_pose_sdf_to_csv(self, filename):
         """Save collected pose and SDF data to CSV file"""
+        if not getattr(getattr(self.robot, "_controller", None), "use_debug", True):
+            return
         if not self.pose_sdf_data:
             print("No pose-SDF data to save")
             return
@@ -1277,6 +1280,8 @@ class simulation_mpc:
             print(f"SDF statistics - Min: {sdf_values.min():.4f}, Max: {sdf_values.max():.4f}, Mean: {sdf_values.mean():.4f}")
 
     def save_trial_history_to_csv(self, filename):
+        if not getattr(getattr(self.robot, "_controller", None), "use_debug", True):
+            return
         if self.sim is None or getattr(self.sim, "_robot", None) is None:
             print("No simulation data to save")
             return
@@ -1352,7 +1357,7 @@ class simulation_mpc:
         """Export an optimizer-provided log without assuming its row schema."""
         controller = getattr(self.robot, "_controller", None)
         optimizer = getattr(controller, "_optimizer", None)
-        if optimizer is None:
+        if optimizer is None or not getattr(controller, "use_debug", True):
             return
         if not hasattr(optimizer, rows_method) or not hasattr(optimizer, fields_method):
             return
@@ -1434,6 +1439,7 @@ class simulation_mpc:
         self.last_run_outcome = None
         self.pose_sdf_data = []
         self.detected_obstacles_logger = []
+        self.benchmark_trace_context = None
         
         start_pos, goal_pos, grid, obstacles = self.create_env(maze_type, config or {})
         geometry_regions = DifferentialDriveMultipleGeometry()
@@ -1484,6 +1490,31 @@ class simulation_mpc:
                 DifferentialDriveRectangleGeometry(0.4 * np.array([[0, 0.1], [0.02, 0.08], [-0.2, -0.1], [-0.22, -0.08]]))
             )
    
+
+        if self._get_config_block(config, "benchmark_logging").get("enabled", False):
+            # Save geometry once; exact clearance is evaluated offline only.
+            self.benchmark_trace_context = {
+                "scenario": {
+                    "maze_type": maze_type, "optimizer_type": optimizer_type,
+                    "dynamics_type": dynamics_type, "path_planner": path_planner,
+                },
+                "robot": {
+                    "shape": robot_shape,
+                    "length": vehicle_length if robot_shape == "rectangle" else None,
+                    "width": vehicle_width if robot_shape == "rectangle" else None,
+                },
+                "geometry": {
+                    "bounds": np.asarray(grid[0], dtype=float).tolist(),
+                    "footprint_polygons": [
+                        np.asarray(region.get_ccw_vertices(), dtype=float).tolist()
+                        for region in geometry_regions.equiv_rep()
+                    ],
+                    "obstacle_polygons": [
+                        np.asarray(obstacle.get_ccw_vertices(), dtype=float).tolist()
+                        for obstacle in obstacles
+                    ],
+                },
+            }
 
         # Perturb the true pose before constructing the plant or planning a path.
         start_pos, self.start_perturbation_info = sample_start_pose(
@@ -1799,6 +1830,8 @@ class simulation_mpc:
             optimizer.reset()
         
         controller = BaseController(optimizer, opt_param)
+        if isinstance(self.robot._local_planner, SplineReferenceGenerator):
+            self.robot._local_planner.use_debug = controller.use_debug
         
         self.robot.set_controller(controller)
         
@@ -1814,8 +1847,12 @@ class simulation_mpc:
             failure_checker=failure_checker,
         )
         
-        # If using PSDF-family optimizer, set up data logging and obstacle update hooks
-        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs", "dcbf"):
+        # Legacy methods require the obstacle-update hook. MPCC-family setup
+        # already owns those updates; its hook is diagnostic-only.
+        if optimizer_type in ("psdf", "dcbf") or (
+            optimizer_type in ("mpcc", "cc_mf", "cc_sf", "cc_ecs")
+            and controller.use_debug
+        ):
             # Monkey patch the controller to log pose-SDF data and perform obstacle detection
             original_generate_control = controller.generate_control_input
             
@@ -1988,15 +2025,16 @@ class simulation_mpc:
                     f"last_solve_mode={optimizer_runtime_stats.get('last_solve_mode')}"
                 )
 
-        self.save_trial_history_to_csv(f"trial_history_{self.current_name}")
+        if controller.use_debug:
+            self.save_trial_history_to_csv(f"trial_history_{self.current_name}")
 
-        if optimizer_type == "cc_mf":
+        if controller.use_debug and optimizer_type == "cc_mf":
             self.save_cc_mf_history_to_csv()
-        elif optimizer_type == "cc_ecs":
+        elif controller.use_debug and optimizer_type == "cc_ecs":
             self.save_cc_ecs_history_to_csv()
 
         # Save pose-SDF data to CSV for PSDF-family optimizers
-        if optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs"):
+        if controller.use_debug and optimizer_type in ("psdf", "mpcc", "cc_mf", "cc_sf", "cc_ecs"):
             csv_filename = f"pose_sdf_{self.current_name}"
             self.save_pose_sdf_to_csv(csv_filename)
         

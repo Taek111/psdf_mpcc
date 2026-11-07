@@ -1,0 +1,6 @@
+이미 완료된 Rectangle benchmark 결과를 분석하라. 먼저 docs/rectangle_benchmark_analysis_context.md 전체를 읽고 모든 audit/집계/보고서 요구를 수행하라. 주행 실험은 새로 실행하지 마라.
+A=/home/taekwon/projects/psdf_mpcc/benchmark_runs/rectangle_don_100_20261105_current_sf
+B=/home/taekwon/projects/psdf_mpcc/benchmark_runs/rectangle_don_sweep_50_20261105_current_sf
+새 분석 디렉토리=/home/taekwon/projects/psdf_mpcc/benchmark_runs/rectangle_analysis_20261105_current_sf
+중요: 최초 preflight는 CC-SF d_col=0.00005가 과거 baseline에 없어서 실패했다. 사용자가 현재 CC-SF 유지와 기준 변경 기록 및 실행을 명시 승인했다. baseline JSON approved_amendments와 최초 실패 디렉토리 benchmark_runs/rectangle_don_100_20261105를 확인하라. 현재 CC-SF는 과거 대비 hard/guard 제약도 달라졌으므로 2026-11-03 제어 수식과 동일하다고 주장하지 마라. 그 외 파라미터 검사는 유지됐다. A/B는 동일한 현재 snapshot이고 B DoN .75의 200건은 A seed 0–49를 재사용한다.
+프로젝트 .venv/bin/python을 사용하라. 원본 결과를 수정하지 말고 offline clearance --strict, provenance/완료수/중복/seed pose 매칭/trace audit, 성공 step pooled solve_nlp 시간, Wilson CI, 성공-only 및 공통 성공 seed traversal, safe-stop/recovery, 실패 분포, B success plot, A 정량 표를 생성하라. paired 비교 seed 목록과 분석 코드 및 audit JSON/CSV를 보존하라. 한국어 Markdown 보고서를 작성하고 최종 응답에 보고서 경로와 주요 결과 및 제한을 간결하게 밝혀라. 오류를 숨기거나 baseline 일치가 과거 소스 일치라는 주장을 하지 마라. 원본에 누락이 있다면 명시하고 가용한 모든 분석을 완료하라.

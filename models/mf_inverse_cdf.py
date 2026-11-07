@@ -52,14 +52,14 @@ class MFInverseCDFResult:
     gradient: Tensor
     A: Tensor
     c: Tensor
-    residual: Tensor
-    probability_sum: Tensor
+    residual: Optional[Tensor]
+    probability_sum: Optional[Tensor]
     feature_count: Tensor
     valid: Tensor
     required: Tensor
     status: Tensor
-    branch: Tensor
-    tail_clipped: Tensor
+    branch: Optional[Tensor]
+    tail_clipped: Optional[Tensor]
     frozen_features: Optional[dict] = None
 
 
@@ -97,6 +97,7 @@ def compute_mf_icdf(
     stage_requested=None,
     no_obstacles: bool = False,
     return_frozen_features: bool = False,
+    collect_diagnostics: bool = True,
     required_override=None,
     pose_feature_gradient: Optional[Tensor] = None,
 ) -> MFInverseCDFResult:
@@ -110,6 +111,12 @@ def compute_mf_icdf(
 
     Geometry and covariance inputs are validated with batched tensor masks;
     no per-stage device synchronization is needed on CUDA.
+
+    ``collect_diagnostics=False`` skips diagnostic-only tensor construction.
+    The result's ``residual``, ``probability_sum``, ``branch`` and
+    ``tail_clipped`` fields are then ``None``. Coefficients, validity checks,
+    statuses and feature counts retain their normal calculation. Frozen
+    feature capture is controlled separately by ``return_frozen_features``.
     """
     if not math.isfinite(float(d_min)):
         raise ValueError("inverse-CDF MF d_min must be finite")
@@ -195,10 +202,12 @@ def compute_mf_icdf(
         eligible = eligible & ok
 
     nan = torch.full((H,), float("nan"), dtype=torch.float64, device=z_bar.device)
-    risk_ok = feature_ok & variance_ok & nominal_ok & probability_ok
-    probability_sum = torch.where(risk_ok, R, nan)
-    if no_obstacles:
-        probability_sum = torch.zeros_like(R)
+    probability_sum = None
+    if collect_diagnostics:
+        risk_ok = feature_ok & variance_ok & nominal_ok & probability_ok
+        probability_sum = torch.where(risk_ok, R, nan)
+        if no_obstacles:
+            probability_sum = torch.zeros_like(R)
     safe_epsilon = torch.where(epsilon_ok, epsilon_t, 0.2)
     # -ndtri(epsilon) avoids rounding 1-epsilon to one for small budgets.
     gamma = -torch.special.ndtri(safe_epsilon)
@@ -243,11 +252,15 @@ def compute_mf_icdf(
     c_out = torch.where(valid, c, torch.ones_like(c))
     A_out = torch.where((required & ~valid)[:, None], float("nan"), A_out)
     c_out = torch.where(required & ~valid, nan, c_out)
-    branch = torch.full_like(status, int(MFInverseCDFBranch.INACTIVE))
-    branch = torch.where(valid, int(MFInverseCDFBranch.INVERSE_CDF), branch)
-    branch = torch.where(valid & extended, int(MFInverseCDFBranch.LINEAR_EXTENSION), branch)
-    branch = torch.where(valid & clipped, int(MFInverseCDFBranch.TAIL_CLIPPED), branch)
-    branch = torch.where(required & ~valid, int(MFInverseCDFBranch.INVALID), branch)
+    residual = branch = tail_clipped = None
+    if collect_diagnostics:
+        residual = torch.where(valid, psi, nan)
+        branch = torch.full_like(status, int(MFInverseCDFBranch.INACTIVE))
+        branch = torch.where(valid, int(MFInverseCDFBranch.INVERSE_CDF), branch)
+        branch = torch.where(valid & extended, int(MFInverseCDFBranch.LINEAR_EXTENSION), branch)
+        branch = torch.where(valid & clipped, int(MFInverseCDFBranch.TAIL_CLIPPED), branch)
+        branch = torch.where(required & ~valid, int(MFInverseCDFBranch.INVALID), branch)
+        tail_clipped = valid & clipped
     frozen = None
     if return_frozen_features:
         # Keep geometric derivatives even for clipped rows: a candidate can
@@ -265,9 +278,9 @@ def compute_mf_icdf(
         }
     return MFInverseCDFResult(
         phi=phi, gradient=gradient, A=A_out, c=c_out,
-        residual=torch.where(valid, psi, nan), probability_sum=probability_sum,
+        residual=residual, probability_sum=probability_sum,
         feature_count=count, valid=valid, required=required, status=status,
-        branch=branch, tail_clipped=valid & clipped, frozen_features=frozen,
+        branch=branch, tail_clipped=tail_clipped, frozen_features=frozen,
     )
 
 

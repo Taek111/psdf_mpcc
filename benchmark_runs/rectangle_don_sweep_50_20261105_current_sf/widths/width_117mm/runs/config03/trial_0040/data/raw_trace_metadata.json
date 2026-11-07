@@ -1,0 +1,2891 @@
+{
+  "schema_version": 1,
+  "scenario": {
+    "maze_type": "maze",
+    "optimizer_type": "cc_sf",
+    "dynamics_type": "differential_drive",
+    "path_planner": "astar"
+  },
+  "robot": {
+    "shape": "rectangle",
+    "length": 0.15,
+    "width": 0.117
+  },
+  "geometry": {
+    "bounds": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        1.95,
+        0.8999999999999999
+      ]
+    ],
+    "footprint_polygons": [
+      [
+        [
+          -0.075,
+          -0.0585
+        ],
+        [
+          0.075,
+          -0.0585
+        ],
+        [
+          0.075,
+          0.0585
+        ],
+        [
+          -0.075,
+          0.0585
+        ]
+      ]
+    ],
+    "obstacle_polygons": [
+      [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.6,
+          0.0
+        ],
+        [
+          0.6,
+          0.44999999999999996
+        ],
+        [
+          0.0,
+          0.44999999999999996
+        ]
+      ],
+      [
+        [
+          0.15,
+          0.6
+        ],
+        [
+          0.44999999999999996,
+          0.6
+        ],
+        [
+          0.44999999999999996,
+          0.8999999999999999
+        ],
+        [
+          0.15,
+          0.8999999999999999
+        ]
+      ],
+      [
+        [
+          0.44999999999999996,
+          0.75
+        ],
+        [
+          0.8999999999999999,
+          0.75
+        ],
+        [
+          0.8999999999999999,
+          0.8999999999999999
+        ],
+        [
+          0.44999999999999996,
+          0.8999999999999999
+        ]
+      ],
+      [
+        [
+          0.8999999999999999,
+          0.6
+        ],
+        [
+          1.05,
+          0.6
+        ],
+        [
+          1.05,
+          0.8999999999999999
+        ],
+        [
+          0.8999999999999999,
+          0.8999999999999999
+        ]
+      ],
+      [
+        [
+          0.6,
+          0.0
+        ],
+        [
+          0.75,
+          0.0
+        ],
+        [
+          0.75,
+          0.6
+        ],
+        [
+          0.6,
+          0.6
+        ]
+      ],
+      [
+        [
+          0.75,
+          0.3
+        ],
+        [
+          1.2,
+          0.3
+        ],
+        [
+          1.2,
+          0.44999999999999996
+        ],
+        [
+          0.75,
+          0.44999999999999996
+        ]
+      ],
+      [
+        [
+          0.75,
+          0.0
+        ],
+        [
+          1.3499999999999999,
+          0.0
+        ],
+        [
+          1.3499999999999999,
+          0.3
+        ],
+        [
+          0.75,
+          0.3
+        ]
+      ],
+      [
+        [
+          1.2,
+          0.3
+        ],
+        [
+          1.3499999999999999,
+          0.3
+        ],
+        [
+          1.3499999999999999,
+          0.6
+        ],
+        [
+          1.2,
+          0.6
+        ]
+      ],
+      [
+        [
+          1.3499999999999999,
+          0.44999999999999996
+        ],
+        [
+          1.7999999999999998,
+          0.44999999999999996
+        ],
+        [
+          1.7999999999999998,
+          0.6
+        ],
+        [
+          1.3499999999999999,
+          0.6
+        ]
+      ],
+      [
+        [
+          1.65,
+          0.6
+        ],
+        [
+          1.7999999999999998,
+          0.6
+        ],
+        [
+          1.7999999999999998,
+          0.75
+        ],
+        [
+          1.65,
+          0.75
+        ]
+      ],
+      [
+        [
+          1.05,
+          0.75
+        ],
+        [
+          1.5,
+          0.75
+        ],
+        [
+          1.5,
+          0.8999999999999999
+        ],
+        [
+          1.05,
+          0.8999999999999999
+        ]
+      ],
+      [
+        [
+          1.3499999999999999,
+          0.0
+        ],
+        [
+          1.65,
+          0.0
+        ],
+        [
+          1.65,
+          0.44999999999999996
+        ],
+        [
+          1.3499999999999999,
+          0.44999999999999996
+        ]
+      ],
+      [
+        [
+          1.7999999999999998,
+          0.15
+        ],
+        [
+          1.95,
+          0.15
+        ],
+        [
+          1.95,
+          0.3
+        ],
+        [
+          1.7999999999999998,
+          0.3
+        ]
+      ],
+      [
+        [
+          0.0,
+          0.8999999999999999
+        ],
+        [
+          1.95,
+          0.8999999999999999
+        ],
+        [
+          1.95,
+          1.05
+        ],
+        [
+          0.0,
+          1.05
+        ]
+      ],
+      [
+        [
+          -0.15,
+          -0.15
+        ],
+        [
+          0.0,
+          -0.15
+        ],
+        [
+          0.0,
+          1.05
+        ],
+        [
+          -0.15,
+          1.05
+        ]
+      ],
+      [
+        [
+          0.0,
+          -0.15
+        ],
+        [
+          1.95,
+          -0.15
+        ],
+        [
+          1.95,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      [
+        [
+          1.95,
+          -0.15
+        ],
+        [
+          2.1,
+          -0.15
+        ],
+        [
+          2.1,
+          1.05
+        ],
+        [
+          1.95,
+          1.05
+        ]
+      ]
+    ]
+  },
+  "initial_pose": [
+    0.0755100310968979,
+    0.8008935725574153,
+    -1.5616468861190753
+  ],
+  "start_perturbation": {
+    "enabled": true,
+    "seed": 39,
+    "position_std": 0.02,
+    "heading_std_deg": 2.8647889756541165,
+    "max_sigma": 3.0,
+    "min_clearance": 0.001,
+    "max_attempts": 1000,
+    "nominal_pose": [
+      0.075,
+      0.7949999999999999,
+      -1.5707963267948966
+    ],
+    "initial_pose": [
+      0.0755100310968979,
+      0.8008935725574153,
+      -1.5616468861190753
+    ],
+    "delta_pose": [
+      0.0005100310968978963,
+      0.005893572557415453,
+      0.00914944067582135
+    ],
+    "nominal_clearance": 0.016499999999999987,
+    "initial_clearance": 0.015306218993040993,
+    "attempts": 1
+  },
+  "dt_s": 0.1,
+  "current_name": "MPC_cc_sf_rectangle_maze_startseed39",
+  "outcome": {
+    "status": "success",
+    "failure_reason": null,
+    "goal_reached": true,
+    "final_time": 39.50000000000029,
+    "distance_to_goal": 0.0178328050722307,
+    "error": null,
+    "safe_stop_count": 0,
+    "backup_feasible_qp_success_count": 0,
+    "plant_input_apply_count": 395,
+    "last_solve_mode": "fast",
+    "optimizer_runtime_stats": {
+      "backup_feasible_qp_success_count": 0,
+      "safe_stop_count": 0,
+      "stage0_guard_stop_count": 0,
+      "main_solver_failure_count": 0,
+      "plant_input_apply_count": 395,
+      "last_solve_mode": "fast"
+    }
+  },
+  "optimizer_parameters": {
+    "use_debug": false,
+    "horizon": 20,
+    "tf": 2.0,
+    "mat_Qe": [
+      [
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        10.0
+      ]
+    ],
+    "mat_Re": [
+      [
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.01
+      ]
+    ],
+    "r_delta_v": 0.05,
+    "r_delta_omega": 0.1,
+    "q_s": 1.0,
+    "terminal_weight": 5.0,
+    "v_s_target": 1.0,
+    "q_s_ref": 2.0,
+    "v_s_max": 2.0,
+    "enforce_v_s_not_faster_than_vmax": true,
+    "path_gate_epsilon": 0.05,
+    "tangent_reg_delta": 1e-06,
+    "reference_weight_reg": 1e-08,
+    "fd_eps": 0.001,
+    "max_segments": 20,
+    "line_search_window": 0.5,
+    "line_search_samples": 41,
+    "s_upper_guard": 100.0,
+    "use_s_state_bounds": true,
+    "s_backtrack_tolerance": 0.3,
+    "vmin": -1.0,
+    "vmax": 1.0,
+    "omegamin": -1.0,
+    "omegamax": 1.0,
+    "a_max": 0.3,
+    "alpha_max": 5.0,
+    "qp_solver": "PARTIAL_CONDENSING_HPIPM",
+    "hessian_approx": "GAUSS_NEWTON",
+    "integrator_type": "DISCRETE",
+    "nlp_solver_type": "SQP_RTI",
+    "qp_solver_iter_max": 50,
+    "nlp_solver_max_iter": 50,
+    "tol": 0.0001,
+    "d_min": 0.0001,
+    "use_obstacle_constraint": true,
+    "use_soft_constraint": false,
+    "slack_weight": 1e+16,
+    "detection_window_width": 4.0,
+    "detection_window_height": 4.0,
+    "detection_safety_margin": 0.05,
+    "detection_frequency": 10.0,
+    "chance_epsilon": 0.1,
+    "robust_horizon": 10,
+    "initial_pose_covariance": null,
+    "sigma_f0": 0.0002,
+    "sigma_l0": 0.00025,
+    "sigma_psi0": 0.00025,
+    "q_f0": 0.0,
+    "q_l0": 0.0,
+    "q_psi0": 0.0,
+    "covariance_growth_scale": 0.8,
+    "alpha_f": 0.0016,
+    "alpha_v": 0.00032,
+    "alpha_kappa": 0.0001,
+    "beta_v": 0.016,
+    "beta_kappa": 0.0064,
+    "beta_omega": 0.0032,
+    "risk_cov_jitter": 1e-09,
+    "covariance_proximal_weight": 0.01,
+    "enable_backup_solver": false,
+    "augmented_psdf_device": "cuda",
+    "chance_gamma": null,
+    "risk_margin_floor": 0.0,
+    "risk_margin_cap": 2.0,
+    "d_col": 5e-05,
+    "debug_mode": false,
+    "debug_risk": true,
+    "debug_print_nominal_risk_heads": false,
+    "debug_print_nominal_risk_head_only_active": true
+  },
+  "solver_status_infos": [
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    },
+    {
+      "raw_status": "success",
+      "status_code": 0,
+      "success": true,
+      "solver_called": true
+    }
+  ],
+  "array_counts": {
+    "poses": 396,
+    "applied_inputs": 395,
+    "solve_nlp_times_s": 395,
+    "solver_status_infos": 395
+  },
+  "computation_time": {
+    "scope": "solve_nlp",
+    "clock": "time.perf_counter",
+    "unit": "s",
+    "raw_samples": "all_attempted_calls_including_failed_or_skipped_solves",
+    "csv_summary_samples": "successful_solver_steps_including_first_step"
+  },
+  "clearance": {
+    "computed_online": false,
+    "sampling": "initial_true_pose_and_each_completed_plant_integration"
+  },
+  "raw_trace_file": "raw_trace.npz",
+  "raw_trace_sha256": "9fd5c8e92af851b7eb3777d41bf73091bf18d160d3ef968e52d2a748e5814ae4"
+}

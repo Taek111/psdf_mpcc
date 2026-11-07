@@ -28,10 +28,15 @@ python test_nmpc.py -c config/config_nmpc_trials_maze_oblique.yaml --trials 100 
 ```
 
 - `trial_results.csv`: trial별 성공(1)/실패(0), 상태·실패 사유, seed, 시작 pose를 매 trial 종료 후 기록한다. 성공은 기존 목표 도달 판정이며 success rate는 성공/완료 trial 비율이다. Timeout·failure·error는 분모에 포함하고 사용자 중단은 제외한다.
-- `computation_times_*.csv`: 설정별 한 파일에 **solver가 성공한 스텝만** 기록한다. `solve()` 호출을 `time.perf_counter()`로 측정하며 단위는 초(s)이다. 외부 setup·PSDF parameter 갱신·경로 계획·출력 시간은 제외한다.
+- `computation_times_*.csv`: 설정별 한 파일에 **solver가 성공한 스텝만** 기록한다. MPCC·CC-SF·CC-MF·CC-ECS는 `solve_nlp()` 전체 호출을 `time.perf_counter()`로 측정하며 단위는 초(s)이다. 함수 내부의 parameter 갱신·주 solver·backup·safe-stop 생성은 포함하고 외부 `setup()`·경로 계획·controller 로깅·파일 출력은 제외한다. 다른 optimizer는 기존 측정을 유지한다. 네 방법의 공정한 비교에는 공통 `mpcc.use_debug: false`(기본값)를 사용한다. `--use-debug` / `--no-use-debug`로 덮어쓸 수 있으며 debug가 켜지면 함수 내부 진단 비용도 포함한다. 상세 pose-SDF·제약·공분산·cycle CSV와 예측 궤적 기록은 debug에서만 생성하고 trial 결과·성공 스텝 시간·summary는 항상 기록한다. 기존 내부 `solve()` 시간 결과와 직접 비교하지 않으며 `run_manifest.yaml`에 측정 범위를 기록한다.
 - `summary.csv`: 설정별 success rate와 solver 시간 mean/p95. 최종적으로 실패한 trial의 성공 스텝도 포함하여 전체 유효 스텝을 모아 집계한다(trial별 통계의 평균이 아님). 첫 스텝을 포함하고 유효 스텝이 없으면 시간 통계는 빈 칸이다.
 - Solver 예외는 실패 사유를 저장하고 다음 trial로 진행한다. Ctrl+C는 현재 trial을 `interrupted`로 저장하고 batch를 중단한다. 상세 기준과 출력 구조는 [TRIAL_METRICS.md](TRIAL_METRICS.md)를 참고한다.
 - 이 실험은 사용자가 다른 PC에서 실행할 예정이므로, 별도 실행 요청 전에는 테스트·benchmark를 실행하지 않고 로깅 코드를 검토한다.
+
+## Rectangle DoN 실험 준비
+- `scripts/run_rectangle_don_benchmark.sh`는 DoN 0.5/0.75(너비 0.075/0.1125 m)에서 네 controller를 각 100회(seed 0–99) 실행한다. `scripts/run_rectangle_don_sweep_benchmark.sh`는 DoN 0.70–0.87을 0.01 간격으로 네 controller 각 50회(seed 0–49) 실행한다. DoN은 robot 너비 / 통로 너비 0.150 m이며 후자는 너비 0.105–0.1305 m, 간격 0.0015 m에 해당한다. `--reuse-results`로 전 실험 DoN 0.75의 동일 조건 seed 0–49를 재사용할 수 있다. 실행·분석 조건은 `docs/rectangle_benchmark_analysis_context.md`를 따른다.
+- `benchmark_logging.enabled`는 debug와 독립적인 실험 원본 저장 옵션이다. 기존 메모리의 실제 초기/적분 후 자세·적용 입력·solver 시간/상태와 고정 형상을 trial 종료 후, optimizer 정리 전에 `raw_trace.npz`/`raw_trace_metadata.json`으로 저장한다. 주행 중 clearance 계산이나 파일 기록을 추가하지 않는다. 초기 자세 표본의 기존 clearance 수용 검사는 유지한다.
+- Mean/P05 clearance는 주행 완료 후 `scripts/analyze_rectangle_clearance.py`로 계산한다. 성공/실패/timeout/error trial의 초기 및 적분 후 전체 표본을 합치고, interrupted는 주 집계에서 제외한다. 접촉·겹침은 0, 지도 경계 침범은 음수다. 누락된 trace는 0으로 채우지 않고 coverage에 표시한다.
 
 ## Coding Style & Naming Conventions
 - PEP 8, 4-space indents, type hints where practical.

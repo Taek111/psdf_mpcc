@@ -4,8 +4,6 @@ CC optimizers inherit tracking/cost helpers while owning their Log-Cholesky
 models, safety constraints, solve/recovery lifecycle, and generated resources.
 """
 
-import time
-
 import casadi as ca
 import numpy as np
 import torch
@@ -17,6 +15,7 @@ from models.geometry_utils import polygon_to_edges
 from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
 from utils.acados_diagnostics import report_solver_failure
 from utils.acados_codegen import AcadosCodegenMixin
+from utils.solver_timing import record_solve_nlp_time
 from utils.spline_path import (
     clamp_progress,
     normalize_path_data,
@@ -30,6 +29,9 @@ class MPCCOptimizerParam:
     """Common experiment defaults, using the selected CC-MF tuning."""
 
     def __init__(self):
+        # Master switch for diagnostic output and diagnostic-only work.
+        # Keep disabled when comparing solve_nlp() computation times.
+        self.use_debug: bool = False
         # Deterministic MPCC has no pose-covariance or process-noise model.
         # The CC-only shared defaults live in CCMPCCOptimizerParam below.
         self.horizon = 20
@@ -197,6 +199,12 @@ class MPCCOptimizer(AcadosCodegenMixin):
 
     def set_state(self, state):
         self.state = state
+
+    def _debug_enabled(self, param=None):
+        """Whether optional diagnostics are enabled for this optimizer."""
+        if param is None:
+            param = getattr(self, "param", None)
+        return bool(getattr(param, "use_debug", False))
 
     def get_progress_info(self):
         """Return MPCC progress-state values useful for runtime logging."""
@@ -603,14 +611,16 @@ class MPCCOptimizer(AcadosCodegenMixin):
         self, param, system, obstacles_geo, *, update_obstacle_data=True,
     ):
         if not getattr(param, "use_obstacle_constraint", True):
-            print("Obstacle avoidance constraint is disabled by use_obstacle_constraint=False")
+            if getattr(param, "use_debug", False):
+                print("Obstacle avoidance constraint is disabled by use_obstacle_constraint=False")
             return
 
         if update_obstacle_data:
             self.update_obstacles(obstacles_geo)
 
         if self.ped_model is None or self.ocp is None:
-            print("Warning: PED model not initialized, skipping obstacle avoidance constraint")
+            if getattr(param, "use_debug", False):
+                print("Warning: PED model not initialized, skipping obstacle avoidance constraint")
             return
 
         x = self.ocp.model.x
@@ -638,9 +648,11 @@ class MPCCOptimizer(AcadosCodegenMixin):
             self.ocp.cost.Zu = np.diag([slack_w] * ns)
             self.ocp.cost.zl = np.zeros(ns)
             self.ocp.cost.zu = np.zeros(ns)
-            print(f"Obstacle avoidance softened with slack weight = {slack_w}")
+            if getattr(param, "use_debug", False):
+                print(f"Obstacle avoidance softened with slack weight = {slack_w}")
         else:
-            print(f"Added HARD obstacle avoidance constraint with d_min = {d_min}")
+            if getattr(param, "use_debug", False):
+                print(f"Added HARD obstacle avoidance constraint with d_min = {d_min}")
 
     def add_warm_start(self, param, system):
         if self.solver is None:
@@ -665,7 +677,8 @@ class MPCCOptimizer(AcadosCodegenMixin):
                 ),
             )
         except Exception as e:
-            print(f"Error in warm start: {e}")
+            if getattr(param, "use_debug", False):
+                print(f"Error in warm start: {e}")
             for i in range(self.N):
                 self.solver.set(i, "x", np.zeros((self.nx,), dtype=float))
                 self.solver.set(i, "u", np.zeros((self.nu,), dtype=float))
@@ -703,13 +716,15 @@ class MPCCOptimizer(AcadosCodegenMixin):
         use_obstacle_constraint = getattr(param, "use_obstacle_constraint", True)
 
         if not self._is_initialized:
-            print("Setting up MPCC optimizer...")
+            if getattr(param, "use_debug", False):
+                print("Setting up MPCC optimizer...")
             if use_obstacle_constraint:
                 self.initialize_ped_model(system, obstacles, E_max=100, K_max=20, device="cuda")
             else:
                 self.psdf_wrapper = None
                 self.ped_model = None
-                print("MPCC obstacle constraint disabled: skipping PSDF model initialization.")
+                if getattr(param, "use_debug", False):
+                    print("MPCC obstacle constraint disabled: skipping PSDF model initialization.")
             self.setup_ocp(param, reference_trajectory)
             if use_obstacle_constraint:
                 self.add_obstacle_avoidance_constraint(
@@ -723,6 +738,7 @@ class MPCCOptimizer(AcadosCodegenMixin):
             if use_obstacle_constraint:
                 self.update_obstacles(obstacles)
 
+    @record_solve_nlp_time
     def solve_nlp(self):
         if self.solver is None:
             raise RuntimeError("MPCC solver is not initialized. Call setup() first.")
@@ -742,7 +758,8 @@ class MPCCOptimizer(AcadosCodegenMixin):
                 if getattr(self, "_input_memory_slice", None) is not None:
                     raise
                 # Fallback for configurations where only s is boxed.
-                print("Warning: stage-0 full-state bounds update failed; falling back to s-only bound.")
+                if getattr(self.param, "use_debug", False):
+                    print("Warning: stage-0 full-state bounds update failed; falling back to s-only bound.")
                 self.solver.set(0, "lbx", np.array([x0[3]], dtype=float))
                 self.solver.set(0, "ubx", np.array([x0[3]], dtype=float))
             self.solver.set(0, "x", x0)
@@ -755,7 +772,8 @@ class MPCCOptimizer(AcadosCodegenMixin):
                 self.solver.set(self.N, "lbx", np.array([s_lower], dtype=float))
                 self.solver.set(self.N, "ubx", np.array([s_upper], dtype=float))
             except Exception:
-                print("Warning: failed to update per-stage s bounds in solver.")
+                if getattr(self.param, "use_debug", False):
+                    print("Warning: failed to update per-stage s bounds in solver.")
 
         # Keep warm-start state/control in-domain before using them for stage-wise reference generation.
         try:
@@ -794,23 +812,20 @@ class MPCCOptimizer(AcadosCodegenMixin):
             terminal_stage_param[self.psdf_param_slice] = psdf_terminal
         self.solver.set(self.N, "p", terminal_stage_param)
 
-        # Match the CC variants: measure only the solver call, excluding
-        # geometry, reference updates, warm-start preparation and diagnostics.
-        start = time.perf_counter()
+        # The decorator measures this entire solve_nlp() call, including the
+        # stage parameter updates and warm-start preparation above.
         status = self.solver.solve()
-        solve_time = time.perf_counter() - start
-        self.solver_times.append(solve_time)
-        print(f"solver time: {solve_time}, path_s: {self._current_s0}")
 
         if status != 0:
-            report_solver_failure(
-                self.solver,
-                status,
-                max_iteration_message=(
-                    "Acados reached the maximum SQP iterations before meeting "
-                    "the configured tolerance."
-                ),
-            )
+            if getattr(self.param, "use_debug", False):
+                report_solver_failure(
+                    self.solver,
+                    status,
+                    max_iteration_message=(
+                        "Acados reached the maximum SQP iterations before meeting "
+                        "the configured tolerance."
+                    ),
+                )
             # Prevent failed iterate from poisoning next-step projection center.
             self._prev_predicted_s = self._clamp_s(self._current_s0)
             self._has_prev_predicted_s = False
@@ -853,6 +868,10 @@ class AcadosSolution:
         self.solver = solver
         self.N = N
         self.variables = variables
+
+    def get_first_input(self):
+        """Read only the command applied to the plant, without a horizon copy."""
+        return self.solver.get(0, "u")
 
     def value(self, var_expr):
         if var_expr == "x" or (isinstance(var_expr, str) and var_expr == "x"):

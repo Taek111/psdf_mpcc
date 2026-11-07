@@ -20,6 +20,7 @@ class SplineReferenceGenerator:
         min_point_distance=1e-4,
         spline_bc_type="natural",
         projected_s_backtrack_tolerance=0.15,
+        use_debug=True,
     ):
         self._reference_speed = float(reference_speed)
         self._num_horizon = int(num_horizon)
@@ -35,6 +36,7 @@ class SplineReferenceGenerator:
         self._min_point_distance = float(min_point_distance)
         self._spline_bc_type = spline_bc_type
         self._projected_s_backtrack_tolerance = max(float(projected_s_backtrack_tolerance), 0.0)
+        self.use_debug = bool(use_debug)
 
         self._global_path = None
         self._global_path_data = None
@@ -119,22 +121,28 @@ class SplineReferenceGenerator:
         local_reference["planner_slice_start_s"] = slice_start_s
         local_reference["planner_slice_lookback"] = float(self._slice_lookback)
 
-        s0 = float(local_reference["s_breaks"][0])
-        s1 = float(local_reference["s_breaks"][int(local_reference["n_segments"])])
-        s_samples = np.linspace(s0, s1, self._sample_count)
-        self._local_trajectory = evaluate_spline_path(local_reference, s_samples)
         self._local_reference = local_reference
-        self._last_debug_info = {
-            "planner_projected_s_raw": float(projected_s_raw),
-            "planner_projected_s": projected_s,
-            "planner_slice_start_s": slice_start_s,
-            "slice_start_s": float(local_reference["slice_start_s"]),
-            "slice_end_s": float(local_reference["slice_end_s"]),
-            "slice_start_idx": int(local_reference["slice_start_idx"]),
-            "slice_end_idx": int(local_reference["slice_end_idx"]),
-            "slice_n_segments": int(local_reference["n_segments"]),
-        }
+        if self.use_debug:
+            # The controller consumes spline coefficients, not these samples.
+            s0 = float(local_reference["s_breaks"][0])
+            s1 = float(local_reference["s_breaks"][int(local_reference["n_segments"])])
+            s_samples = np.linspace(s0, s1, self._sample_count)
+            self._local_trajectory = evaluate_spline_path(local_reference, s_samples)
+            self._last_debug_info = {
+                "planner_projected_s_raw": float(projected_s_raw),
+                "planner_projected_s": projected_s,
+                "planner_slice_start_s": slice_start_s,
+                "slice_start_s": float(local_reference["slice_start_s"]),
+                "slice_end_s": float(local_reference["slice_end_s"]),
+                "slice_start_idx": int(local_reference["slice_start_idx"]),
+                "slice_end_idx": int(local_reference["slice_end_idx"]),
+                "slice_n_segments": int(local_reference["n_segments"]),
+            }
+        else:
+            self._local_trajectory = None
+            self._last_debug_info = {}
         return local_reference
 
     def logging(self, logger):
-        logger._trajs.append(self._local_trajectory)
+        if self.use_debug:
+            logger._trajs.append(self._local_trajectory)

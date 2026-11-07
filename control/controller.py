@@ -10,6 +10,11 @@ class BaseController:
             "success": None,
         }
 
+    @property
+    def use_debug(self):
+        # Optimizers outside the MPCC family retain their existing logging.
+        return bool(getattr(self._param, "use_debug", True))
+
     @staticmethod
     def _infer_success(raw_status, status_code):
         if status_code is not None:
@@ -100,11 +105,16 @@ class BaseController:
 
         self._update_last_solver_status_info()
         try:
-            u_opt = self._opt_sol.value("u")
-            u_stage0 = u_opt[:, 0]
+            if not self.use_debug and hasattr(self._opt_sol, "get_first_input"):
+                u_stage0 = self._opt_sol.get_first_input()
+            else:
+                u_opt = self._opt_sol.value("u")
+                u_stage0 = u_opt[:, 0]
             if hasattr(self._optimizer, "record_plant_input_applied"):
                 self._optimizer.record_plant_input_applied()
-            if not getattr(self._optimizer, "prints_compact_runtime_summary", False):
+            if self.use_debug and not getattr(
+                self._optimizer, "prints_compact_runtime_summary", False
+            ):
                 print(f"plant_input_stage0: full={u_stage0}, pose={system.get_state()[:3]}")
             return u_stage0
                   
@@ -112,11 +122,18 @@ class BaseController:
             u_stage0 = self._opt_sol.value(self._optimizer.variables["u"][:, 0])
             if hasattr(self._optimizer, "record_plant_input_applied"):
                 self._optimizer.record_plant_input_applied()
-            if not getattr(self._optimizer, "prints_compact_runtime_summary", False):
+            if self.use_debug and not getattr(
+                self._optimizer, "prints_compact_runtime_summary", False
+            ):
                 print(f"plant_input_stage0: full={u_stage0}, pose={system.get_state()[:3]}")
             return u_stage0
 
     def logging(self, logger):
+        # Status snapshots are required for failure criteria and timing metrics.
+        logger._solver_status_infos.append(self.get_last_solver_status_info())
+        if not self.use_debug:
+            return
+
         # SQP 기반 optimizer
         if hasattr(self._opt_sol, 'get_state_trajectory'):
             logger._xtrajs.append(self._opt_sol.get_state_trajectory().T)
@@ -125,5 +142,3 @@ class BaseController:
             # CasADi 기반 optimizer
             logger._xtrajs.append(self._opt_sol.value(self._optimizer.variables["x"]).T)
             logger._utrajs.append(self._opt_sol.value(self._optimizer.variables["u"]).T)
-
-        logger._solver_status_infos.append(self.get_last_solver_status_info())

@@ -3,8 +3,12 @@
 # python test_nmpc.py -c config/config_benchmark.yaml --results-dir benchmark_runs/<new_run>
 # Common controller defaults are defined in control/mpcc_optimizer.py from CC-MF tuning.
 # Optional common overrides belong in 'mpcc'; method blocks are for method-specific settings.
-# This benchmark uses those defaults without YAML parameter overrides.
+# computation_times CSVs measure complete solve_nlp() calls in seconds.
+# Diagnostic collection must be off for all methods when comparing timings.
 trials: 10
+
+mpcc:
+  use_debug: false  # true enables detailed output, traces and diagnostic CSVs
 
 # Trial seeds 0-9 are shared across methods. This perturbs the true initial pose.
 start_perturbation:
@@ -21,7 +25,7 @@ localization_error:
 
 defaults:
   simulation_time: 80.0
-  generate_animation: true
+  generate_animation: false
   generate_plots: false
 
 trial_failure_criteria:

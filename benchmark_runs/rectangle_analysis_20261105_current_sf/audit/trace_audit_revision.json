@@ -1,0 +1,17 @@
+{
+  "analysis_implementation_correction": {
+    "initial_assumption": "Audit first compared final pose with nominal maze goal [1.8,0.09].",
+    "first_run_mismatches": {
+      "final_goal_distance": 4400,
+      "final_goal_criterion": 188
+    },
+    "evidence": "Recorded planning/path_generator/astar.py:43 defines cell centers; sim/simulation.py:77-87 uses final A* path point as target.",
+    "correction": "Audit derives actual A* goal cell center from the recorded 0.0375m grid and nominal goal. The first-run mismatches were an audit assumption error, not defects in benchmark data."
+  },
+  "bytecode_observation": {
+    "A_start_perturbation_pyc_mtime_kst": "2026-11-05T20:39:02.463423+09:00",
+    "B_start_perturbation_pyc_mtime_kst": "2026-11-05T20:42:02.463225+09:00",
+    "trace_script_initial_created_kst": "2026-11-05T20:41:53.461883858+09:00",
+    "action": "Subsequent imports use sys.dont_write_bytecode=True and python -B. Original benchmark CSV, JSON, NPZ, and source text were not edited."
+  }
+}

@@ -22,6 +22,7 @@ from control.cc_covariance import (
 from control.mpcc_optimizer import CCMPCCOptimizerParam, MPCCOptimizer
 from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
 from utils.acados_diagnostics import report_solver_failure
+from utils.solver_timing import record_solve_nlp_time
 
 
 class CCSFOptimizerParam(CCMPCCOptimizerParam):
@@ -36,7 +37,7 @@ class CCSFOptimizerParam(CCMPCCOptimizerParam):
         # Both hard rows apply only at future stages 1,...,N.
         self.d_col = 0.00005
         self.debug_mode = False
-        # Optional risk-diagnostic subflag; debug_mode is the master switch.
+        # Detail selectors; inherited use_debug is the master switch.
         self.debug_risk = True
         self.debug_print_nominal_risk_heads = False
         self.debug_print_nominal_risk_head_only_active = True
@@ -108,7 +109,7 @@ class CCSFOptimizer(MPCCOptimizer):
         )
 
     def _print_runtime_summary(self):
-        if not self._has_runtime_activity():
+        if not self._debug_enabled() or not self._has_runtime_activity():
             return
 
         print(
@@ -345,7 +346,8 @@ class CCSFOptimizer(MPCCOptimizer):
     def _debug_risk_enabled(self, param=None):
         target_param = self.param if param is None else param
         return bool(
-            getattr(target_param, "debug_mode", False)
+            self._debug_enabled(target_param)
+            and getattr(target_param, "debug_mode", False)
             and getattr(target_param, "debug_risk", True)
         )
 
@@ -374,7 +376,9 @@ class CCSFOptimizer(MPCCOptimizer):
         grad_local[:, 2] = grad_np[:, 2]
         return grad_local[0] if squeeze else grad_local
 
-    def _projected_variance_data_from_psdf_params(self, poses, psdf_params_batch):
+    def _projected_variance_data_from_psdf_params(
+        self, poses, psdf_params_batch, *, include_diagnostics=True,
+    ):
         params_np = np.asarray(psdf_params_batch, dtype=float)
         squeeze = params_np.ndim == 1
         params_np = np.atleast_2d(params_np)
@@ -384,14 +388,17 @@ class CCSFOptimizer(MPCCOptimizer):
                 "Projected-variance mode expects PSDF Taylor params [a(3), phi(1), grad(3)] per stage."
             )
 
-        phi_np = params_np[:, 3].copy()
-        grad_world = params_np[:, 4:7].copy()
+        phi_np = params_np[:, 3].copy() if include_diagnostics else None
+        grad_world = params_np[:, 4:7]
         grad_local = self._world_to_local_gradient(poses, grad_world)
-        heads = self._build_projected_variance_heads(grad_local)
+        heads = (
+            self._build_projected_variance_heads(grad_local)
+            if include_diagnostics else None
+        )
         terms = self._extract_projected_variance_terms(grad_local)
 
         if squeeze:
-            return phi_np[0], heads, terms
+            return phi_np[0] if include_diagnostics else None, heads, terms
         return phi_np, heads, terms
 
     def _extract_projected_variance_terms(self, grad_local):
@@ -494,12 +501,15 @@ class CCSFOptimizer(MPCCOptimizer):
         stage_entries = [f"{int(i)}:{_format_matrix(risk_tensor_batch[i])}" for i in stage_indices]
         print(f"{source_label}_risk_head_stages({label}): [{', '.join(stage_entries)}]")
 
-    def _compute_stage_risk_data(self, poses, psdf_params_batch=None, risk_tensor_batch=None):
+    def _compute_stage_risk_data(
+        self, poses, psdf_params_batch=None, risk_tensor_batch=None,
+        *, include_diagnostics=True,
+    ):
         num_stages = poses.shape[0]
-        zero_phi = np.zeros((num_stages,), dtype=float)
-        zero_R = np.zeros((num_stages, 3, 3), dtype=float)
-        zero_terms = np.zeros((num_stages, 4), dtype=float)
         if self.psdf_wrapper is None or not getattr(self.param, "use_obstacle_constraint", True):
+            zero_phi = np.zeros((num_stages,), dtype=float) if include_diagnostics else None
+            zero_R = np.zeros((num_stages, 3, 3), dtype=float) if include_diagnostics else None
+            zero_terms = np.zeros((num_stages, 4), dtype=float)
             return zero_phi, zero_R, zero_terms
 
         if psdf_params_batch is None and self.ped_model is not None and self.psdf_param_dim > 0:
@@ -509,6 +519,7 @@ class CCSFOptimizer(MPCCOptimizer):
             phi_np, R_np, risk_terms = self._projected_variance_data_from_psdf_params(
                 poses,
                 psdf_params_batch,
+                include_diagnostics=include_diagnostics,
             )
             return phi_np, R_np, risk_terms
 
@@ -518,12 +529,15 @@ class CCSFOptimizer(MPCCOptimizer):
             device=self.psdf_wrapper.device,
         )
         phi_t, grad_world_t = self.psdf_wrapper(poses_t)
-        phi_np = phi_t.detach().cpu().numpy().reshape(-1)
+        phi_np = phi_t.detach().cpu().numpy().reshape(-1) if include_diagnostics else None
         grad_local_np = self._world_to_local_gradient(
             poses,
             grad_world_t.detach().cpu().numpy(),
         )
-        R_np = self._build_projected_variance_heads(grad_local_np)
+        R_np = (
+            self._build_projected_variance_heads(grad_local_np)
+            if include_diagnostics else None
+        )
         risk_terms = self._extract_projected_variance_terms(grad_local_np)
         return phi_np, R_np, risk_terms
 
@@ -568,7 +582,7 @@ class CCSFOptimizer(MPCCOptimizer):
         ):
             return zero_margin
 
-        _, _, risk_terms = self._compute_stage_risk_data(poses)
+        _, _, risk_terms = self._compute_stage_risk_data(poses, include_diagnostics=False)
         covariance_batch = self._propagate_covariance_state_batch(inputs, stage_s_values)
         margin_batch = self._compute_margin_from_risk_terms(covariance_batch, risk_terms, self.param)
         margin_batch *= self._build_risk_margin_scale_batch(num_stages, self.param)
@@ -668,14 +682,16 @@ class CCSFOptimizer(MPCCOptimizer):
         self, param, system, obstacles_geo, *, update_obstacle_data=True,
     ):
         if not getattr(param, "use_obstacle_constraint", True):
-            print("Obstacle avoidance constraint is disabled by use_obstacle_constraint=False")
+            if self._debug_enabled(param):
+                print("Obstacle avoidance constraint is disabled by use_obstacle_constraint=False")
             return
 
         if update_obstacle_data:
             self.update_obstacles(obstacles_geo)
 
         if self.ped_model is None or self.ocp is None:
-            print("Warning: PED model not initialized, skipping obstacle avoidance constraint")
+            if self._debug_enabled(param):
+                print("Warning: PED model not initialized, skipping obstacle avoidance constraint")
             return
 
         x = self.ocp.model.x
@@ -733,8 +749,9 @@ class CCSFOptimizer(MPCCOptimizer):
         self.ocp.model.con_h_expr_e = constraint_expr
         self.ocp.constraints.lh_e = np.zeros(2, dtype=float)
         self.ocp.constraints.uh_e = np.full(2, 1e8, dtype=float)
-        print(f"Added HARD PSDF guard and projected-variance rows at stages 1..{self.N} "
-              f"with d_col = {d_col}, d_min = {d_min}; stage 0 uses exact PSDF check")
+        if self._debug_enabled(param):
+            print(f"Added HARD PSDF guard and projected-variance rows at stages 1..{self.N} "
+                  f"with d_col = {d_col}, d_min = {d_min}; stage 0 uses exact PSDF check")
 
     def add_warm_start(self, param, system, solver=None):
         solver = self.solver if solver is None else solver
@@ -774,7 +791,8 @@ class CCSFOptimizer(MPCCOptimizer):
                 ),
             )
         except Exception as e:
-            print(f"Error in warm start: {e}")
+            if self._debug_enabled(param):
+                print(f"Error in warm start: {e}")
             initial_guess = np.zeros((self.nx,), dtype=float)
             if self.state is not None:
                 initial_guess[:3] = self.state._x[:3]
@@ -842,7 +860,8 @@ class CCSFOptimizer(MPCCOptimizer):
             except Exception:
                 if getattr(self, "_input_memory_slice", None) is not None:
                     raise
-                print("Warning: stage-0 full-state bounds update failed; keeping previous equality bounds.")
+                if self._debug_enabled():
+                    print("Warning: stage-0 full-state bounds update failed; keeping previous equality bounds.")
             solver.set(0, "x", x0)
 
         _, lbx, ubx = self._get_augmented_state_bounds(self.param, s_lower, s_upper)
@@ -853,7 +872,8 @@ class CCSFOptimizer(MPCCOptimizer):
             solver.set(self.N, "lbx", lbx)
             solver.set(self.N, "ubx", ubx)
         except Exception:
-            print("Warning: failed to update per-stage augmented-state bounds in solver.")
+            if self._debug_enabled():
+                print("Warning: failed to update per-stage augmented-state bounds in solver.")
 
         effective_v_s_max = self._get_effective_v_s_max(self.param)
         for i in range(1, self.N + 1):
@@ -881,8 +901,13 @@ class CCSFOptimizer(MPCCOptimizer):
         _, risk_tensor_batch, risk_terms_batch = self._compute_stage_risk_data(
             x_guess[:, :3],
             psdf_params_batch=psdf_params_batch,
+            include_diagnostics=(
+                self._debug_risk_enabled()
+                and getattr(self.param, "debug_print_nominal_risk_heads", False)
+            ),
         )
-        self._log_stage_risk_heads(risk_tensor_batch, self.param, source_label="nominal")
+        if risk_tensor_batch is not None:
+            self._log_stage_risk_heads(risk_tensor_batch, self.param, source_label="nominal")
         risk_margin_scale_batch = self._build_risk_margin_scale_batch(self.N + 1, self.param)
         for i in range(self.N):
             stage_path_param = self._build_stage_path_parameter(stage_s_values[i])
@@ -916,13 +941,16 @@ class CCSFOptimizer(MPCCOptimizer):
             if not np.isfinite(self._current_psdf) or self._current_psdf < float(self.param.d_col):
                 return None  # No solver call; do not invent an acados status.
 
-        # Include every main/backup solve in this cycle, but exclude geometry,
-        # parameter updates, recovery construction and optional diagnostics.
-        started = time.perf_counter()
-        try:
+        # Inner solver timing is an optional diagnostic. The public timing
+        # samples cover the complete solve_nlp() call for every method.
+        if self._debug_enabled():
+            started = time.perf_counter()
+            try:
+                status = solver.solve()
+            finally:
+                self._cycle_solver_time += time.perf_counter() - started
+        else:
             status = solver.solve()
-        finally:
-            self._cycle_solver_time += time.perf_counter() - started
         status = int(status)
         solver.status = status
         return status
@@ -931,7 +959,8 @@ class CCSFOptimizer(MPCCOptimizer):
         if self.solver is None or self.state is None:
             raise RuntimeError("CC-SF safe stop requires a solver and current state")
 
-        print(f"Fast SQP_RTI solver failed with status {fast_status}. Starting infeasible recovery.")
+        if self._debug_enabled():
+            print(f"Fast SQP_RTI solver failed with status {fast_status}. Starting infeasible recovery.")
 
         if self.backup_solver is not None:
             try:
@@ -948,23 +977,27 @@ class CCSFOptimizer(MPCCOptimizer):
                     except Exception:
                         pass
                     self._last_solve_mode = "backup_feasible_qp"
-                    print("Recovered with backup SQP_WITH_FEASIBLE_QP solver.")
+                    if self._debug_enabled():
+                        print("Recovered with backup SQP_WITH_FEASIBLE_QP solver.")
                     return self.backup_solver, 0, "backup_feasible_qp"
                 try:
                     self._copy_primal_guess(self.backup_solver, self.solver)
                 except Exception:
                     pass
                 self._last_solve_mode = "backup_feasible_qp"
-                print(
-                    f"Backup SQP_WITH_FEASIBLE_QP solver returned status {backup_status}; "
-                    "falling back to safe stop."
-                )
+                if self._debug_enabled():
+                    print(
+                        f"Backup SQP_WITH_FEASIBLE_QP solver returned status {backup_status}; "
+                        "falling back to safe stop."
+                    )
                 if backup_status is not None:
                     fast_status = backup_status
             except Exception as e:
-                print(f"Warning: backup solver recovery failed: {e}")
+                if self._debug_enabled():
+                    print(f"Warning: backup solver recovery failed: {e}")
         else:
-            print("Backup solver is unavailable; falling back to safe stop.")
+            if self._debug_enabled():
+                print("Backup solver is unavailable; falling back to safe stop.")
 
         return self._apply_safe_stop(fast_status)
 
@@ -1008,7 +1041,8 @@ class CCSFOptimizer(MPCCOptimizer):
         use_obstacle_constraint = getattr(param, "use_obstacle_constraint", True)
 
         if not self._is_initialized:
-            print("Setting up CC-SF optimizer...")
+            if self._debug_enabled(param):
+                print("Setting up CC-SF optimizer...")
             if use_obstacle_constraint:
                 self.initialize_ped_model(
                     system, obstacles, E_max=100, K_max=20,
@@ -1017,7 +1051,8 @@ class CCSFOptimizer(MPCCOptimizer):
             else:
                 self.psdf_wrapper = None
                 self.ped_model = None
-                print("CC-SF obstacle constraint disabled: skipping PSDF model initialization.")
+                if self._debug_enabled(param):
+                    print("CC-SF obstacle constraint disabled: skipping PSDF model initialization.")
             self.setup_ocp(param, reference_trajectory)
             if use_obstacle_constraint:
                 self.add_obstacle_avoidance_constraint(
@@ -1046,7 +1081,8 @@ class CCSFOptimizer(MPCCOptimizer):
                     self.add_warm_start(param, system, solver=self.backup_solver)
                 except Exception as e:
                     self.backup_solver = None
-                    print(f"Warning: failed to initialize backup solver: {e}")
+                    if self._debug_enabled(param):
+                        print(f"Warning: failed to initialize backup solver: {e}")
                 finally:
                     self.ocp = main_ocp
             self._is_initialized = True
@@ -1054,6 +1090,7 @@ class CCSFOptimizer(MPCCOptimizer):
             if use_obstacle_constraint:
                 self.update_obstacles(obstacles)
 
+    @record_solve_nlp_time
     def solve_nlp(self):
         if self.solver is None:
             raise RuntimeError("CC-SF solver is not initialized. Call setup() first.")
@@ -1071,7 +1108,7 @@ class CCSFOptimizer(MPCCOptimizer):
             self._stage0_guard_stop_count += 1
         elif status != 0:
             self._main_solver_failure_count += 1
-            if getattr(self.param, "debug_mode", False):
+            if self._debug_enabled() and getattr(self.param, "debug_mode", False):
                 report_solver_failure(
                     self.solver,
                     status,
@@ -1085,8 +1122,8 @@ class CCSFOptimizer(MPCCOptimizer):
                 self._backup_feasible_qp_success_count += 1
             elif mode == "safe_stop":
                 self._safe_stop_count += 1
-            if mode == "safe_stop":
-                print("Applied zero-input safe-stop plan after infeasible CC-SF solve.")
+                if self._debug_enabled():
+                    print("Applied zero-input safe-stop plan after infeasible CC-SF solve.")
         if status == 0:
             try:
                 if self.N >= 1:
@@ -1128,7 +1165,6 @@ class CCSFOptimizer(MPCCOptimizer):
 
         self._last_solve_mode = mode
         solve_time = self._cycle_solver_time
-        self.solver_times.append(solve_time)
         if self._debug_risk_enabled():
             risk_margin_max = 0.0 if self._last_risk_margins is None else float(np.max(self._last_risk_margins))
             print(
@@ -1178,6 +1214,10 @@ class AcadosSolution:
         self.N = N
         self.variables = variables
         self._status_info = dict(status_info) if status_info is not None else None
+
+    def get_first_input(self):
+        """Read only the command applied to the plant, without a horizon copy."""
+        return self.solver.get(0, "u")
 
     def value(self, var_expr):
         if var_expr == "x" or (isinstance(var_expr, str) and var_expr == "x"):

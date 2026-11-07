@@ -23,6 +23,7 @@ from control.mpcc_optimizer import CCMPCCOptimizerParam
 from models.augmented_psdf_wrapper import AugmentedPSDFWrapper
 from models.geometry_utils import polygon_to_edges
 from utils.acados_diagnostics import report_solver_failure
+from utils.solver_timing import record_solve_nlp_time
 
 
 PROCESS_NOISE_FIELDS = (
@@ -139,7 +140,7 @@ class CCECSOptimizer(CCSFOptimizer):
         self.risk_tensor_param_dim = 3
 
     def _print_runtime_summary(self):
-        if self._has_runtime_activity():
+        if self._debug_enabled() and self._has_runtime_activity():
             print(
                 "CC-ECS execution summary: "
                 f"Recovered={self._backup_feasible_qp_success_count}, "
@@ -182,7 +183,7 @@ class CCECSOptimizer(CCSFOptimizer):
         # These quantities enter stage parameters or x0 rather than generated C.
         runtime_fields = {
             "chance_epsilon", "robust_horizon", "initial_pose_covariance",
-            "sigma_f0", "sigma_l0", "sigma_psi0", "debug_mode",
+            "sigma_f0", "sigma_l0", "sigma_psi0", "debug_mode", "use_debug",
         }
         return json.dumps(
             {key: value for key, value in vars(param).items() if key not in runtime_fields},
@@ -406,11 +407,14 @@ class CCECSOptimizer(CCSFOptimizer):
         self._set_ecs_parameters(
             solver, stage_s, self._constraint_data, states[:, 4:8],
         )
-        started = time.perf_counter()
-        try:
+        if self._debug_enabled():
+            started = time.perf_counter()
+            try:
+                status = solver.solve()
+            finally:
+                self._cycle_solver_time += time.perf_counter() - started
+        else:
             status = solver.solve()
-        finally:
-            self._cycle_solver_time += time.perf_counter() - started
         status = int(status)
         solver.status = status
         return status
@@ -519,6 +523,8 @@ class CCECSOptimizer(CCSFOptimizer):
         return margins
 
     def _record_experiment_logs(self, solver, status, mode):
+        if not self._debug_enabled():
+            return
         cycle = {
             "time": (self._solve_count - 1) * self.param.tf / self.N,
             "solve_step": self._solve_count, "solve_mode": mode,
@@ -593,18 +599,20 @@ class CCECSOptimizer(CCSFOptimizer):
             "minimum_reevaluated_ecs_residual": float(exact_residuals[active].min()) if active.any() else None,
         })
 
+    @record_solve_nlp_time
     def solve_nlp(self):
         if self.solver is None:
             raise RuntimeError("CC-ECS solver is not initialized; call setup() first")
         self._cycle_solver_time = 0.0
         self._last_backup_status = None
         self._last_constraint_diagnostics = None
-        self._solve_count += 1
+        if self._debug_enabled():
+            self._solve_count += 1
         status = self._prepare_and_solve(self.solver)
         self._last_main_status = status
         active_solver, mode = self.solver, "sqp_rti"
         if status != 0:
-            if getattr(self.param, "debug_mode", False):
+            if self._debug_enabled() and getattr(self.param, "debug_mode", False):
                 report_solver_failure(self.solver, status)
             active_solver, status, mode = self.recovery_infeasible(status)
             if mode == "backup_feasible_qp":
@@ -617,9 +625,9 @@ class CCECSOptimizer(CCSFOptimizer):
         )
         active_solver.status = int(status)
         self._last_solve_mode = mode
-        self.solver_times.append(self._cycle_solver_time)
-        self._record_experiment_logs(active_solver, status, mode)
-        if getattr(self.param, "debug_mode", False):
+        if self._debug_enabled():
+            self._record_experiment_logs(active_solver, status, mode)
+        if self._debug_enabled() and getattr(self.param, "debug_mode", False):
             print(
                 f"[CC-ECS {self._solve_count:04d}] {mode} status={status} "
                 f"solve={1e3 * self._cycle_solver_time:.1f}ms s={self._current_s0:.3f}"

@@ -13,6 +13,7 @@ from control import (
 from sim.simulation_mpc import simulation_mpc
 from sim.start_perturbation import resolve_start_perturbation
 from sim.trial_metrics import TrialMetricsRecorder, collect_successful_solver_steps
+from utils.solver_timing import SOLVE_NLP_TIMING_METHODS
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -51,8 +52,19 @@ def load_runtime_config(config_arg: str) -> dict:
 
 
 def apply_start_perturbation_options(config: Optional[dict], args: argparse.Namespace) -> dict:
-    """Apply explicit CLI overrides to both common and per-test YAML settings."""
+    """Apply CLI start-pose and diagnostic overrides to the runtime config."""
     runtime_config = copy.deepcopy(config or {})
+    use_debug = getattr(args, "use_debug", None)
+    if use_debug is not None:
+        common_mpcc = runtime_config.setdefault("mpcc", {})
+        if not isinstance(common_mpcc, dict):
+            raise ValueError("mpcc must be a mapping.")
+        common_mpcc["use_debug"] = bool(use_debug)
+        # An explicit CLI choice also wins over existing method-local settings.
+        for method in ("cc_sf", "cc_mf", "cc_ecs"):
+            local_config = runtime_config.get(method, {})
+            if isinstance(local_config, dict) and "use_debug" in local_config:
+                local_config["use_debug"] = bool(use_debug)
     cli_keys = {
         "perturb_start": "enabled",
         "start_seed": "seed",
@@ -441,6 +453,18 @@ def run_single_test(
                 if system is not None:
                     result.setdefault("final_time", float(system._time))
                 result = attach_runtime_stats(result, test_sim)
+            benchmark_logging = config.get("benchmark_logging", {})
+            if isinstance(benchmark_logging, dict) and benchmark_logging.get("enabled", False):
+                from utils.benchmark_trace import save_raw_trial_trace
+
+                result = dict(result or test_sim.last_run_outcome or {})
+                result.setdefault("status", "error")
+                result = attach_runtime_stats(result, test_sim)
+                try:
+                    result.update(save_raw_trial_trace(test_sim, result))
+                except Exception as exc:
+                    result["raw_trace_error"] = f"{type(exc).__name__}: {exc}"
+                    print(f"Raw trace export failed: {result['raw_trace_error']}")
         finally:
             try:
                 cleanup_simulation(test_sim)
@@ -521,6 +545,19 @@ def run_trial_batch(args: argparse.Namespace, config: Optional[dict] = None) -> 
     recorder = TrialMetricsRecorder(results_dir)
     manifest = {
         "trials_per_configuration": trials, "config": config, "cli": vars(args),
+        "computation_time": {
+            "clock": "time.perf_counter",
+            "unit": "s",
+            "scope_by_optimizer": {
+                identity["optimizer_type"]: (
+                    "solve_nlp" if identity["optimizer_type"] in SOLVE_NLP_TIMING_METHODS
+                    else "optimizer_defined"
+                )
+                for identity, _, _ in configurations
+            },
+            "successful_steps_only": True,
+            "debug_work_in_solve_nlp": "included_when_enabled",
+        },
         "configurations": [
             {**identity, "start_perturbation": settings}
             for identity, _, settings in configurations
@@ -603,6 +640,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--path-planner", default="astar", help="Path planner type")
     parser.add_argument("--simulation-time", type=float, default=60.0, help="Simulation duration [s]")
     parser.add_argument("--frame-skip", type=int, default=5, help="Animation frame skip")
+    parser.add_argument(
+        "--use-debug", action=argparse.BooleanOptionalAction, default=None,
+        help="Enable MPCC-family diagnostics; --no-use-debug disables them for timing comparisons",
+    )
     parser.add_argument(
         "--perturb-start", action=argparse.BooleanOptionalAction, default=None,
         help="Enable Gaussian start-pose perturbation; --no-perturb-start disables it (default: off)",

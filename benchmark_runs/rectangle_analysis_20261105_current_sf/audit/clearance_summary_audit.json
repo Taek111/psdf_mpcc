@@ -1,0 +1,53 @@
+{
+  "analysis_manifest_summary": {
+    "schema_version": 1,
+    "analyzer": {
+      "path": "/home/taekwon/projects/psdf_mpcc/scripts/analyze_rectangle_clearance.py",
+      "sha256": "269e6ca0a80df067d4217f115b3036e6945df73a139970d9ecd84837c861c4ce"
+    },
+    "python_version": "3.10.12 (main, Aug 31 2026, 10:18:17) [GCC 11.4.0]",
+    "numpy_version": "1.24.4",
+    "suite_roots": [
+      "/home/taekwon/projects/psdf_mpcc/benchmark_runs/rectangle_don_100_20261105_current_sf",
+      "/home/taekwon/projects/psdf_mpcc/benchmark_runs/rectangle_don_sweep_50_20261105_current_sf"
+    ],
+    "expected_trials": 4400,
+    "recorded_trials": 4400,
+    "completed_trials": 4400,
+    "cohort_trial_memberships": 4400,
+    "unique_source_trial_origins": 4200,
+    "trial_origin_identity": "origin suite-manifest SHA256, width_id, controller and start seed; independent of file location",
+    "unique_available_source_trace_records": 4200,
+    "reused_trial_memberships": 200,
+    "completed_trials_with_unavailable_clearance": 0,
+    "expected_trial_count_reached": true,
+    "primary_statuses": [
+      "error",
+      "failure",
+      "success",
+      "timeout"
+    ],
+    "sampling": "initial true pose plus every post-integration true pose",
+    "aggregation": "pool individual samples across completed trials; do not average trial percentiles",
+    "cohort_grouping": "each suite, width and controller separately; overlapping A/B cohorts are not merged",
+    "clearance": "minimum exact convex polygon distance and signed map-boundary margin",
+    "units": "input geometry m; CSV clearance mm",
+    "zero_meaning": "obstacle contact or overlap; not a signed PSDF",
+    "negative_meaning": "footprint crosses map boundary"
+  },
+  "available_pose_samples_by_experiment": {
+    "don": 250954,
+    "don_sweep": 1146930
+  },
+  "thresholds": {
+    "zero_clearance": "exact value == 0.0 m, no epsilon",
+    "negative_boundary": "value < 0.0 m, no epsilon",
+    "nonpositive": "value <= 0.0 m, no epsilon"
+  },
+  "coverage_complete_groups": 80,
+  "total_groups": 80,
+  "completed_unavailable_trial_count": 0,
+  "metric_definition": "Minimum over Euclidean convex polygon distance and signed map-boundary margin. Initial pose and every post-integration true pose pooled over completed success/failure/timeout/error trials; interrupted excluded. Mean and P05 are sample weighted, not averages of trial statistics.",
+  "interpretation": "Zero includes obstacle contact/overlap or exact map-boundary contact; negative means footprint crosses map bounds. These are discrete dt=0.1 s observations, not continuous-time collision-free or probabilistic safety guarantees. A and B are separate cohorts; B reused 0.75 records are not independent runs.",
+  "scope": "Only existing raw traces read; no solver or simulator run."
+}

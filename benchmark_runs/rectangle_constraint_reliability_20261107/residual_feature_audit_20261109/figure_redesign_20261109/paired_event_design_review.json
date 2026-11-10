@@ -1,0 +1,71 @@
+{
+  "don": 0.85,
+  "denominator_per_method": 50,
+  "paired_event_counts": {
+    "neither": 31,
+    "sf_only": 17,
+    "mf_only": 2
+  },
+  "event_intersection_seeds": [],
+  "sf_event_seeds": [
+    0,
+    2,
+    5,
+    6,
+    10,
+    11,
+    13,
+    16,
+    18,
+    20,
+    21,
+    26,
+    31,
+    34,
+    38,
+    42,
+    48
+  ],
+  "mf_event_seeds": [
+    23,
+    24
+  ],
+  "sf_non_event_outcomes": {
+    "success": 32,
+    "failure": 1
+  },
+  "mf_non_event_outcomes": {
+    "success": 45,
+    "failure": 3
+  },
+  "seed10_selection_independent_of_clearance_gap": {
+    "cohort": "MF-only successful pairs at DoN .85",
+    "cohort_size": 17,
+    "criterion": "Minimum absolute SF failure-time difference from cohort median; smallest seed resolves ties",
+    "median_sf_failure_time_s": 6.7,
+    "selected_seed": 10,
+    "tied_seed_candidates": [
+      10,
+      13
+    ],
+    "selected_sf_failure_time_s": 6.7,
+    "selected_sf_first_guard_time_s": 4.7,
+    "selected_old_distance_gain_mm": 0.8560082824452755,
+    "old_distance_gain_ascending_rank_among_sf_events": 11,
+    "selected_geometric_omission_gap_mm": 1.5501293633532374,
+    "omission_gap_ascending_rank_among_sf_events": 7,
+    "sf_event_count": 17
+  },
+  "visual_encoding": {
+    "layout": "Two aligned 5-row by 10-column grids in natural seed order; row=seed//10, col=seed%10",
+    "filled_marker": "The precisely specified geometric event occurred at least once in the trial",
+    "empty_marker": "The specified event was not observed; this does not mean the trial reached the goal",
+    "event_definition": "At actual pose k choose nearest obstacle j. Over its recorded solver-success step, d_j increases and d_j(next)>=0.05 mm, while min_i d_i(next)<0.05 mm",
+    "avoid_label": "No chance probability, primitive feature, planner infeasibility, or causal claim is encoded"
+  },
+  "input_sha256": {
+    "terminal_distance_reversal.csv": "93ff8d4a09453c42746f26ece34f7cabe6920922f26b1a360f3ba78e6e55dff7",
+    "trial_terminal_audit.csv": "4d277b9de392d0ce973883ae413a91eed33af5b93c89b3d58c3d1aeff7637ddc"
+  },
+  "script_sha256": "eeb4f2f06216c58bdeccbe127127789f653d293754d0052d167f1e9fdce5e3c3"
+}

@@ -1,0 +1,323 @@
+{
+  "source": "cc_sf",
+  "seed": 10,
+  "don": 0.85,
+  "applied_step": 46,
+  "recorded_endpoint_times_s": [
+    4.6000000000000005,
+    4.7
+  ],
+  "recorded_poses_before_after": [
+    [
+      0.09672109571157597,
+      0.5483546285287821,
+      -0.9569538275595086
+    ],
+    [
+      0.09588117691342332,
+      0.5494956295413718,
+      -0.915515857369327
+    ]
+  ],
+  "actual_pose_delta_x_y_theta": [
+    -0.0008399187981526501,
+    0.0011410010125896264,
+    0.041437970190181694
+  ],
+  "applied_input_v_omega_virtual_speed": [
+    -0.014169100727584144,
+    0.41437970190181633,
+    1.1843615993937646e-11
+  ],
+  "applied_step_solver_status": {
+    "raw_status": "success",
+    "status_code": 0,
+    "success": true,
+    "solver_called": true
+  },
+  "next_step_solver_status": {
+    "raw_status": "safe_stop_stage0",
+    "status_code": null,
+    "success": false,
+    "solver_called": false
+  },
+  "d_col_mm": 0.05,
+  "formula": "phi_current + gradient_current dot (actual_pose_next - actual_pose_current)",
+  "interpretation": "The active obstacle/feature changes between the two recorded endpoints. The current active PSDF tangent can predict increasing clearance while another obstacle becomes the signed minimum. This is a diagnostic of a current-pose tangent only, NOT reconstruction of the native stage-1 optimizer row, whose retained nominal anchor and returned state were not logged. Both deployed methods share a single signed-PSDF geometric guard; this example does not establish the causal source of the SF/MF success difference.",
+  "geometry_diagnostic_only": true,
+  "planning_covariance_evaluated": false,
+  "interpolated_pose_used": false,
+  "local_probe_used": false,
+  "simulation_executed": false,
+  "solver_executed": false,
+  "precision_checks": [
+    {
+      "geometry_dtype": "torch.float64",
+      "canonical_id_before": "C0|sep|RV1|OE2",
+      "canonical_id_after": "C14|sat|OA1|side2|RV0|OV2",
+      "active_cluster_before": 0,
+      "active_cluster_after": 14,
+      "phi_before_mm": 0.32576290849264466,
+      "phi_after_mm": -0.3683581724153173,
+      "current_active_tangent_end_mm": 1.0973738950547582,
+      "actual_minus_current_tangent_mm": -1.4657320674700756,
+      "world_gradient_before": [
+        -4.367438304653248e-05,
+        0.9999999990462742,
+        -0.008915173841265063
+      ],
+      "world_gradient_after": [
+        1.0,
+        5.551115123125783e-17,
+        -0.020617698604837344
+      ],
+      "critical_cluster_details": [
+        {
+          "cluster": 0,
+          "signed_psdf_before_mm": 0.32576290849264466,
+          "signed_psdf_after_mm": 1.18177119093792,
+          "current_tangent_end_mm": 1.0973738950547582,
+          "world_gradient_before": [
+            -4.367438304653248e-05,
+            0.9999999990462742,
+            -0.008915173841265063
+          ],
+          "world_gradient_after": [
+            -1.1963236503431673e-05,
+            0.9999999999284406,
+            -0.004843464477806286
+          ],
+          "obstacle_polygon_world_m": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.6,
+              0.0
+            ],
+            [
+              0.6,
+              0.44999999999999996
+            ],
+            [
+              0.0,
+              0.44999999999999996
+            ]
+          ]
+        },
+        {
+          "cluster": 14,
+          "signed_psdf_before_mm": 1.4082951969846647,
+          "signed_psdf_after_mm": -0.3683581724153173,
+          "current_tangent_end_mm": -0.4504790893824105,
+          "world_gradient_before": [
+            0.9999999999936459,
+            3.564898600760813e-06,
+            -0.024587583588109328
+          ],
+          "world_gradient_after": [
+            1.0,
+            5.551115123125783e-17,
+            -0.020617698604837344
+          ],
+          "obstacle_polygon_world_m": [
+            [
+              -0.15,
+              -0.15
+            ],
+            [
+              0.0,
+              -0.15
+            ],
+            [
+              0.0,
+              1.05
+            ],
+            [
+              -0.15,
+              1.05
+            ]
+          ]
+        }
+      ],
+      "closest_three_clusters_before": [
+        {
+          "cluster": 0,
+          "signed_psdf_mm": 0.32576290849264466
+        },
+        {
+          "cluster": 14,
+          "signed_psdf_mm": 1.4082951969846647
+        },
+        {
+          "cluster": 1,
+          "signed_psdf_mm": 9.550737291506822
+        }
+      ],
+      "closest_three_clusters_after": [
+        {
+          "cluster": 14,
+          "signed_psdf_mm": -0.3683581724153173
+        },
+        {
+          "cluster": 0,
+          "signed_psdf_mm": 1.18177119093792
+        },
+        {
+          "cluster": 1,
+          "signed_psdf_mm": 9.936008954929322
+        }
+      ]
+    },
+    {
+      "geometry_dtype": "torch.float32",
+      "canonical_id_before": "C0|sep|RV1|OE2",
+      "canonical_id_after": "C14|sat|OA1|side2|RV0|OV1",
+      "active_cluster_before": 0,
+      "active_cluster_after": 14,
+      "phi_before_mm": 0.3257809148635715,
+      "phi_after_mm": -0.3683716058731079,
+      "current_active_tangent_end_mm": 1.0976689979215664,
+      "actual_minus_current_tangent_mm": -1.4660406037946743,
+      "world_gradient_before": [
+        4.228949546813965e-05,
+        1.0,
+        -0.008906744420528412
+      ],
+      "world_gradient_after": [
+        1.0,
+        0.0,
+        -0.02061769738793373
+      ],
+      "critical_cluster_details": [
+        {
+          "cluster": 0,
+          "signed_psdf_before_mm": 0.3257809148635715,
+          "signed_psdf_after_mm": 1.1818095808848739,
+          "current_tangent_end_mm": 1.0976689979215664,
+          "world_gradient_before": [
+            4.228949546813965e-05,
+            1.0,
+            -0.008906744420528412
+          ],
+          "world_gradient_after": [
+            -2.9802322387695312e-08,
+            1.0,
+            -0.004842285066843033
+          ],
+          "obstacle_polygon_world_m": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.6,
+              0.0
+            ],
+            [
+              0.6,
+              0.44999999999999996
+            ],
+            [
+              0.0,
+              0.44999999999999996
+            ]
+          ]
+        },
+        {
+          "cluster": 14,
+          "signed_psdf_before_mm": 1.4082464622333646,
+          "signed_psdf_after_mm": -0.3683716058731079,
+          "current_tangent_end_mm": -0.4505743921132481,
+          "world_gradient_before": [
+            1.0,
+            2.008676528930664e-05,
+            -0.024589162319898605
+          ],
+          "world_gradient_after": [
+            1.0,
+            0.0,
+            -0.02061769738793373
+          ],
+          "obstacle_polygon_world_m": [
+            [
+              -0.15,
+              -0.15
+            ],
+            [
+              0.0,
+              -0.15
+            ],
+            [
+              0.0,
+              1.05
+            ],
+            [
+              -0.15,
+              1.05
+            ]
+          ]
+        }
+      ],
+      "closest_three_clusters_before": [
+        {
+          "cluster": 0,
+          "signed_psdf_mm": 0.3257809148635715
+        },
+        {
+          "cluster": 14,
+          "signed_psdf_mm": 1.4082464622333646
+        },
+        {
+          "cluster": 1,
+          "signed_psdf_mm": 9.550757706165314
+        }
+      ],
+      "closest_three_clusters_after": [
+        {
+          "cluster": 14,
+          "signed_psdf_mm": -0.3683716058731079
+        },
+        {
+          "cluster": 0,
+          "signed_psdf_mm": 1.1818095808848739
+        },
+        {
+          "cluster": 1,
+          "signed_psdf_mm": 9.936019778251648
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\high_don_mechanism_20261109\\actual_step_tangent_audit.py",
+      "sha256": "64a42a7fbc750d6df467f7ab7cd3a0e0268320b1786e5ed0a4b035937c180da8"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0011\\data\\raw_trace.npz",
+      "sha256": "540cf8370f34345418d88558e7d646db78af59d0bb53d3839b2b828b88041b21"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0011\\data\\raw_trace_metadata.json",
+      "sha256": "0c1d19b0ca1cea481b4e070124169f4eed16de85f7d6cdafd06d98a1fcef6800"
+    },
+    {
+      "path": "scripts\\analyze_sf_mf_reliability.py",
+      "sha256": "f557602e1b0f244dc6b6a4f7ea890851d1507a664ff375bd40b137551c15d5c8"
+    },
+    {
+      "path": "utils\\offline_feature_selectors.py",
+      "sha256": "a748b7c04561aaa10265ff0beb38f1f16fabf4a14b646e51865b8ec4e941ac9a"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\augmented_psdf.py",
+      "sha256": "21975680aa2099b8387290ce35b2807762bc68460d5483bc45e9e26ed014ad8b"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\augmented_psdf_wrapper.py",
+      "sha256": "9459b3431ac898f21c4161a59115a6f7ede8fa793d4565ebd4dadec27b71f249"
+    }
+  ]
+}

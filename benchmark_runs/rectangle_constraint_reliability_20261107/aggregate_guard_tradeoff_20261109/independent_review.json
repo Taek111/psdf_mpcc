@@ -1,0 +1,127 @@
+{
+  "status": "passed",
+  "scope": "Independent all-trial raw alignment/status/hash checks; all223 guard endpoint geometry replay; float32 robustness; cohort, paired-event, Wilson interval and manifest recomputation. No optimizer/simulation.",
+  "trials": 500,
+  "matched_initial_pose_pairs": 250,
+  "guard_transitions": 223,
+  "raw_metadata_hashes_checked": 1000,
+  "archived_float64_geometry_replay_max_abs_error_mm": 0.0,
+  "float32_event_classification_changes": [],
+  "cohorts": [
+    {
+      "don": 0.83,
+      "source": "cc_mf",
+      "trials": 50,
+      "event": 4,
+      "other_guard": 0,
+      "goal": 46,
+      "all_guard": 4,
+      "retained_positive_fresh_negative_margin": 4
+    },
+    {
+      "don": 0.83,
+      "source": "cc_sf",
+      "trials": 50,
+      "event": 3,
+      "other_guard": 0,
+      "goal": 47,
+      "all_guard": 3,
+      "retained_positive_fresh_negative_margin": 3
+    },
+    {
+      "don": 0.84,
+      "source": "cc_mf",
+      "trials": 50,
+      "event": 0,
+      "other_guard": 1,
+      "goal": 49,
+      "all_guard": 1,
+      "retained_positive_fresh_negative_margin": 0
+    },
+    {
+      "don": 0.84,
+      "source": "cc_sf",
+      "trials": 50,
+      "event": 12,
+      "other_guard": 4,
+      "goal": 34,
+      "all_guard": 16,
+      "retained_positive_fresh_negative_margin": 16
+    },
+    {
+      "don": 0.85,
+      "source": "cc_mf",
+      "trials": 50,
+      "event": 2,
+      "other_guard": 3,
+      "goal": 45,
+      "all_guard": 5,
+      "retained_positive_fresh_negative_margin": 5
+    },
+    {
+      "don": 0.85,
+      "source": "cc_sf",
+      "trials": 50,
+      "event": 17,
+      "other_guard": 1,
+      "goal": 32,
+      "all_guard": 18,
+      "retained_positive_fresh_negative_margin": 18
+    },
+    {
+      "don": 0.86,
+      "source": "cc_mf",
+      "trials": 50,
+      "event": 24,
+      "other_guard": 6,
+      "goal": 20,
+      "all_guard": 30,
+      "retained_positive_fresh_negative_margin": 26
+    },
+    {
+      "don": 0.86,
+      "source": "cc_sf",
+      "trials": 50,
+      "event": 36,
+      "other_guard": 10,
+      "goal": 4,
+      "all_guard": 46,
+      "retained_positive_fresh_negative_margin": 45
+    },
+    {
+      "don": 0.87,
+      "source": "cc_mf",
+      "trials": 50,
+      "event": 43,
+      "other_guard": 7,
+      "goal": 0,
+      "all_guard": 50,
+      "retained_positive_fresh_negative_margin": 46
+    },
+    {
+      "don": 0.87,
+      "source": "cc_sf",
+      "trials": 50,
+      "event": 41,
+      "other_guard": 9,
+      "goal": 0,
+      "all_guard": 50,
+      "retained_positive_fresh_negative_margin": 50
+    }
+  ],
+  "interpretation": [
+    "This is an exploratory recorded-motion pattern, chosen after inspecting failures, not proof of native feature ignoring or controller causation.",
+    "At DoN .83 and .87 MF event incidence is slightly higher; .84-.86 show lower MF incidence. At .87 both controllers have zero goals.",
+    "All50 trials per method/DoN are retained in the denominator and goals/other guards complete the partition.",
+    "Geometric retained-obstacle and global margins are evaluated at the same actual next pose, with fresh within-obstacle geometry; native future-stage choice is unknown.",
+    "Wilson intervals are marginal descriptive binomial intervals across trial seeds; they are not a paired test of controller differences."
+  ],
+  "reviewed_files": {
+    "analyze_aggregate_guard_tradeoff.py": "fc18160ff4c5a63210d6f473c5b4bfb39e94b0dde6936ec8b7b5f5a651941c5b",
+    "all_trials.csv": "99ebc73fd3f65147bc8cc43a5126319b7bac3b55beb2755cd020c640590a2fe5",
+    "cohort_summary.csv": "b7535a5738e47f9d9778b6b0ccdcf56cb1b9d278d4c24c495845fc4905cafb31",
+    "paired_event_counts.csv": "4e895257f6c159148f0ac3b7530c0768ec79a5d07f0299b9b91152151392561e",
+    "manifest.json": "e9fee2810c26679cd4a1c9eb16fdea3635df64ab0edf7adaaa06a78bf984596f"
+  },
+  "supplementary_sign_reversal_flag_review": "passed; current added flag and before-margin arithmetic checked"
+}

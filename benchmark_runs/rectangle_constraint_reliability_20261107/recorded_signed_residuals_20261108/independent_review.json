@@ -1,0 +1,65 @@
+{
+  "verdict": "pass: reviewed alignment, raw-source geometry replay and independent probability arithmetic",
+  "scope": "Selected seed9 both controllers only; no simulation or optimizer execution. Gaussian probabilities independently calculated with math.erfc and covariance projection with numpy.einsum. Covariance reconstructed afresh from raw controls using archived covariance model.",
+  "checks": [
+    {
+      "source": "cc_sf",
+      "seed": 9,
+      "postintegration_samples": 540,
+      "raw_csv_time_max_roundtrip_error_s": 7.105427357601002e-15,
+      "switches_recomputed_match": true,
+      "switch_count": 65,
+      "max_reconstructed_xi_cache_error": 0.0,
+      "sf_probability_max_absolute_error": 8.326672684688674e-17,
+      "mf_probability_max_absolute_error": 8.326672684688674e-17,
+      "table_residual_max_error_pp": 8.43769498715119e-15,
+      "plotted_samples": 539,
+      "excluded_times_s": [
+        4.2
+      ],
+      "first_sample_time_s": 0.1,
+      "last_sample_time_s": 54.0,
+      "full_xlim_contains_all_samples": true
+    },
+    {
+      "source": "cc_mf",
+      "seed": 9,
+      "postintegration_samples": 537,
+      "raw_csv_time_max_roundtrip_error_s": 7.105427357601002e-15,
+      "switches_recomputed_match": true,
+      "switch_count": 83,
+      "max_reconstructed_xi_cache_error": 0.0,
+      "sf_probability_max_absolute_error": 5.551115123125783e-17,
+      "mf_probability_max_absolute_error": 9.71445146547012e-17,
+      "table_residual_max_error_pp": 1.0658141036401503e-14,
+      "plotted_samples": 537,
+      "excluded_times_s": [],
+      "first_sample_time_s": 0.1,
+      "last_sample_time_s": 53.7,
+      "full_xlim_contains_all_samples": true
+    }
+  ],
+  "static_review": {
+    "alignment": "input[k] generates reconstructed xi1[k], evaluated at actual pose[k+1], plotted at raw time[k+1]; covariance changes across control steps",
+    "switches": "canonical_id[k]!=canonical_id[k+1], marked at endpoint of preceding0.1s interval; exact switching instant unknown",
+    "eligibility": "failed/skipped solves remain NaN gaps; initial t0 has no residual",
+    "metric": "100*(epsilon-own risk), own unrelaxed model-condition boundary b0",
+    "selection": "nearest median paired mean traversal, detail30-36s illustrative; all56 candidate cache hashes in figure manifest",
+    "interpretation": "own formulation on own trajectory is not isolated formulation comparison; planning covariance/native residuals unavailable",
+    "local_probes": "no local-probe event table or pose interpolation used"
+  },
+  "sources": [
+    {
+      "path": "scripts\\plot_recorded_signed_residuals.py",
+      "sha256": "dc9cbb84d0826afe175b6a5dd55a2baa367fd72d313b77453ae22b6d007e4e51"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\recorded_signed_residuals_20261108\\recorded_samples.csv",
+      "sha256": "aec4ee820e510ec934562b3636256b578523a85b75aa852a0ee3e64c5cbea39e"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\recorded_signed_residuals_20261108\\figure_manifest.json",
+      "sha256": "92a7fc4ad841f4b90b9682a1a09a23f3b6c7d36a0126ec1d6c1c1b500489b451"
+    }
+  ]
+}

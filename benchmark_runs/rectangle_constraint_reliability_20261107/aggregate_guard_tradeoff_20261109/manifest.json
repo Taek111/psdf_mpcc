@@ -1,0 +1,85 @@
+{
+  "scope": "All 500 saved DoN .83-.87 SF/MF trials, 50 per method/DoN; all 223 first-guard transitions have previous successful solver calls and exactly 20 subsequent stationary zero-input guard calls.",
+  "metric_name": "Trial fraction with increasing previous-obstacle clearance followed by another obstacle's guard entry",
+  "event_definition": "For nearest obstacle j at actual x[k], d_j(x[k+1])-d_j(x[k])>0 AND d_j(x[k+1])>=d_col AND min_i d_i(x[k+1])<d_col; k+1 is the first recorded guard pose.",
+  "d_col_mm": 0.05,
+  "geometry": "Archived signed PSDF, CPU float64, exact recorded endpoint poses. Retain obstacle identity while freshly recomputing its own closest primitive.",
+  "confidence_interval": "Two-sided Wilson 95% interval for trial-level event fraction; z=NormalDist().inv_cdf(.975). Descriptive across 50 perturbation seeds, not independent time-step inference; SF/MF share seeds.",
+  "denominator": "All 50 trials per method/DoN including successful trials and all failure types; no success conditioning or favorable DoN filtering.",
+  "not_measured": "Not native future-stage feature choice, optimized-stage constraint satisfaction, chance probability, or proof of controller causation. No simulation, solver, interpolation, or local pose probes.",
+  "checks": {
+    "trials": 500,
+    "guard_transitions": 223,
+    "matched_initial_poses": 250,
+    "excluded_trials": 0,
+    "all_guards_absorbing_20_steps": true,
+    "gain_tolerance_1e_minus6_mm_changes_event_counts": false,
+    "don085_matches_prior_all_normal_step_scan": true
+  },
+  "source_aggregate_sha256": "18377821b243cfbac53a14ad151b8195dc659e29d2cfe6655fe8592ed30091d6",
+  "input_hashes": [
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\high_don_mechanism_20261109\\trial_terminal_audit.csv",
+      "sha256": "4d277b9de392d0ce973883ae413a91eed33af5b93c89b3d58c3d1aeff7637ddc"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\aggregate_guard_tradeoff_20261109\\analyze_aggregate_guard_tradeoff.py",
+      "sha256": "fc18160ff4c5a63210d6f473c5b4bfb39e94b0dde6936ec8b7b5f5a651941c5b"
+    },
+    {
+      "path": "scripts\\analyze_sf_mf_reliability.py",
+      "sha256": "f557602e1b0f244dc6b6a4f7ea890851d1507a664ff375bd40b137551c15d5c8"
+    },
+    {
+      "path": "utils\\offline_cc_margin.py",
+      "sha256": "92660067b7d43b750808031e034b014d60bf6bbcdbbabfe6a183220b4fe8a7bd"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\augmented_psdf.py",
+      "sha256": "21975680aa2099b8387290ce35b2807762bc68460d5483bc45e9e26ed014ad8b"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\augmented_psdf_wrapper.py",
+      "sha256": "9459b3431ac898f21c4161a59115a6f7ede8fa793d4565ebd4dadec27b71f249"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\dd.py",
+      "sha256": "05e620bffce956101eabc33046b924f2a65cccdfa72ab69b52ea92a303bc8297"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\dd_dynamics.py",
+      "sha256": "172ec911a2de2fa076c5d14b854e6c8ce1b70aadc542c5bac0e7dde7a1959ca7"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\geometry_utils.py",
+      "sha256": "1f402281b75e2eee281b69635d834ce1cfb4a557149296632fde786a0da8fe39"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\mf_implicit.py",
+      "sha256": "9f0e64faf1a551051a93d0a91ce7b43fc99ac07eba292573aac4e0a01153ae01"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\mf_inverse_cdf.py",
+      "sha256": "915f4773e3edb1ed325e0ed5bd6f05f34fc095cd065ee751452d88521a7bf5d9"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\psdf.py",
+      "sha256": "6c40a788f70ad5759ab5d43de3570cde68d0f92ecbdf36fb7609218507fc8b80"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\psdf_wrapper.py",
+      "sha256": "3909e25365dfc07f5599a1807e7d64a552421cfd011ed0e1b4e9fb6b2a32a3ed"
+    }
+  ],
+  "raw_hashes": "Per-trial raw and metadata SHA256 columns are recorded in all_trials.csv.",
+  "output_hashes": {
+    "all_trials.csv": "99ebc73fd3f65147bc8cc43a5126319b7bac3b55beb2755cd020c640590a2fe5",
+    "guard_transition_details.csv": "a121b140ffab135aa66c277f8ca643c3f8c8073343701a244a9d6143868f3eb3",
+    "cohort_summary.csv": "b7535a5738e47f9d9778b6b0ccdcf56cb1b9d278d4c24c495845fc4905cafb31",
+    "paired_event_counts.csv": "4e895257f6c159148f0ac3b7530c0768ec79a5d07f0299b9b91152151392561e"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "status": "passed",
+  "scope": "Independent numerical selection/aggregation/source-hash review and direct visual inspection of both KO and EN PNGs. No new geometry, solver or simulation was executed.",
+  "selection_checks": {
+    "all_trials_included": 100,
+    "same_seeds_each_method": 50,
+    "no_condition_on_failure_or_event": true,
+    "minimum_fresh_recorded_normal_step_checked_for_every_trial": true,
+    "first_chronological_tie_selection_verified": true,
+    "same_next_pose_for_keep_and_fresh": true,
+    "unchanged_original_margin_values_max_abs_error_mm": 4.440892098500626e-16,
+    "no_points_outside_plot_ylim": true
+  },
+  "groups": [
+    {
+      "source": "cc_sf",
+      "trials": 50,
+      "successes": 32,
+      "failures": 18,
+      "negative_keep": 0,
+      "negative_fresh": 18,
+      "specified_event": 17,
+      "keep_margin_median_mm": 0.4098742627103601,
+      "fresh_margin_median_mm": 0.33079958714438273,
+      "keep_margin_min_mm": 0.033274274485299196,
+      "fresh_margin_min_mm": -1.8987856811060244
+    },
+    {
+      "source": "cc_mf",
+      "trials": 50,
+      "successes": 45,
+      "failures": 5,
+      "negative_keep": 0,
+      "negative_fresh": 5,
+      "specified_event": 2,
+      "keep_margin_median_mm": 0.14880763491334753,
+      "fresh_margin_median_mm": 0.11477441789653854,
+      "keep_margin_min_mm": 0.0013463179672073,
+      "fresh_margin_min_mm": -0.7726490793041801
+    }
+  ],
+  "visual_checks": {
+    "ko_legible": true,
+    "en_legible": true,
+    "negative_count_labels_below_all_points": true,
+    "no_label_overlap_or_clipping_observed": true,
+    "zero_line_and_negative_band_visible": true,
+    "color_legend_matches_event_indicator": true
+  },
+  "interpretation": [
+    "Minimum recorded fresh margin is an outcome-dependent worst-step statistic; all trials are included, but different trajectory durations remain different exposure.",
+    "m_fresh<=m_keep is a mathematical consequence of taking a global minimum; this ordering alone is not a stability or causality result. The meaningful empirical quantities are the signs, magnitudes and trial incidences.",
+    "Old obstacle is chosen from the actual preceding pose, while its next-pose closest primitive is recomputed. Neither column is the logged native SF/MF horizon constraint.",
+    "No covariance or chance probability is used; plotted values are signed geometric clearance minus0.05mm."
+  ],
+  "blocking_findings": [],
+  "reviewed_file_hashes": {
+    "plot_population_margins.py": "1423e3efcd234d7c9a68fb8f65af31326508691f216f11c1d0e68177676df9e1",
+    "worst_recorded_margins_don085.csv": "9d5ae80b5a13d30ebb15629bb145d174b6c125a4230eb1d383a8be3bde29b2ae",
+    "population_margin_manifest.json": "9efb04dd7fd3a3ced84b278f949cf602031361dbd3bba4a2e9f1b9527858ff7d",
+    "population_guard_margins_don085_ko.png": "b8f62d950e998f5d50b87d4c89b13db43168691667e11ffaebb639632601e79d",
+    "population_guard_margins_don085_en.png": "84c5b304da3b4bc0b18c48cd738f224dff74eea7a698454e1d25cda992fcc3b3"
+  }
+}

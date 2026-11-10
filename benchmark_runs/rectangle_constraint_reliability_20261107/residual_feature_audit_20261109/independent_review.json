@@ -1,0 +1,85 @@
+{
+  "status": "numerical_and_methodological_checks_passed",
+  "scope": "Independent CSV aggregations, math.erfc probability arithmetic, all terminal subset matching and source hashes. No native optimizer or new simulation executed; geometry not rerun for all rows in this review.",
+  "normal_rows": 43652,
+  "trial_rows": 100,
+  "summary_rows": 54,
+  "source_hashes_checked": 208,
+  "root_terminal_source_hashes_checked": 46,
+  "independent_probability_max_abs_error": 1.3877787807814457e-16,
+  "residual_max_abs_error_pp": 0.0,
+  "terminal_subset_max_numeric_error": 0.0,
+  "terminal_tolerance_classification_differences": 0,
+  "plot_script_matches_current_summary_hash": true,
+  "cohorts": [
+    {
+      "method": "cc_sf",
+      "normal_steps": 17745,
+      "valid_domain_steps": 17725,
+      "sign_mismatch_valid_domain": 30,
+      "sign_mismatch_all": 47,
+      "terminal_steps": 18,
+      "sign_mismatch_terminal": 16,
+      "clearance_away_from_old_into_new_terminal_steps": 17,
+      "normal_steps_below_guard": 18
+    },
+    {
+      "method": "cc_mf",
+      "normal_steps": 25907,
+      "valid_domain_steps": 25894,
+      "sign_mismatch_valid_domain": 40,
+      "sign_mismatch_all": 44,
+      "terminal_steps": 5,
+      "sign_mismatch_terminal": 4,
+      "clearance_away_from_old_into_new_terminal_steps": 2,
+      "normal_steps_below_guard": 5
+    }
+  ],
+  "seed10_examples": [
+    {
+      "next_recorded_time_s": "4.5",
+      "old_cluster": "14",
+      "fresh_cluster": "0",
+      "d_fresh_cluster_next_mm": "0.2813746577310888",
+      "b_keep_cluster_pp": "9.999999994612404",
+      "b_fresh_cluster_pp": "-17.8279295033219",
+      "endpoint_phi_gt_dmin": "True"
+    },
+    {
+      "next_recorded_time_s": "4.7",
+      "old_cluster": "0",
+      "fresh_cluster": "14",
+      "d_fresh_cluster_next_mm": "-0.3683581724153173",
+      "b_keep_cluster_pp": "9.978892785535246",
+      "b_fresh_cluster_pp": "-80.12072783222534",
+      "endpoint_phi_gt_dmin": "False"
+    }
+  ],
+  "caveats": [
+    "Fixed obstacle identity with fresh closest primitive and gradient is neither fixed primitive tracking nor the native nominal SF row.",
+    "At phi<=d_min, scores are formal signed-distance Gaussian diagnostics outside native MF domain, not native MF violation probabilities.",
+    "Native nominal pose, returned stage1 covariance/row and realized MF slack were not saved.",
+    "Both controller trajectories use the same diagnostic; retained versus fresh is not a native SF-versus-MF residual comparison.",
+    "Different completion lengths and failure censoring give unequal step exposures; per-step rates alone do not establish cause of success difference.",
+    "An argmin identity change alone may reflect a tie and does not establish physical sensitivity."
+  ],
+  "reviewed_file_hashes": {
+    "analyze_retained_clusters.py": "3bc2d86544ae6122ec403fb851bf2a54d70551fe77819f33cdeb5b75152a447d",
+    "normal_step_cluster_audit.csv": "3d0fc7038a44ef4a862411598555f5072445a951b2c82946350aee25a68cbda2",
+    "cluster_diagnostic_summary.csv": "ee62d875f8313119a03abdd497c6da18e175ad430733d34f2c7cbb2727f2bc7c",
+    "terminal_residual_pairs.csv": "11412de687cdc54d82aa296c2763fc098839480b875888d39b2c44d0793136b0",
+    "plot_terminal_residuals.py": "0db2099c9907101cfda4be7fa7ed7c14ff29ce97e7061bf8d2dbd85bb923efc3",
+    "terminal_residual_summary.json": "243951f48534f914f84922916f905d5d52db6966202359916da131ca86238f3b",
+    "summarize_clearance_tradeoff.py": "f9c5d6b34fbeaabffbba3bd5631e583e73ae76085f219717b467ce6e9b54e08e",
+    "terminal_distance_reversal.csv": "93ff8d4a09453c42746f26ece34f7cabe6920922f26b1a360f3ba78e6e55dff7",
+    "clearance_tradeoff_summary.json": "8cd37c79646638f7d057cc770a45d7c232d72fc533012a3f93b8c225e98fa138"
+  },
+  "clearance_tradeoff_review": {
+    "status": "passed",
+    "terminal_rows": 23,
+    "sf_increase_and_guard_events": 17,
+    "mf_increase_and_guard_events": 2,
+    "full_scan_fresh_guard_crossings_equal_terminal_subset": true,
+    "definition": "Actual current-nearest obstacle clearance increases over the recorded interval, remains >=d_col, and global next-pose clearance <d_col. This includes changes due to rotation and is not a claim about the direction of center translation or native nominal choice."
+  }
+}

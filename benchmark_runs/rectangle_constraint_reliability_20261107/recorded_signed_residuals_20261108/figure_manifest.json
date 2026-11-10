@@ -1,0 +1,339 @@
+{
+  "selected_seed": 9,
+  "don": 0.85,
+  "paired_success_candidates": 28,
+  "selection_rule": "Nearest paired mean traversal to the 28-pair median; ties: smaller inter-method traversal gap, then seed",
+  "median_pair_mean_traversal_s": 53.85000000000001,
+  "detail_window_s": [
+    30,
+    36
+  ],
+  "detail_selection": "Illustrative readable interval with zero crossings in both traces; full trace supplied and not clipped",
+  "scope": "Own formulation on own recorded post-integration trajectory; not isolated formulation comparison",
+  "covariance": "Each step resets configured Sigma0 and propagates the stored applied input once; varies across time, not stored planning Sigma1",
+  "switch_timing": "ID difference over [previous_recorded_time_s,time_s]; mark at endpoint, exact sub-step time unknown",
+  "eligibility": "Finite own risk and solver_called=true, success=true; excluded steps are NaN gaps",
+  "no_initial_risk": "Initial t=0 pose retained only for first switch comparison; risk samples start at t=.1",
+  "local_probe_used": false,
+  "interpolated_pose_used": false,
+  "simulation_executed": false,
+  "solver_executed": false,
+  "metrics_not_in_main_figure": [
+    "P05",
+    "violation rate",
+    "absolute residual change",
+    "local probe"
+  ],
+  "traces": {
+    "cc_sf": {
+      "recorded_postintegration_samples": 540,
+      "plotted_samples": 539,
+      "omitted_times_s": [
+        4.2
+      ],
+      "detected_switches_total": 65,
+      "detected_switches_plotted": 65,
+      "last_time_s": 54.0,
+      "minimum_plotted_b_pp": -7.669187044379513
+    },
+    "cc_mf": {
+      "recorded_postintegration_samples": 537,
+      "plotted_samples": 537,
+      "omitted_times_s": [],
+      "detected_switches_total": 83,
+      "detected_switches_plotted": 83,
+      "last_time_s": 53.7,
+      "minimum_plotted_b_pp": -27.525105456912414
+    }
+  },
+  "caption_en": "Signed probability-scale residuals along the recorded CC-SF and CC-MF trajectories at DoN=0.85, seed 9. Residuals are reevaluated at 0.1 s recorded poses using one-step reconstructed covariance. Open diamonds mark samples whose canonical nearest-feature ID differs from the preceding sample; the zero line marks the respective unrelaxed condition boundary. Each controller is evaluated with its own formulation. These offline residuals are not logged stage-1 optimizer residuals.",
+  "caption_ko": "DoN 0.85, 동일 시작 seed 9의 CC-SF/CC-MF 실제 기록 자세에서 자체 formulation의 signed residual을 재평가했다. 0.1초 표본과 한 step 재구성 공분산을 사용했다. 빈 마름모는 직전 표본과 최근접 feature ID가 다른 시점이며 정확한 전환 시각을 뜻하지 않는다. 검은 0선 아래는 해당 조건 초과다. 저장된 stage-1 solver residual은 아니다.",
+  "sources": [
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\tables\\per_trial_metrics.csv",
+      "sha256": "3db77c6a1180f3929c087ac7f905ce553bbd4c59b370569290e912fabe04a7c2"
+    },
+    {
+      "path": "scripts\\plot_recorded_signed_residuals.py",
+      "sha256": "dc9cbb84d0826afe175b6a5dd55a2baa367fd72d313b77453ae22b6d007e4e51"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed1.npz",
+      "sha256": "6cbc63aa5be32de0e26bc25d851adf48d75497a3fddfbfc8ee68032b2194e5a4"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed1.npz",
+      "sha256": "7db9ac01fcacc349a57f95949e81f09c5d41e07eb8a3f68d60a8a6c16b24f51f"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed3.npz",
+      "sha256": "6f184d934b048f271ee8d14380aabd6c98933ced6cbf53f7ef9d7d8e58ae604f"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed3.npz",
+      "sha256": "16ec926484a81a9659016d9f013b2e4c1213706a03fb8e2220f8346b06497616"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed4.npz",
+      "sha256": "a0b84fe1d42544fd3f63bb8bf0a4fa45114012290f9c54d79d4e9e6be9c1ebc0"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed4.npz",
+      "sha256": "0421291e768bf9dd5722282b1d4564f6a0f917fae750d264f3394f7516eaf419"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed7.npz",
+      "sha256": "c1cf531a27a2b8c03c855293656f91971598906dc7d3f54455371bf3837b459f"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed7.npz",
+      "sha256": "79f39535d9c0f911df1112edcc20c4fdb4bb19aaacde983f0884ce64b5e7477c"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed8.npz",
+      "sha256": "47753d4eb68589db41a1f1b3b541c372029f27b6f2483684cac1374ae95ca927"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed8.npz",
+      "sha256": "47589d90199c6bdf094f07b6b1f63687397e5d9af8cf8984d64381622e385d96"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed9.npz",
+      "sha256": "2249d207cbce4fb50fab8d0cabeab179227517badab461035e3eb1aa99b420b2"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed9.npz",
+      "sha256": "866e8bebfb915977f704ab010e1c02f1bd3248bb2ac03c1f97bc30b8161ee18c"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed12.npz",
+      "sha256": "fff5627edcf1bbff382ea3c12901dc9f6318205c06ff183ccfb477b3eef1e1aa"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed12.npz",
+      "sha256": "905d5520e5739bdb97fa4e60207afd1ec9561d7498a17b86b25275e1eb4ac0a8"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed14.npz",
+      "sha256": "c4f626eb7a964b282e8b8df010734d417f78048767283bb7ae3c34ad63ad7573"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed14.npz",
+      "sha256": "aa407f37a49a8c297ca339dcae0f9e87743e4ae52442f339b6fafdb8bcd4f824"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed15.npz",
+      "sha256": "d8385e859486825feecaf1396ac68c77feeee091ffe2588c9e4ac04c3994c860"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed15.npz",
+      "sha256": "2340dce3613fb1f0ac124bca1f056325506868538250b0e88e2890c3d55b67e2"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed17.npz",
+      "sha256": "0511bbb41dfba42c08a6849fa3c41d9e04759ce2a2573f893708494a1cddf817"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed17.npz",
+      "sha256": "940bb8f739e8e9a82c81077336374987c08e416c006f01612f56aca0a5eb65d2"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed19.npz",
+      "sha256": "38a5f234b12b2c05a4c47393fac6ae4fea1a9f6f33cad9c56403947991b882ad"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed19.npz",
+      "sha256": "17a97150c11972a268a347d8c60dd8f15a6fd22f4826e5784caf74845760d49e"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed25.npz",
+      "sha256": "482dcaaaadb2058f5a03ea37a9a4cb34a459f1e47ff6d097b46f1ce28687edac"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed25.npz",
+      "sha256": "d9b329c1e6516e6a46f8d03ec0cb811c834dbf4e683c328ae2191a5abe3afeb6"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed27.npz",
+      "sha256": "eee8d8044d00772884a55244e60783183a9d7c90ede458df7197ec4945ed577c"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed27.npz",
+      "sha256": "6b7bfb48666bd7543c0a92fea3a44774687156a06d5980721c127cce854c0299"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed28.npz",
+      "sha256": "c9d9bdaba7c0229cc540573da7fa2751e96434a0cada789673c4d57251b96c37"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed28.npz",
+      "sha256": "f83903e9204139072c1197a85822aa5ffa538e34008ebdf3d61bfedaf161737b"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed29.npz",
+      "sha256": "a118a2bfe30b072720344ab1ce4cc872d373ce95159c14d60345eecbfa311f4d"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed29.npz",
+      "sha256": "abfbe8588398dec2e5b74cdf64cdd0cab451c685d1ad737a4b36bca2ef313eea"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed30.npz",
+      "sha256": "36c2cc8201539a3f02fba61a20ff03a7824f7c531b6e3817cb0706b127d36926"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed30.npz",
+      "sha256": "8825e9442e8b60076a222bd1466091e9c45fa5012a3572424a61ebbc28a8615c"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed32.npz",
+      "sha256": "5b8c888c92e3559753c6573ce1be29400b1e8b0f593d5fb264b17dd6219734a5"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed32.npz",
+      "sha256": "5418025b4c1f24beec0872a2059b65b12cb0695ad5f22964adf5a9a174f658ec"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed33.npz",
+      "sha256": "ea58fb767448479d7a6cea01e7a4452c423082859c249fecf3214fd6a0318f02"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed33.npz",
+      "sha256": "9e65a7a5384986dd633b32565568267cac1bce06206f96544a601631d6acaa3f"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed35.npz",
+      "sha256": "120cf9194a0f098e49d05312263e96c114c2c8ab14ddb4b7903df94c3311b801"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed35.npz",
+      "sha256": "e1386c48f292c0de2df33d15be5e0a6f0248e929e5911c52bd138b9363ea33a8"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed36.npz",
+      "sha256": "134c54c2118bf53c4c5b0a77cb0448b846ca112a392f6b687fa84fc4b5aa2dba"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed36.npz",
+      "sha256": "e4a7f5533b9eeb71a6cf5bc511cbd20814d1cf52a08016d9f92dfe3820a44cfc"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed40.npz",
+      "sha256": "8a040384b0c1e2fda775eac1decce9196e5446d15a776859213a3f4eb4b4affd"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed40.npz",
+      "sha256": "65717b1d96e2eae31df8b4585f4c04afc2bd0a4ed95f25b1991b59d15c4f62f6"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed41.npz",
+      "sha256": "ddbbd9077ab639a94e797afd47dd5ce7ea6a22dc347d9015be66459c72393ea6"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed41.npz",
+      "sha256": "5c19300fd2e4653e3fadc42fd114568187e34b11cb3ab66107f746ddd17fa260"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed43.npz",
+      "sha256": "9f60a7554fea5bd3fd429fdf65858188ef1f4cbc25b150528f11e5a0811b3982"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed43.npz",
+      "sha256": "bccf9ca944870132bd5888667d9b550a51a53f1f19c51103ea6bf13e310b8037"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed44.npz",
+      "sha256": "217368f3a1500c2b0500fa534a5cc299e6444c251da636b53a4c05bdbbf47172"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed44.npz",
+      "sha256": "5798acec4c886bcfc01fab1ce867af46c9377ceda087da5a7340bcef9e2aeceb"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed45.npz",
+      "sha256": "5827cadf901f52b1bd37164c3e302bc51dc5b945888c5e0ce92ebab1d1da706f"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed45.npz",
+      "sha256": "6573a5168b4df1b34d83e413af40ff47e087db9fef957e3d63099081e2050e41"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed46.npz",
+      "sha256": "d07ea431c888d39ef357248047ae1ecfaa2ec9877e5b2c0884617b01ab39b5b7"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed46.npz",
+      "sha256": "548cf50b23aa9379228a323cda69a3a50d0d684564c413ed629be3384d78187b"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed47.npz",
+      "sha256": "57e45447fef5c6025f2b0a655959f2ce9f573c5e1ef0e059e553210017a431ab"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed47.npz",
+      "sha256": "1ec589a69af0c3964a50c7bd4160d26f2c1113c418add18b0c3ed7422df1fec4"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_sf_seed49.npz",
+      "sha256": "bd0f19338f81cd39e7418fef6e0245ac894b226a846bb819887b5ec49f921b3d"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\cache\\don0.85_cc_mf_seed49.npz",
+      "sha256": "3440a04ca6e30f1723188d940b1d1687d1d03f9ade42e6132a05351008936b87"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0010\\data\\raw_trace.npz",
+      "sha256": "0be9a2ba935face00d363526005ac405c02e25fa7b0b98f2201632dd046d7afe"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0010\\data\\raw_trace_metadata.json",
+      "sha256": "34dd58e0499c7c9369cd528fc21b076ea6810cb7ed3b9cb6aa2b5723ac29af5e"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config04\\trial_0010\\data\\raw_trace.npz",
+      "sha256": "d1d65ca95ca9c55112ad0e52595ea585ff2ae11b1bfc87483771c406b8243562"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config04\\trial_0010\\data\\raw_trace_metadata.json",
+      "sha256": "fbc18f77a7ff2301f19dc2fd7e82c63ae08a33abab265962a7337d66992cb3f0"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "detected_switch_intervals.csv",
+      "sha256": "4995c93e12d860812dcc087077e806ac42b6fca62c5e8db2a9dd6dba691fb919"
+    },
+    {
+      "path": "recorded_samples.csv",
+      "sha256": "aec4ee820e510ec934562b3636256b578523a85b75aa852a0ee3e64c5cbea39e"
+    },
+    {
+      "path": "seed_selection.csv",
+      "sha256": "7be83a80bb65631e14f4c248ffb772597c244ff6e8f75ebc4ae8dd020ed5259f"
+    },
+    {
+      "path": "signed_residual_recorded_30_36s.pdf",
+      "sha256": "a0e7fd6cc9d932c632f1b7c278110174191b8340c81bccb2ea0321fda3494d1c"
+    },
+    {
+      "path": "signed_residual_recorded_30_36s.png",
+      "sha256": "cfb2138de96c753858a853e89e0358d89d97b932a88f5af71a013bc03fcd69d0"
+    },
+    {
+      "path": "signed_residual_recorded_30_36s.svg",
+      "sha256": "f7d4e3d36ee76d6beb5fbbd77ba61a711301dc4f895bb3ec80e3a30f8fef89fb"
+    },
+    {
+      "path": "signed_residual_recorded_full.pdf",
+      "sha256": "b6647d8b41ce0d7006df0c62618fdf0aae8f21596f05f2a63197b55b7470b976"
+    },
+    {
+      "path": "signed_residual_recorded_full.png",
+      "sha256": "8117cc186285b4070d3d9c0c0da066cc711e5291c6cfe75536da9ea6d7d2b6f6"
+    },
+    {
+      "path": "signed_residual_recorded_full.svg",
+      "sha256": "80844e0f5c8101c042a08af77f257edf8535294843c2fa4c0fbb1affe6eba031"
+    }
+  ]
+}

@@ -1,0 +1,392 @@
+{
+  "scope": "All 18 DoN .85 SF failures, including 17 paired MF-only-success trials, plus all 5 MF failures as a comparator. Only two recorded endpoint poses immediately before first stage0 guard; no pose interpolation, local probes, simulations or solver calls.",
+  "diagnostic": "phi(x_before)+gradient(x_before) dot (actual_x_after-actual_x_before), compared with actual fresh phi(x_after) and d_col=.05mm.",
+  "caveat": "This CURRENT-POSE tangent is not the native future-stage row anchored at retained warm-start nominal state. All-cluster tangents are a geometric counterfactual, not the deployed MF probability-sum row. Neither comparison identifies the causal source of the SF/MF success difference. Both methods share a single signed-PSDF guard.",
+  "precision_checks": {
+    "float64": {
+      "all_sf_failures": {
+        "n_trials": 18,
+        "previous_solver_success": 18,
+        "actual_below_guard": 18,
+        "feature_changed": 18,
+        "cluster_changed": 18,
+        "missed_by_current_active_tangent": 18,
+        "missed_with_cluster_change": 18,
+        "missed_same_cluster_feature_change": 0,
+        "missed_same_feature": 0,
+        "all_cluster_tangents_flag_guard": 18,
+        "missed_by_current_but_flagged_by_all_cluster_tangents": 18,
+        "missed_seeds": [
+          0,
+          2,
+          5,
+          6,
+          10,
+          11,
+          13,
+          16,
+          18,
+          20,
+          21,
+          22,
+          26,
+          31,
+          34,
+          38,
+          42,
+          48
+        ]
+      },
+      "mf_only_success_sf_failure": {
+        "n_trials": 17,
+        "previous_solver_success": 17,
+        "actual_below_guard": 17,
+        "feature_changed": 17,
+        "cluster_changed": 17,
+        "missed_by_current_active_tangent": 17,
+        "missed_with_cluster_change": 17,
+        "missed_same_cluster_feature_change": 0,
+        "missed_same_feature": 0,
+        "all_cluster_tangents_flag_guard": 17,
+        "missed_by_current_but_flagged_by_all_cluster_tangents": 17,
+        "missed_seeds": [
+          0,
+          2,
+          6,
+          10,
+          11,
+          13,
+          16,
+          18,
+          20,
+          21,
+          22,
+          26,
+          31,
+          34,
+          38,
+          42,
+          48
+        ]
+      },
+      "all_mf_failures": {
+        "n_trials": 5,
+        "previous_solver_success": 5,
+        "actual_below_guard": 5,
+        "feature_changed": 5,
+        "cluster_changed": 5,
+        "missed_by_current_active_tangent": 5,
+        "missed_with_cluster_change": 5,
+        "missed_same_cluster_feature_change": 0,
+        "missed_same_feature": 0,
+        "all_cluster_tangents_flag_guard": 5,
+        "missed_by_current_but_flagged_by_all_cluster_tangents": 5,
+        "missed_seeds": [
+          5,
+          23,
+          24,
+          37,
+          39
+        ]
+      }
+    },
+    "float32": {
+      "all_sf_failures": {
+        "n_trials": 18,
+        "previous_solver_success": 18,
+        "actual_below_guard": 18,
+        "feature_changed": 18,
+        "cluster_changed": 18,
+        "missed_by_current_active_tangent": 18,
+        "missed_with_cluster_change": 18,
+        "missed_same_cluster_feature_change": 0,
+        "missed_same_feature": 0,
+        "all_cluster_tangents_flag_guard": 18,
+        "missed_by_current_but_flagged_by_all_cluster_tangents": 18,
+        "missed_seeds": [
+          0,
+          2,
+          5,
+          6,
+          10,
+          11,
+          13,
+          16,
+          18,
+          20,
+          21,
+          22,
+          26,
+          31,
+          34,
+          38,
+          42,
+          48
+        ]
+      },
+      "mf_only_success_sf_failure": {
+        "n_trials": 17,
+        "previous_solver_success": 17,
+        "actual_below_guard": 17,
+        "feature_changed": 17,
+        "cluster_changed": 17,
+        "missed_by_current_active_tangent": 17,
+        "missed_with_cluster_change": 17,
+        "missed_same_cluster_feature_change": 0,
+        "missed_same_feature": 0,
+        "all_cluster_tangents_flag_guard": 17,
+        "missed_by_current_but_flagged_by_all_cluster_tangents": 17,
+        "missed_seeds": [
+          0,
+          2,
+          6,
+          10,
+          11,
+          13,
+          16,
+          18,
+          20,
+          21,
+          22,
+          26,
+          31,
+          34,
+          38,
+          42,
+          48
+        ]
+      },
+      "all_mf_failures": {
+        "n_trials": 5,
+        "previous_solver_success": 5,
+        "actual_below_guard": 5,
+        "feature_changed": 5,
+        "cluster_changed": 5,
+        "missed_by_current_active_tangent": 5,
+        "missed_with_cluster_change": 5,
+        "missed_same_cluster_feature_change": 0,
+        "missed_same_feature": 0,
+        "all_cluster_tangents_flag_guard": 5,
+        "missed_by_current_but_flagged_by_all_cluster_tangents": 5,
+        "missed_seeds": [
+          5,
+          23,
+          24,
+          37,
+          39
+        ]
+      }
+    }
+  },
+  "classification_precision_disagreements": 0,
+  "sources": [
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\high_don_mechanism_20261109\\trial_terminal_audit.csv",
+      "sha256": "4d277b9de392d0ce973883ae413a91eed33af5b93c89b3d58c3d1aeff7637ddc"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_constraint_reliability_20261107\\high_don_mechanism_20261109\\terminal_step_tangent_audit.py",
+      "sha256": "050ac241caa36a7cf7990fe9c3ebc0e674205ed85dc71b9589a56172a96128fb"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0001\\data\\raw_trace.npz",
+      "sha256": "2fccd27cf667ce0cceb640c6422f1d2089f2b022a237e625a36502937883aa27"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0001\\data\\raw_trace_metadata.json",
+      "sha256": "789cd6d377657c83719d2273333f4f0d5ae97a6f2b002c60c394673b17ebf7b0"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0003\\data\\raw_trace.npz",
+      "sha256": "24a9fea01687ccebf2625688f3369eb04619f4b12795e067d4ffe72ecee72221"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0003\\data\\raw_trace_metadata.json",
+      "sha256": "ccdc6663ec81e6d10885c862957d77a5dd04362072accb49e2e37334479360b3"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0006\\data\\raw_trace.npz",
+      "sha256": "7bf09ab24c29180547e2a5b67881b9dc1e943698fde1b1399bfe1f7cd41bacca"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0006\\data\\raw_trace_metadata.json",
+      "sha256": "d231ee2f6656ba0dd3426d9b27c5658591dd4b8484622c010beb0dd36a352a92"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0007\\data\\raw_trace.npz",
+      "sha256": "9fb223f054a3eb10e093539853fc0a1e5f36115db7ec1dd5ee390d862c6d2e18"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0007\\data\\raw_trace_metadata.json",
+      "sha256": "5d85de24f48e6503b4a88d54f51c9a6ca07135820177ced00e88515916d4aaf4"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0011\\data\\raw_trace.npz",
+      "sha256": "540cf8370f34345418d88558e7d646db78af59d0bb53d3839b2b828b88041b21"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0011\\data\\raw_trace_metadata.json",
+      "sha256": "0c1d19b0ca1cea481b4e070124169f4eed16de85f7d6cdafd06d98a1fcef6800"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0012\\data\\raw_trace.npz",
+      "sha256": "f59f34ec8baa82a958737d2cbaf185c2d6cb6201ad7b7c977e57ddfc139d37ac"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0012\\data\\raw_trace_metadata.json",
+      "sha256": "e7929844125acd771a51ed25950f96712ce39b22578b16790d151a9ff1b36cc6"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0014\\data\\raw_trace.npz",
+      "sha256": "89bc047b3d157004db21a03288dfd1dfa0e0942757c12c9c7341010f53356ed0"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0014\\data\\raw_trace_metadata.json",
+      "sha256": "8685506b3e13d50aea7b4fa01f482c89db794e8f249db7339cc98d1c8f85d77b"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0017\\data\\raw_trace.npz",
+      "sha256": "c7ae453ae6e7540ff0361364827449e22c9332e5116931cc001b340cab2e7f85"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0017\\data\\raw_trace_metadata.json",
+      "sha256": "ec5c41c15de5cdda6a46059251941d8e8450df11c9a36788ad045b5a25c45410"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0019\\data\\raw_trace.npz",
+      "sha256": "4ac8bef5a1b1eeb4ef48f077013c1b533a87b031e279a32169f078043dc3b245"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0019\\data\\raw_trace_metadata.json",
+      "sha256": "6bc91eface85742a99bb8bd403d5915c08b5e8b849c9d335ea4aaa2227d5fd8b"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0021\\data\\raw_trace.npz",
+      "sha256": "5262a79f725c0fb2c0614d91fe3a01af5d43ee75f3fb69f8b3cbd35b7e7a4d3d"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0021\\data\\raw_trace_metadata.json",
+      "sha256": "dca9836f0de959782292fd3eba52873353a478b747b158742b856d7753757d30"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0022\\data\\raw_trace.npz",
+      "sha256": "ec21c1fba65f9e91c108154aab90756e208dd87c187c1e970c0de165926df281"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0022\\data\\raw_trace_metadata.json",
+      "sha256": "e630bf3457ae11b01c26bb932ec2ff8069ca849d2a5b9ce1632cbe660135b7de"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0023\\data\\raw_trace.npz",
+      "sha256": "39da0c75636b214f6563225860d4895d2541fa73b2f740f12d4be048234b4f41"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0023\\data\\raw_trace_metadata.json",
+      "sha256": "f867161977a3f797d74d1fa6a76d50f8084553a2efbabc01f18dcdfc49aa642c"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0027\\data\\raw_trace.npz",
+      "sha256": "acfb0c3415150e0df622709a6f4e6ef670b3fa1a8ca7793f9e05700a98f51fc7"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0027\\data\\raw_trace_metadata.json",
+      "sha256": "82e2da32a797b61e2b6b0e10b5c9a060b5ab84df57c40317c9d3b3056cbbcc12"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0032\\data\\raw_trace.npz",
+      "sha256": "9e9bd34415f67e69d7cc7f680b2833fa976ca6dc4d8745153f2d8803c9b9ac9e"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0032\\data\\raw_trace_metadata.json",
+      "sha256": "7159204244679f42a75315aac076a73a7ac83be3a48d55dce271da577b712f9b"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0035\\data\\raw_trace.npz",
+      "sha256": "5dbff5d84a3c19f83d522b0ab177b0ea71b64331bb6340baab9817894a3464ea"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0035\\data\\raw_trace_metadata.json",
+      "sha256": "a28e4da6d0e29b92b2169d56a7c368e1f79b20b43c291a7c2edb63d29275161d"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0039\\data\\raw_trace.npz",
+      "sha256": "a852134a79bded99f96bf802f79d2bb234e390bce7b9fcae31d6c5b9297c6d5b"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0039\\data\\raw_trace_metadata.json",
+      "sha256": "15813eb0822e67b0740f72314de33512382f4a584959785a2f4dab9467f2f2cd"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0043\\data\\raw_trace.npz",
+      "sha256": "2fbc2330c579dab61b3710d4d2e5036a193c093980c91a664fb4cf7300144285"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0043\\data\\raw_trace_metadata.json",
+      "sha256": "6564994d551c29443d2b2d82623349a867112dee112687b24d5f1d18fbeae8d4"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0049\\data\\raw_trace.npz",
+      "sha256": "5c88ac32fe5057c808bae288c7cb19bbc9f6bc41a03624af0c76e62b1298106a"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0049\\data\\raw_trace_metadata.json",
+      "sha256": "df8638c5324d439e806ca337103950ba51e1841b7ac4fd16925ba5e37c7e7fde"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config04\\trial_0006\\data\\raw_trace.npz",
+      "sha256": "69fc65f8c5d60a9df143a2ba9045a6630e1e47729518a1ee693091bb8d901391"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config04\\trial_0006\\data\\raw_trace_metadata.json",
+      "sha256": "4acdb4791f3a1cc34b9f46b1642bc91bda389657539340596a94f5987b62a75e"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config04\\trial_0024\\data\\raw_trace.npz",
+      "sha256": "c16124967dd628ff4a62ce8dc8b33b92057b76f6e1c8fada5890f4fdead6965d"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config04\\trial_0024\\data\\raw_trace_metadata.json",
+      "sha256": "ba4acd7a3e53fadb384ed97daeb5a7c44b3fcc705e4139c0d7c79d1186ea0841"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config04\\trial_0025\\data\\raw_trace.npz",
+      "sha256": "cb7d3562a9cc811e7bef0484c5caf6dd80189dbfde87a54fabfebba36fbb0538"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config04\\trial_0025\\data\\raw_trace_metadata.json",
+      "sha256": "186d4a3578cc0f14feced6e9ba3927dccd3103db8fe356f780d1d824cdf20233"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config04\\trial_0038\\data\\raw_trace.npz",
+      "sha256": "fb80e1502854945b1d1d55c49e83ada58f16703e43350157a2d4f87448d1d2b8"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config04\\trial_0038\\data\\raw_trace_metadata.json",
+      "sha256": "fed099969287575d3771df19170516bc994f638f72bb8abc246bf00da3562ae3"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config04\\trial_0040\\data\\raw_trace.npz",
+      "sha256": "1ecaa7c2e0e841ea84f06f3d238c60ee410ff4fce5c22d730bc7634eb2437110"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config04\\trial_0040\\data\\raw_trace_metadata.json",
+      "sha256": "a908b80e731568c5585380a582a66e7fff17375030182315427577c4f60266a7"
+    },
+    {
+      "path": "scripts\\analyze_sf_mf_reliability.py",
+      "sha256": "f557602e1b0f244dc6b6a4f7ea890851d1507a664ff375bd40b137551c15d5c8"
+    },
+    {
+      "path": "utils\\offline_feature_selectors.py",
+      "sha256": "a748b7c04561aaa10265ff0beb38f1f16fabf4a14b646e51865b8ec4e941ac9a"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\augmented_psdf.py",
+      "sha256": "21975680aa2099b8387290ce35b2807762bc68460d5483bc45e9e26ed014ad8b"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\source_snapshot\\models\\augmented_psdf_wrapper.py",
+      "sha256": "9459b3431ac898f21c4161a59115a6f7ede8fa793d4565ebd4dadec27b71f249"
+    }
+  ]
+}

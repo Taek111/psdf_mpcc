@@ -1,0 +1,35 @@
+{
+  "scope": "All100 trials at DoN.85, including failures. One record each: successful-solver applied step with minimum fresh full-geometry signed clearance; first chronological occurrence breaks exact ties.",
+  "margins": "m_keep=d_jk(x_next)-d_col, m_fresh=min_j d_j(x_next)-d_col, j_k nearest obstacle at actual current pose. Both margins use the same actual next pose. Units mm; d_col=.05mm.",
+  "selection_caveat": "Worst recorded geometric margin, not a random sample. Exposure/traversal durations differ across methods. No optimizer-native feature or chance constraint is recovered.",
+  "points": "Horizontal deterministic offsets avoid overlap, without changing y-values. Same seed has the same horizontal offset in both columns. Colored points mark the separately defined clearance-improvement guard event.",
+  "summaries": [
+    {
+      "source": "cc_sf",
+      "trials": 50,
+      "negative_keep": 0,
+      "negative_fresh": 18,
+      "specified_event": 17,
+      "keep_margin_median_mm": 0.4098742627103601,
+      "fresh_margin_median_mm": 0.33079958714438273,
+      "keep_margin_min_mm": 0.033274274485299196,
+      "fresh_margin_min_mm": -1.8987856811060244
+    },
+    {
+      "source": "cc_mf",
+      "trials": 50,
+      "negative_keep": 0,
+      "negative_fresh": 5,
+      "specified_event": 2,
+      "keep_margin_median_mm": 0.14880763491334753,
+      "fresh_margin_median_mm": 0.11477441789653854,
+      "keep_margin_min_mm": 0.0013463179672073,
+      "fresh_margin_min_mm": -0.7726490793041801
+    }
+  ],
+  "source_hashes": {
+    "normal_step_cluster_audit.csv": "3d0fc7038a44ef4a862411598555f5072445a951b2c82946350aee25a68cbda2",
+    "all_trials.csv": "99ebc73fd3f65147bc8cc43a5126319b7bac3b55beb2755cd020c640590a2fe5"
+  },
+  "script_sha256": "1423e3efcd234d7c9a68fb8f65af31326508691f216f11c1d0e68177676df9e1"
+}

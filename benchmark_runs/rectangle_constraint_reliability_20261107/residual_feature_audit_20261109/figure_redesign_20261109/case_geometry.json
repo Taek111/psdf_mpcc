@@ -1,0 +1,225 @@
+{
+  "case": "DoN .85 CC-SF seed10, recorded applied step46, 4.6 to4.7sec",
+  "coordinate_units": "metres; theta radians; clearance values explicitly millimetres",
+  "transform": "world_vertices = body_vertices @ [[cos(theta), sin(theta)],[-sin(theta), cos(theta)]] + pose_xy",
+  "body_vertices_m": [
+    [
+      -0.075,
+      -0.06375
+    ],
+    [
+      0.075,
+      -0.06375
+    ],
+    [
+      0.075,
+      0.06375
+    ],
+    [
+      -0.075,
+      0.06375
+    ]
+  ],
+  "wall_surfaces": {
+    "bottom_y_m": 0.44999999999999996,
+    "left_x_m": 0.0
+  },
+  "obstacle_polygons": {
+    "C0": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.6,
+        0.0
+      ],
+      [
+        0.6,
+        0.44999999999999996
+      ],
+      [
+        0.0,
+        0.44999999999999996
+      ]
+    ],
+    "C14": [
+      [
+        -0.15,
+        -0.15
+      ],
+      [
+        0.0,
+        -0.15
+      ],
+      [
+        0.0,
+        1.05
+      ],
+      [
+        -0.15,
+        1.05
+      ]
+    ]
+  },
+  "frames": [
+    {
+      "time_s": 4.6000000000000005,
+      "pose_world_m_rad": [
+        0.09672109571157597,
+        0.5483546285287821,
+        -0.9569538275595086
+      ],
+      "world_vertices_m": [
+        [
+          0.0014082951969757451,
+          0.5729418723365786
+        ],
+        [
+          0.08781020321203908,
+          0.45032576290818194
+        ],
+        [
+          0.1920338962261762,
+          0.5237673847209857
+        ],
+        [
+          0.10563198821111286,
+          0.6463834941493823
+        ]
+      ],
+      "bounding_box_m": {
+        "x_min": 0.0014082951969757451,
+        "x_max": 0.1920338962261762,
+        "y_min": 0.45032576290818194,
+        "y_max": 0.6463834941493823
+      },
+      "bottom_wall": {
+        "cluster": 0,
+        "nearest_robot_vertex_index": 1,
+        "robot_witness_m": [
+          0.08781020321203908,
+          0.45032576290818194
+        ],
+        "wall_projection_m": [
+          0.08781020321203908,
+          0.44999999999999996
+        ],
+        "signed_clearance_mm": 0.3257629081819813
+      },
+      "left_wall": {
+        "cluster": 14,
+        "nearest_robot_vertex_index": 0,
+        "robot_witness_m": [
+          0.0014082951969757451,
+          0.5729418723365786
+        ],
+        "wall_projection_m": [
+          0.0,
+          0.5729418723365786
+        ],
+        "signed_clearance_mm": 1.4082951969757451
+      }
+    },
+    {
+      "time_s": 4.7,
+      "pose_world_m_rad": [
+        0.09588117691342332,
+        0.5494956295413718,
+        -0.915515857369327
+      ],
+      "world_vertices_m": [
+        [
+          -0.0003683581724153451,
+          0.5701133281462091
+        ],
+        [
+          0.09103888858720954,
+          0.4511817711908533
+        ],
+        [
+          0.192130711999262,
+          0.5288779309365345
+        ],
+        [
+          0.1007234652396371,
+          0.6478094878918903
+        ]
+      ],
+      "bounding_box_m": {
+        "x_min": -0.0003683581724153451,
+        "x_max": 0.192130711999262,
+        "y_min": 0.4511817711908533,
+        "y_max": 0.6478094878918903
+      },
+      "bottom_wall": {
+        "cluster": 0,
+        "nearest_robot_vertex_index": 1,
+        "robot_witness_m": [
+          0.09103888858720954,
+          0.4511817711908533
+        ],
+        "wall_projection_m": [
+          0.09103888858720954,
+          0.44999999999999996
+        ],
+        "signed_clearance_mm": 1.1817711908533313
+      },
+      "left_wall": {
+        "cluster": 14,
+        "nearest_robot_vertex_index": 0,
+        "robot_witness_m": [
+          -0.0003683581724153451,
+          0.5701133281462091
+        ],
+        "wall_projection_m": [
+          0.0,
+          0.5701133281462091
+        ],
+        "signed_clearance_mm": -0.3683581724153451
+      }
+    }
+  ],
+  "delta": {
+    "pose_m_rad": [
+      -0.0008399187981526501,
+      0.0011410010125896264,
+      0.041437970190181694
+    ],
+    "center_translation_mm": 1.4168087020556959,
+    "heading_change_deg": 2.3742208034863284,
+    "world_vertices_mm": [
+      [
+        -1.7766533693910902,
+        -2.8285441903694863
+      ],
+      [
+        3.228685375170459,
+        0.85600828267135
+      ],
+      [
+        0.09681577308578992,
+        5.110546215548739
+      ],
+      [
+        -4.90852297147576,
+        1.4259937425079583
+      ]
+    ],
+    "bottom_clearance_change_mm": 0.85600828267135,
+    "left_clearance_change_mm": -1.7766533693910902
+  },
+  "d_col_mm": 0.05,
+  "d_min_mm": 0.1,
+  "caveat": "Exact recorded poses and rigid footprint transforms. Bottom and left witnesses are V1 and V0 respectively at both endpoints; negative left distance means overlap by that supporting-wall amount. No exaggerated displacement, intermediate poses, optimizer or simulations.",
+  "sources": [
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0011\\data\\raw_trace.npz",
+      "sha256": "540cf8370f34345418d88558e7d646db78af59d0bb53d3839b2b828b88041b21"
+    },
+    {
+      "path": "benchmark_runs\\rectangle_don_sweep_50_20261105_current_sf\\widths\\width_127p5mm\\runs\\config03\\trial_0011\\data\\raw_trace_metadata.json",
+      "sha256": "0c1d19b0ca1cea481b4e070124169f4eed16de85f7d6cdafd06d98a1fcef6800"
+    }
+  ]
+}

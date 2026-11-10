@@ -1,0 +1,38 @@
+{
+  "status": "passed",
+  "review_type": "Independent visual inspection of both full PNGs plus renderer/source geometry and source-hash review. No new simulation or optimizer run.",
+  "visual_checks": {
+    "ko_legible": true,
+    "en_legible": true,
+    "negative_clearance_minus_visible": true,
+    "both_one_mm_scale_bars_visible": true,
+    "no_text_clipping_or_overlap_observed": true,
+    "before_grey_dashed_after_dark_solid_consistent": true
+  },
+  "scientific_checks": {
+    "recorded_world_vertices_preserved": true,
+    "all_axes_equal_aspect": true,
+    "no_displacement_or_rotation_exaggeration": true,
+    "left_penetration_polygon_exact_x_le_zero": true,
+    "left_penetration_area_mm2": 0.14041561592921148,
+    "overview_gray_obstacle_matches_archived_geometry_crop": true,
+    "seed10_representative_selection_verified": true,
+    "selection_cohort": 17,
+    "selection_median_first_guard_time_s": 4.7,
+    "summary_counts_match_underlying_event_definition": true,
+    "sf_events_trials": 17,
+    "mf_events_trials": 2,
+    "population_event_uses_guard_threshold_mm": 0.05,
+    "population_event_not_claimed_to_be_all_penetrations": true,
+    "native_optimizer_feature_choice_not_claimed": true
+  },
+  "blocking_findings": [],
+  "interpretation_note": "The main case shows actual overlap at4.7s; the17/50 and2/50 population figures concern guard crossings below0.05mm, which include positive-clearance near-contact states. Footprint clearance changes include rotation; they do not uniquely specify center-motion direction.",
+  "reviewed_file_hashes": {
+    "render_contact_story.py": "f255418034da1de52ad0bfcfd108cda97ac26b7640d62eb918289c82eac391ea",
+    "case_geometry.json": "9b5dae595f1903324f89d612409b6834f669b3455147555112044131aaf29d90",
+    "contact_story_manifest.json": "68da99d139bfc5cd69774b8f9bb21f249a2a075130111ddd5cde35b0db3bccae",
+    "clearance_tradeoff_contact_story_ko.png": "270c880a4db8c2d1160edf37e984047fccca66a9c74175d7cf0f4d3464d42fd8",
+    "clearance_tradeoff_contact_story_en.png": "03c0be0ca3d7735f795e8c2ebcca894c225f81d6778038dce3d42de99403cbd7"
+  }
+}

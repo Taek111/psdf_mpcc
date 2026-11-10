@@ -1,0 +1,69 @@
+{
+  "review_type": "Independent static and saved-data arithmetic review; no optimizer/simulation/test suite",
+  "engine_path": "scripts/analyze_sf_mf_reliability.py",
+  "engine_sha256": "f557602e1b0f244dc6b6a4f7ea890851d1507a664ff375bd40b137551c15d5c8",
+  "reviewed_artifact": "benchmark_runs\\rectangle_constraint_reliability_20261107_pilot",
+  "checks": [
+    {
+      "source": "cc_sf",
+      "seed": 1,
+      "samples_independently_recalculated": 598,
+      "covariance_max_abs_error": 2.710505431213761e-19,
+      "sf_probability_max_abs_error": 2.0816681711721685e-16,
+      "mf_probability_sum_max_abs_error": 2.0816681711721685e-16,
+      "valid_denominator": 597,
+      "violation_numerator": 24,
+      "csv_valid_denominator": 597,
+      "csv_violation_numerator": 24,
+      "eligibility_equal_cache": true,
+      "rates_and_counts_match": true,
+      "float32_comparison": {
+        "sf_max_absolute_probability_difference": 5.7430091816426665e-05,
+        "mf_max_absolute_probability_sum_difference": 5.7431589621764756e-05,
+        "sf_threshold_classification_mismatches_eligible": 0,
+        "mf_threshold_classification_mismatches_eligible": 0
+      },
+      "max_adjacent_heading_delta_rad": 0.09999999997164943,
+      "mf_domain_inactive_eligible": 0
+    },
+    {
+      "source": "cc_mf",
+      "seed": 1,
+      "samples_independently_recalculated": 585,
+      "covariance_max_abs_error": 2.710505431213761e-19,
+      "sf_probability_max_abs_error": 2.498001805406602e-16,
+      "mf_probability_sum_max_abs_error": 3.608224830031759e-16,
+      "valid_denominator": 585,
+      "violation_numerator": 31,
+      "csv_valid_denominator": 585,
+      "csv_violation_numerator": 31,
+      "eligibility_equal_cache": true,
+      "rates_and_counts_match": true,
+      "float32_comparison": {
+        "sf_max_absolute_probability_difference": 5.242672239166857e-05,
+        "mf_max_absolute_probability_sum_difference": 5.243614481263703e-05,
+        "sf_threshold_classification_mismatches_eligible": 0,
+        "mf_threshold_classification_mismatches_eligible": 0
+      },
+      "max_adjacent_heading_delta_rad": 0.10000000000000009,
+      "mf_domain_inactive_eligible": 0
+    }
+  ],
+  "scope_limitations": [
+    "No returned stage-1 candidates or planning covariance exist in source traces; these remain offline surrogate diagnostics.",
+    "Independent probability arithmetic covers pilot DoN .85 seed 1 from each controller, not all trial traces.",
+    "Geometry is archived implementation; this review checks covariance/probability arithmetic, not physical model calibration.",
+    "CPU float32 sensitivity is not bitwise reproduction of archived CUDA float32 execution."
+  ],
+  "static_findings": {
+    "alignment": "xi1[k] resets Sigma0 and propagates applied_inputs[k], then evaluates poses[k+1]; no cumulative run-wide covariance.",
+    "eligibility": "Successful solver-called steps supply both numerator and denominator, fallback excluded, first successful step retained.",
+    "cohort": "Common-success seeds at each width, with matching initial poses independently audited.",
+    "mf_rows": "Evaluable probability_sum includes domain-inactive rows, with no slack and no required-row eligibility filter.",
+    "switch_comparison": "Both formulations use identical pose pairs and fixed body covariance, reported separately by source trajectory.",
+    "aggregation": "Pooled counts and mean trial rates are separate; boundary-jump averages are event-weighted.",
+    "switch_sampling": "Only endpoint-ID-changing intervals inspected; nine-point grid/bisection does not guarantee every continuous crossing.",
+    "probability": "MF R is an untruncated probability sum/union bound and can exceed 1, not an empirical collision probability."
+  },
+  "verdict": "passes reviewed static alignment and independent pilot arithmetic; native stage-1 metric remains unavailable"
+}

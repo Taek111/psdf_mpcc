@@ -58,7 +58,7 @@ def main():
     assert len(set(geometries)) == 1
     pairs = np.asarray(endpoint_pairs)
     delta = pairs[:, 1] - pairs[:, 0]
-    suite = ROOT / 'benchmark_runs/rectangle_don_sweep_50_20261105_current_sf'
+    suite = ROOT / 'benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf'
     with _snapshot_imports(suite / 'source_snapshot') as (module, _, _):
         for dtype, suffix in ((torch.float64, ''), (torch.float32, '_float32')):
             wrapper = make_wrapper(module, metadata_rows[0], dtype)

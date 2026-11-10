@@ -19,7 +19,7 @@ def main():
         traces = {}
         for method in ("cc_sf", "cc_mf"):
             row = next(r for r in terminal if float(r["don"]) == don and int(r["seed"]) == seed and r["source"] == method)
-            data = ROOT / row["trace"]
+            data = SUITE / "widths" / row["trace"].replace("\\", "/").split("/widths/", 1)[1]
             raw = np.load(data)
             metadata = json.loads(data.with_name("raw_trace_metadata.json").read_text(encoding="utf-8"))
             poses, times, inputs = raw["poses"], raw["pose_times_s"], raw["applied_inputs"]

@@ -15,8 +15,8 @@ import matplotlib.pyplot as plt
 
 OUT = Path(__file__).resolve().parents[1]
 PROJECT = OUT.parents[1]
-ROOTS = {'A': PROJECT/'benchmark_runs/rectangle_don_100_20261105_current_sf',
-         'B': PROJECT/'benchmark_runs/rectangle_don_sweep_50_20261105_current_sf'}
+ROOTS = {'A': PROJECT/'benchmark_runs/rectangle_analysis_20261105_current_sf/rectangle_don_100_20261105_current_sf',
+         'B': PROJECT/'benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf'}
 METHODS = ['mpcc', 'cc_ecs', 'cc_sf', 'cc_mf']
 LABELS = dict(zip(METHODS, ['MPCC', 'CC-ECS', 'CC-SF', 'CC-MF']))
 COMPLETE = {'success', 'failure', 'timeout', 'error'}
@@ -208,7 +208,8 @@ def main():
     clearpath = OUT/'offline_clearance'/'clearance_summary.csv'
     if clearpath.exists():
         cl = pd.read_csv(clearpath)
-        cl['cohort'] = cl.suite_root.map({str(v):k for k,v in ROOTS.items()})
+        suite_names = cl.suite_root.str.replace('\\', '/', regex=False).str.rsplit('/', n=1).str[-1]
+        cl['cohort'] = suite_names.map({root.name: cohort for cohort, root in ROOTS.items()})
         cols=['cohort','width_m','nominal_don','optimizer_type','available_completed_trials','unavailable_completed_trials','pooled_pose_samples','clearance_mean_mm','clearance_p05_mm','clearance_min_mm','zero_clearance_samples','negative_boundary_samples','coverage_complete']
         a=a.merge(cl[cols],on=['cohort','width_m','nominal_don','optimizer_type'],validate='one_to_one',how='left')
     save(a,'A_quantitative_table.csv')

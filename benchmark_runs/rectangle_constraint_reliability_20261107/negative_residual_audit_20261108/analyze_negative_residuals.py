@@ -20,7 +20,7 @@ from utils.offline_feature_selectors import _capture_forward, extract_feature_se
 
 OUTPUT = Path(__file__).resolve().parent
 ANALYSIS = OUTPUT.parent
-SUITE = ROOT / "benchmark_runs/rectangle_don_sweep_50_20261105_current_sf"
+SUITE = ROOT / "benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf"
 SNAPSHOT = SUITE / "source_snapshot"
 
 

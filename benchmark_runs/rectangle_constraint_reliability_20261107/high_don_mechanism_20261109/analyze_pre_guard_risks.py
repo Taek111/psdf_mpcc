@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT))
 from scripts.analyze_sf_mf_reliability import evaluate, make_wrapper
 from utils.offline_cc_margin import _snapshot_imports
 
-SNAPSHOT = ROOT / 'benchmark_runs/rectangle_don_sweep_50_20261105_current_sf/source_snapshot'
+SNAPSHOT = ROOT / 'benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf/source_snapshot'
 
 
 def save_csv(name, rows):

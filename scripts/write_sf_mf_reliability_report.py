@@ -92,7 +92,7 @@ def main():
 
 DoN 0.85는 SF 32/50, MF 45/50 성공이며 두 방법이 모두 성공한 seed가 28개다. 0.86은 공통 성공 3개뿐이므로 주 자료로 쓰기에는 표본이 작다. 0.85의 paired seeds는 `{source_seeds}`다. 같은 너비·seed의 시작 pose가 일치한다. 성공 여부에 따른 선택이 있으므로 이하 결과는 **두 방법 모두 성공한 조건부 cohort**에 대한 설명이다.
 
-원본은 `../rectangle_don_sweep_50_20261105_current_sf`다. config ID를 원본 CSV로 확인했으며 `config03=CC-SF`, `config04=CC-MF`다. DoN 0.83–0.86의 두 방법 총 400 traces를 점검했고 NPZ/metadata 누락·hash 불일치·비유한 수·길이/결과 불일치는 없었다. 그중 공통 성공 {len(trials)//2} seed pairs, 총 {len(trials)} traces를 수치 분석했다. [가용성 audit](audit/raw_availability.json), [cohort CSV](tables/paired_cohort.csv).
+원본은 [DoN 스윕](./rectangle_don_sweep_50_20261105_current_sf/)다. config ID를 원본 CSV로 확인했으며 `config03=CC-SF`, `config04=CC-MF`다. DoN 0.83–0.86의 두 방법 총 400 traces를 점검했고 NPZ/metadata 누락·hash 불일치·비유한 수·길이/결과 불일치는 없었다. 그중 공통 성공 {len(trials)//2} seed pairs, 총 {len(trials)} traces를 수치 분석했다. [가용성 audit](audit/raw_availability.json), [cohort CSV](tables/paired_cohort.csv).
 
 ## 2. Feature-switching sensitivity figure
 

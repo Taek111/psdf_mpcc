@@ -35,8 +35,8 @@ ROOT = Path(__file__).resolve().parents[3]
 OUT = Path(__file__).resolve().parents[1]
 HELPER_PATH = ROOT / "scripts/analyze_rectangle_clearance.py"
 SUITES = [
-    ROOT / "benchmark_runs/rectangle_don_100_20261105_current_sf",
-    ROOT / "benchmark_runs/rectangle_don_sweep_50_20261105_current_sf",
+    ROOT / "benchmark_runs/rectangle_analysis_20261105_current_sf/rectangle_don_100_20261105_current_sf",
+    ROOT / "benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf",
 ]
 WORKERS = 12
 WORKER_HELPER = None

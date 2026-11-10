@@ -193,7 +193,7 @@ def pack_event(common, step, event, kind, radius, alpha, pl, pr, xi, left, right
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--suite", type=Path, default=ROOT / "benchmark_runs/rectangle_don_sweep_50_20261105_current_sf")
+    parser.add_argument("--suite", type=Path, default=ROOT / "benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf")
     parser.add_argument("--output", type=Path, default=ROOT / "benchmark_runs/rectangle_constraint_reliability_20261107")
     parser.add_argument("--dons", type=float, nargs="+", default=[.83, .84, .85, .86])
     parser.add_argument("--switch-don", type=float, default=.85)

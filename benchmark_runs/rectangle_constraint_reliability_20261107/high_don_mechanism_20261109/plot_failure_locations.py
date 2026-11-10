@@ -19,7 +19,8 @@ def main():
     for method in ("cc_sf", "cc_mf"):
         rows = [r for r in records if r["source"] == method]
         for row in rows:
-            raw = np.load(ROOT / row["trace"])
+            trace = SUITE / "widths" / row["trace"].replace("\\", "/").split("/widths/", 1)[1]
+            raw = np.load(trace)
             poses, times = raw["poses"], raw["pose_times_s"]
             inside = 0 <= float(row["final_x_m"]) <= .2 and .45 <= float(row["final_y_m"]) <= .65
             stage = "goal_success" if row["status"] == "success" else ("first_corner_failure" if inside else "later_failure")

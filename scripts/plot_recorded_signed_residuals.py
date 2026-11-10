@@ -21,6 +21,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 ANALYSIS = ROOT / "benchmark_runs/rectangle_constraint_reliability_20261107"
+SUITE = ANALYSIS / "rectangle_don_sweep_50_20261105_current_sf"
 OUT = ANALYSIS / "recorded_signed_residuals_20261108"
 COLORS = {"cc_sf": "#2864A5", "cc_mf": "#C27620"}
 NAMES = {"cc_sf": "CC-SF", "cc_mf": "CC-MF"}
@@ -32,7 +33,8 @@ def digest(path):
 
 def load_trace(row):
     cache_path = ANALYSIS / "cache" / f"don0.85_{row.source}_seed{row.seed}.npz"
-    raw_path, meta_path = ROOT / row.trace, ROOT / row.metadata
+    raw_path = SUITE / "widths" / row.trace.replace("\\", "/").split("/widths/", 1)[1]
+    meta_path = SUITE / "widths" / row.metadata.replace("\\", "/").split("/widths/", 1)[1]
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
     with np.load(raw_path, allow_pickle=False) as raw, np.load(cache_path, allow_pickle=False) as cached:
         c = {key: cached[key].copy() for key in cached.files}

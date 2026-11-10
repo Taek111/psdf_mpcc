@@ -19,7 +19,7 @@ import torch
 
 ROOT = Path(__file__).resolve().parents[3]
 OUTPUT = Path(__file__).resolve().parent
-SUITE = ROOT / "benchmark_runs/rectangle_don_sweep_50_20261105_current_sf"
+SUITE = ROOT / "benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf"
 sys.path.insert(0, str(ROOT))
 from scripts.analyze_sf_mf_reliability import make_wrapper
 from utils.offline_cc_margin import _snapshot_imports

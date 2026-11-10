@@ -39,7 +39,7 @@ def boundary_examples(boundary):
     from analyze_sf_mf_reliability import make_wrapper, evaluate
     from utils.offline_cc_margin import _snapshot_imports
 
-    suite = ROOT / "benchmark_runs/rectangle_don_sweep_50_20261105_current_sf"
+    suite = ROOT / "benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf"
     fig, axs = plt.subplots(1, 2, figsize=(10.4, 4.6), layout="constrained", sharey=True)
     selected = []
     with _snapshot_imports(suite / "source_snapshot") as (module, _, _):

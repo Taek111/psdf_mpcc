@@ -1,0 +1,170 @@
+trials_per_configuration: 1
+config:
+  trials: 1
+  rectangle_geometry:
+    length: 0.15
+    width: 0.123
+  mpcc:
+    use_debug: false
+  benchmark_logging:
+    enabled: true
+  start_perturbation:
+    enabled: true
+    seed: 0
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.001
+    max_attempts: 1000
+  localization_error:
+    enabled: false
+  defaults:
+    simulation_time: 80.0
+    generate_animation: false
+    generate_plots: false
+  success_criteria:
+    position_tolerance: 0.02
+  trial_failure_criteria:
+    enabled: true
+    movement_window_sec: 10.0
+    movement_threshold: 0.03
+    max_consecutive_solver_failures: 20
+  test_configs:
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_mf
+    dynamics_type: differential_drive
+    path_planner: astar
+    start_perturbation:
+      seed: 2063807083
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_mf
+    dynamics_type: differential_drive
+    path_planner: astar
+    start_perturbation:
+      seed: 1176644122
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_mf
+    dynamics_type: differential_drive
+    path_planner: astar
+    start_perturbation:
+      seed: 1697645524
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_mf
+    dynamics_type: differential_drive
+    path_planner: astar
+    start_perturbation:
+      seed: 1301404181
+  - maze_type: maze
+    robot_shape: rectangle
+    optimizer_type: cc_mf
+    dynamics_type: differential_drive
+    path_planner: astar
+    start_perturbation:
+      seed: 3864669725
+cli:
+  config: /home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_constraint_reliability_20261107/cc_mf_don080_083_random5_20261110_161545/configs/width_123mm.yaml
+  single: false
+  trials: 1
+  results_dir: /home/taek111/projects/psdf_mpcc/benchmark_runs/rectangle_constraint_reliability_20261107/cc_mf_don080_083_random5_20261110_161545/widths/width_123mm
+  maze_type: s_path
+  robot_shape: rectangle
+  optimizer_type: psdf
+  dynamics_type: differential_drive
+  path_planner: astar
+  simulation_time: 60.0
+  frame_skip: 5
+  use_debug: false
+  perturb_start: null
+  start_seed: null
+  start_position_std: null
+  start_heading_std_deg: null
+  start_min_clearance: null
+  generate_animation: false
+  generate_plots: false
+  safe_stop_batch: false
+  safe_stop_robot_shapes: null
+  safe_stop_maze_types: null
+  safe_stop_optimizer_types: null
+  safe_stop_summary: null
+computation_time:
+  clock: time.perf_counter
+  unit: s
+  scope_by_optimizer:
+    cc_mf: solve_nlp
+  successful_steps_only: true
+  debug_work_in_solve_nlp: included_when_enabled
+configurations:
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: cc_mf
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config01
+  start_perturbation:
+    enabled: true
+    seed: 2063807083
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.001
+    max_attempts: 1000
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: cc_mf
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config02
+  start_perturbation:
+    enabled: true
+    seed: 1176644122
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.001
+    max_attempts: 1000
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: cc_mf
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config03
+  start_perturbation:
+    enabled: true
+    seed: 1697645524
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.001
+    max_attempts: 1000
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: cc_mf
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config04
+  start_perturbation:
+    enabled: true
+    seed: 1301404181
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.001
+    max_attempts: 1000
+- maze_type: maze
+  robot_shape: rectangle
+  optimizer_type: cc_mf
+  dynamics_type: differential_drive
+  path_planner: astar
+  configuration_id: config05
+  start_perturbation:
+    enabled: true
+    seed: 3864669725
+    position_std: 0.02
+    heading_std_deg: 2.8647889756541165
+    max_sigma: 3.0
+    min_clearance: 0.001
+    max_attempts: 1000

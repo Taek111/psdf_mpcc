@@ -16,7 +16,7 @@ import torch
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT = Path(__file__).resolve().parent
-SUITE = ROOT / "benchmark_runs/rectangle_don_sweep_50_20261105_current_sf"
+SUITE = ROOT / "benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf"
 AUDIT = OUT.parent / "high_don_mechanism_20261109/trial_terminal_audit.csv"
 sys.path.insert(0, str(ROOT))
 from scripts.analyze_sf_mf_reliability import make_wrapper
@@ -43,7 +43,7 @@ def main():
     assert sorted(audit.don.unique()) == [.83, .84, .85, .86, .87]
     records, pending, geometry_by_don, initial_poses = [], {}, {}, {}
     for row in audit.itertuples(index=False):
-        npz_path = ROOT / row.trace
+        npz_path = SUITE / "widths" / row.trace.replace("\\", "/").split("/widths/", 1)[1]
         meta_path = npz_path.parent / "raw_trace_metadata.json"
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
         npz_hash, meta_hash = sha(npz_path), sha(meta_path)

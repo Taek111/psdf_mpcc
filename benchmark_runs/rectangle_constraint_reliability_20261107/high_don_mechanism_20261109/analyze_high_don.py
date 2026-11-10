@@ -11,7 +11,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[3]
 OUTPUT = Path(__file__).resolve().parent
-SUITE = ROOT / "benchmark_runs/rectangle_don_sweep_50_20261105_current_sf"
+SUITE = ROOT / "benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf"
 WIDTHS = ((.83, "124p5"), (.84, "126"), (.85, "127p5"), (.86, "129"), (.87, "130p5"))
 
 

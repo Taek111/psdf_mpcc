@@ -22,7 +22,7 @@ from utils.offline_cc_margin import _snapshot_imports
 def main():
     torch.set_num_threads(6)
     analysis = HERE.parent
-    suite = ROOT / "benchmark_runs/rectangle_don_sweep_50_20261105_current_sf"
+    suite = ROOT / "benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf"
     cache_path = analysis / "cache/don0.85_cc_mf_seed35.npz"
     event_path = analysis / "tables/switch_events.csv"
     metadata_path = suite / "widths/width_127p5mm/runs/config04/trial_0036/data/raw_trace_metadata.json"

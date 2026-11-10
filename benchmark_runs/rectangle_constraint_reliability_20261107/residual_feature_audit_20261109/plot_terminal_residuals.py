@@ -33,7 +33,7 @@ def main():
     torch.set_num_threads(2)
     audit_path = PRIOR / 'terminal_step_tangent_audit.csv'
     trials = list(csv.DictReader(audit_path.open(encoding='utf-8')))
-    suite = ROOT / 'benchmark_runs/rectangle_don_sweep_50_20261105_current_sf'
+    suite = ROOT / 'benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf'
     rows, time_rows, hashes = [], [], {}
     with _snapshot_imports(suite / 'source_snapshot') as (module, covariance, _):
         for trial in trials:

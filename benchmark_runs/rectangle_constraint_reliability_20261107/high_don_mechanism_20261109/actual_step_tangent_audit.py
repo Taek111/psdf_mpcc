@@ -18,7 +18,7 @@ from utils.offline_feature_selectors import extract_feature_selectors
 
 def main():
     torch.set_num_threads(2)
-    suite = ROOT / 'benchmark_runs/rectangle_don_sweep_50_20261105_current_sf'
+    suite = ROOT / 'benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf'
     directory = suite / 'widths/width_127p5mm/runs/config03/trial_0011/data'
     trace_path = directory / 'raw_trace.npz'
     metadata_path = directory / 'raw_trace_metadata.json'

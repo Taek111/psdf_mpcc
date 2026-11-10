@@ -23,8 +23,8 @@ sys.dont_write_bytecode = True
 COMPLETE = {'success', 'failure', 'timeout', 'error'}
 METHODS = ['mpcc', 'cc_ecs', 'cc_sf', 'cc_mf']
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_A = ROOT / 'benchmark_runs/rectangle_don_100_20261105_current_sf'
-DEFAULT_B = ROOT / 'benchmark_runs/rectangle_don_sweep_50_20261105_current_sf'
+DEFAULT_A = ROOT / 'benchmark_runs/rectangle_analysis_20261105_current_sf/rectangle_don_100_20261105_current_sf'
+DEFAULT_B = ROOT / 'benchmark_runs/rectangle_constraint_reliability_20261107/rectangle_don_sweep_50_20261105_current_sf'
 
 def read_csv(p):
     with p.open(newline='', encoding='utf-8') as f:
